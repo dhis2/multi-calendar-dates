@@ -46,5 +46,10 @@
   "types": "lib/index.d.ts",
   "files": [
     "/lib"
-  ]
+  ],
+  "jest": {
+    "transformIgnorePatterns": [
+      "/!node_modules\\/@js-temporal/"
+    ]
+  }
 }
