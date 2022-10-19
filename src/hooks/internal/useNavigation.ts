@@ -1,14 +1,8 @@
 import { Temporal } from "@js-temporal/polyfill"; // eslint-disable-line
 import { Dispatch, SetStateAction, useMemo } from "react";
-import { FormatterResult } from "../useFormatters";
 
 import "../../date-override";
-
-type navigationOptions = {
-  firstZdtOfVisibleMonth: Temporal.ZonedDateTime;
-  formatters: FormatterResult;
-  setFirstZdtOfVisibleMonth: Dispatch<SetStateAction<Temporal.ZonedDateTime>>;
-};
+import { LocaleOptions } from "../useDatePicker";
 
 /**
  * internal hook used by useDatePicker to build the navigation of the calendar
@@ -16,40 +10,56 @@ type navigationOptions = {
  * @param options
  * @returns
  */
-export const useNavigation = (options: navigationOptions) => {
-  const { firstZdtOfVisibleMonth, formatters, setFirstZdtOfVisibleMonth } =
-    options;
+export const useNavigation = (
+  firstZdtOfVisibleMonth: Temporal.ZonedDateTime,
+  setFirstZdtOfVisibleMonth: Dispatch<SetStateAction<Temporal.ZonedDateTime>>,
+  localeOptions: LocaleOptions
+) => {
   return useMemo(() => {
     const prevYear = firstZdtOfVisibleMonth.subtract({ years: 1 });
     const nextYear = firstZdtOfVisibleMonth.add({ years: 1 });
     const prevMonth = firstZdtOfVisibleMonth.subtract({ months: 1 });
     const nextMonth = firstZdtOfVisibleMonth.add({ months: 1 });
 
+    const { locale, ...otherLocaleOptions } = localeOptions;
+
+    const yearNumericFormat = {
+      ...otherLocaleOptions,
+      year: "numeric" as const,
+    };
+
+    const monthFormat = {
+      ...otherLocaleOptions,
+      month: "long" as const,
+    };
+
     return {
       prevYear: {
-        label: formatters.yearNumeric.format(prevYear.toInstant()),
+        label: prevYear.toInstant().toLocaleString(locale, yearNumericFormat),
         navigateTo: () => setFirstZdtOfVisibleMonth(prevYear),
       },
       currYear: {
-        label: formatters.yearNumeric.format(
-          firstZdtOfVisibleMonth.toInstant()
-        ),
+        label: firstZdtOfVisibleMonth
+          .toInstant()
+          .toLocaleString(locale, yearNumericFormat),
       },
       nextYear: {
-        label: formatters.yearNumeric.format(nextYear.toInstant()),
+        label: nextYear.toInstant().toLocaleString(locale, yearNumericFormat),
         navigateTo: () => setFirstZdtOfVisibleMonth(nextYear),
       },
       prevMonth: {
-        label: formatters.monthLong.format(prevMonth.toInstant()),
+        label: prevMonth.toInstant().toLocaleString(locale, monthFormat),
         navigateTo: () => setFirstZdtOfVisibleMonth(prevMonth),
       },
       currMonth: {
-        label: formatters.monthLong.format(firstZdtOfVisibleMonth.toInstant()),
+        label: firstZdtOfVisibleMonth
+          .toInstant()
+          .toLocaleString(locale, monthFormat),
       },
       nextMonth: {
-        label: formatters.monthLong.format(nextMonth.toInstant()),
+        label: nextMonth.toInstant().toLocaleString(locale, monthFormat),
         navigateTo: () => setFirstZdtOfVisibleMonth(nextMonth),
       },
     };
-  }, [firstZdtOfVisibleMonth, formatters, setFirstZdtOfVisibleMonth]);
+  }, [firstZdtOfVisibleMonth, localeOptions, setFirstZdtOfVisibleMonth]);
 };
