@@ -1,16 +1,12 @@
 import { useMemo } from "react";
 import { Temporal } from "@js-temporal/polyfill";
-import { FormatterResult } from "../useFormatters";
-
 import "../../date-override";
+import { LocaleOptions } from "../useDatePicker";
 
-export const useWeekDayLabels = ({
-  todayZdt,
-  formatters,
-}: {
-  todayZdt: Temporal.ZonedDateTime;
-  formatters: FormatterResult;
-}) =>
+export const useWeekDayLabels = (
+  todayZdt: Temporal.ZonedDateTime,
+  localeOptions: LocaleOptions
+) =>
   useMemo(() => {
     const daysInWeek = todayZdt.daysInWeek;
     const labels = [];
@@ -22,11 +18,20 @@ export const useWeekDayLabels = ({
 
     while (weekDay <= daysInWeek) {
       labels.push(
-        formatters.weekDayNameShort.format(currentZonedDateTime.toInstant())
+        currentZonedDateTime.toInstant().toLocaleString(localeOptions.locale, {
+          weekday: "short",
+          calendar: localeOptions.calendar,
+          timeZone: localeOptions.timeZone,
+        })
       );
       weekDay++;
       currentZonedDateTime = currentZonedDateTime.add({ days: 1 });
     }
 
     return labels;
-  }, [todayZdt, formatters]);
+  }, [
+    todayZdt,
+    localeOptions.locale,
+    localeOptions.calendar,
+    localeOptions.timeZone,
+  ]);

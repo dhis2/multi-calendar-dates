@@ -2,12 +2,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Temporal } from "@js-temporal/polyfill";
 import { isoDateStringToZdt, zdtToIsoDateStr } from "../utils/conversions";
 import { useCalendarWeekDays } from "./internal/useCalendarWeekDays";
-import { useFormatters } from "./useFormatters";
 import { useNavigation } from "./internal/useNavigation";
 import { useWeekDayLabels } from "./internal/useWeekDayLabels";
 import { SupportedNumberingSystem } from "../types";
 
 import "../date-override";
+
+export type LocaleOptions = {
+  locale: string;
+  calendar: Temporal.CalendarProtocol;
+  timeZone: Temporal.TimeZoneProtocol;
+  numberingSystem?: SupportedNumberingSystem;
+};
 
 type DatePickerOptions = {
   onDateSelect: ({
@@ -19,11 +25,7 @@ type DatePickerOptions = {
   }) => void;
   dateString: string;
   locale: string;
-  options: {
-    calendar: Temporal.CalendarLike;
-    timeZone: Temporal.TimeZoneLike;
-    numberingSystem: SupportedNumberingSystem;
-  };
+  options: LocaleOptions;
 };
 
 export const useDatePicker = ({
@@ -44,12 +46,7 @@ export const useDatePicker = ({
     () => Temporal.TimeZone.from(options.timeZone!),
     [options]
   );
-  const formatters = useFormatters({
-    locale,
-    options,
-    temporalCalendar,
-    temporalTimeZone,
-  });
+
   const todayZdt = useMemo(
     () =>
       Temporal.Now.zonedDateTime(temporalCalendar)
@@ -70,15 +67,19 @@ export const useDatePicker = ({
   );
   const [firstZdtOfVisibleMonth, setFirstZdtOfVisibleMonth] = useState(() => {
     const zdt = selectedDateZdt || todayZdt;
-    const daysToMonthStart = zdt.day - 1;
-    return zdt.subtract({ days: daysToMonthStart });
+    return zdt.with({ day: 1 });
   });
-  const weekDayLabels = useWeekDayLabels({ todayZdt, formatters });
-  const navigation = useNavigation({
+  const localeOptions = {
+    locale,
+    calendar: temporalCalendar,
+    timeZone: temporalTimeZone,
+  };
+  const weekDayLabels = useWeekDayLabels(todayZdt, localeOptions);
+  const navigation = useNavigation(
     firstZdtOfVisibleMonth,
-    formatters,
     setFirstZdtOfVisibleMonth,
-  });
+    localeOptions
+  );
   const selectDate = useCallback(
     (zdt: Temporal.ZonedDateTime) => {
       const dateString = zdtToIsoDateStr(zdt);
@@ -122,12 +123,15 @@ export const useDatePicker = ({
   return {
     selectedDate: {
       zdt: selectedDateZdt,
-      label:
-        selectedDateZdt &&
-        formatters.longFullDate.format(selectedDateZdt.toInstant()),
+      label: selectedDateZdt?.toLocaleString(locale, {
+        ...localeOptions,
+        dateStyle: "full",
+      }),
     },
     today: {
-      label: formatters.daysAgoNonNumeric.format(0, "day"),
+      label: new window.Intl.RelativeTimeFormat(locale, {
+        numeric: "auto",
+      }).format(0, "day"),
       navigateTo: () =>
         setFirstZdtOfVisibleMonth(
           todayZdt.subtract({ days: todayZdt.day - 1 })
@@ -136,7 +140,9 @@ export const useDatePicker = ({
     calendarWeekDays: calendarWeekDaysZdts.map((week) =>
       week.map((zdt) => ({
         zdt,
-        label: formatters.dayNumber.format(zdt.toInstant()),
+        label: zdt
+          .toInstant()
+          .toLocaleString(locale, { ...localeOptions, day: "numeric" }),
         onClick: () => selectDate(zdt),
         isSelected: selectedDateZdt && zdt.equals(selectedDateZdt),
         isToday: todayZdt && zdt.equals(todayZdt),
