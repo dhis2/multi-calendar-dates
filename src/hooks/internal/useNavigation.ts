@@ -2,6 +2,8 @@ import { Temporal } from "@js-temporal/polyfill"; // eslint-disable-line
 import { Dispatch, SetStateAction, useMemo } from "react";
 
 import "../../date-override";
+import calendarLocalisations from "../../utils/calendarLocalisations";
+import { isCustomCalendar } from "../../utils/helpers";
 import { LocaleOptions } from "../useDatePicker";
 
 /**
@@ -35,29 +37,43 @@ export const useNavigation = (
 
     return {
       prevYear: {
-        label: prevYear.toInstant().toLocaleString(locale, yearNumericFormat),
+        label: isCustomCalendar(locale)
+          ? prevYear.year
+          : prevYear.toInstant().toLocaleString(locale, yearNumericFormat),
         navigateTo: () => setFirstZdtOfVisibleMonth(prevYear),
       },
       currYear: {
-        label: firstZdtOfVisibleMonth
-          .toInstant()
-          .toLocaleString(locale, yearNumericFormat),
+        label: isCustomCalendar(locale)
+          ? firstZdtOfVisibleMonth.year
+          : firstZdtOfVisibleMonth
+              .toInstant()
+              .toLocaleString(locale, yearNumericFormat),
       },
       nextYear: {
-        label: nextYear.toInstant().toLocaleString(locale, yearNumericFormat),
+        label: isCustomCalendar(locale)
+          ? nextYear.year
+          : nextYear.toInstant().toLocaleString(locale, yearNumericFormat),
         navigateTo: () => setFirstZdtOfVisibleMonth(nextYear),
       },
       prevMonth: {
-        label: prevMonth.toInstant().toLocaleString(locale, monthFormat),
+        label: isCustomCalendar(locale)
+          ? calendarLocalisations[locale].monthNames[prevMonth.month]
+          : prevMonth.toInstant().toLocaleString(locale, monthFormat),
         navigateTo: () => setFirstZdtOfVisibleMonth(prevMonth),
       },
       currMonth: {
-        label: firstZdtOfVisibleMonth
-          .toInstant()
-          .toLocaleString(locale, monthFormat),
+        label: isCustomCalendar(locale)
+          ? calendarLocalisations[locale].monthNames[
+              firstZdtOfVisibleMonth.month
+            ]
+          : firstZdtOfVisibleMonth
+              .toInstant()
+              .toLocaleString(locale, monthFormat),
       },
       nextMonth: {
-        label: nextMonth.toInstant().toLocaleString(locale, monthFormat),
+        label: isCustomCalendar(locale)
+          ? calendarLocalisations[locale].monthNames[nextMonth.month]
+          : nextMonth.toInstant().toLocaleString(locale, monthFormat),
         navigateTo: () => setFirstZdtOfVisibleMonth(nextMonth),
       },
     };
