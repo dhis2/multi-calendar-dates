@@ -7,6 +7,8 @@ import { useWeekDayLabels } from "./internal/useWeekDayLabels";
 import { SupportedNumberingSystem } from "../types";
 
 import "../date-override";
+import { isCustomCalendar } from "../utils/helpers";
+import calendarLocalisations from "../utils/calendarLocalisations";
 
 export type LocaleOptions = {
   locale: string;
@@ -35,7 +37,7 @@ export const useDatePicker = ({
   options,
 }: DatePickerOptions) => {
   if (!options.calendar || !options.timeZone) {
-    throw new Error("options should include calendar or timeZone");
+    throw new Error("options should include calendar and timeZone");
   }
   const prevDateStringRef = useRef(dateString);
   const temporalCalendar = useMemo(
@@ -140,9 +142,13 @@ export const useDatePicker = ({
     calendarWeekDays: calendarWeekDaysZdts.map((week) =>
       week.map((zdt) => ({
         zdt,
-        label: zdt
-          .toInstant()
-          .toLocaleString(locale, { ...localeOptions, day: "numeric" }),
+        label: isCustomCalendar(locale)
+          ? calendarLocalisations[locale].numbers
+            ? calendarLocalisations[locale].numbers?.[zdt.day]
+            : zdt.day
+          : zdt
+              .toInstant()
+              .toLocaleString(locale, { ...localeOptions, day: "numeric" }),
         onClick: () => selectDate(zdt),
         isSelected: selectedDateZdt && zdt.equals(selectedDateZdt),
         isToday: todayZdt && zdt.equals(todayZdt),

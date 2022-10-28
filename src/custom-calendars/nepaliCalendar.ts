@@ -14,7 +14,7 @@ class NepaliCalendar extends Temporal.Calendar {
     return "nepali";
   }
 
-  _validateFields(fields: { day: number; year: number; month: number }) {
+  _nepaliToIso(fields: { day: number; year: number; month: number }) {
     let { year: nepaliYear, month: nepaliMonth, day: nepaliDay } = fields;
 
     let gregorianDayOfYear = 0;
@@ -70,86 +70,148 @@ class NepaliCalendar extends Temporal.Calendar {
       day: 1,
     }).add({ days: gregorianDayOfYear });
 
-    return { year: result.year, month: result.month, day: result.day };
+    return {
+      year: result.year,
+      month: result.month,
+      monthCode: buildMonthCode(result.month),
+      day: result.day,
+    };
   }
 
-  // monthCode(
-  //   date: // | string
-  //   | Temporal.PlainDate
-  //     | Temporal.PlainDateTime
-  //     | Temporal.PlainYearMonth
-  //     | Temporal.PlainDateLike
-  //   // | Temporal.PlainMonthDay
-  // ): string {
-  //   if (typeof date === "string") return date;
-  //   const { month } = date;
-  //   return defaultLocalisation.monthNames[month! - 1];
-  // }
+  _isoToNepali = (
+    isoDate:
+      | Temporal.PlainDate
+      | Temporal.PlainDateTime
+      | Temporal.PlainYearMonth
+      | Temporal.PlainDateLike
+      | string
+  ) => {
+    // make sure this is iso8601
+    let gregorianDate =
+      Temporal.PlainDate.from(isoDate).withCalendar("iso8601");
+
+    const gregorianYear = gregorianDate.year;
+
+    const gregorianDayOfYear = gregorianDate.dayOfYear;
+    let nepaliYear = gregorianYear + 56; // this is not final, it could be also +57 but +56 is always true for 1st Jan.
+
+    // FIXME: do something similar to what world-calendar does here
+    // this.createMissingCalendarData(nepaliYear);
+
+    let nepaliMonth = 9; // Jan 1 always fall in Nepali month Paush which is the 9th month of Nepali calendar.
+    // Get the Nepali day in Paush (month 9) of 1st January
+    const dayOfFirstJanInPaush = NEPALI_CALENDAR_DATA[nepaliYear][0];
+    // Check how many days are left of Paush.
+    // Days calculated from 1st Jan till the end of the actual Nepali month,
+    // we use this value to check if the Gregorian date is in the actual Nepali month.
+    let daysSinceJanFirstToEndOfNepaliMonth =
+      NEPALI_CALENDAR_DATA[nepaliYear][nepaliMonth] - dayOfFirstJanInPaush + 1;
+
+    // If the Gregorian day-of-year is smaller than or equal to the sum of days between the 1st January and
+    // the end of the actual Nepali month we have found the correct Nepali month.
+    // Example:
+    // The 4th February 2011 is the gregorianDayOfYear 35 (31 days of January + 4)
+    // 1st January 2011 is in the Nepali year 2067, where 1st January is the 17th day of Paush (9th month).
+    // In 2067 Paush has 30 days, which means (30-17+1=14) there are 14 days between 1st January and end of Paush
+    // (including 17th January).
+    // The gregorianDayOfYear (35) is bigger than 14, so we check the next month.
+    // The next Nepali month (Mangh) has 29 days
+    // 29+14=43, this is bigger than gregorianDayOfYear (35) so, we have found the correct Nepali month.
+    while (gregorianDayOfYear > daysSinceJanFirstToEndOfNepaliMonth) {
+      nepaliMonth++;
+      if (nepaliMonth > 12) {
+        nepaliMonth = 1;
+        nepaliYear++;
+        if (nepaliYear === 0) {
+          nepaliYear++;
+        }
+      }
+      daysSinceJanFirstToEndOfNepaliMonth +=
+        NEPALI_CALENDAR_DATA[nepaliYear][nepaliMonth];
+    }
+    // The last step is to calculate the Nepali day-of-month.
+    // To continue our example from before:
+    // we calculated there are 43 days from 1st January (17 Paush) till end of Mangh (29 days).
+    // When we subtract from this 43 days the day-of-year of the the Gregorian date (35),
+    // we know how far the searched day is away from the end of the Nepali month.
+    // So we simply subtract this number from the amount of days in this month (30).
+    const nepaliDayOfMonth =
+      NEPALI_CALENDAR_DATA[nepaliYear][nepaliMonth] -
+      (daysSinceJanFirstToEndOfNepaliMonth - gregorianDayOfYear);
+    if (nepaliYear <= 0) {
+      nepaliYear--;
+    }
+
+    return {
+      year: nepaliYear,
+      month: nepaliMonth,
+      day: nepaliDayOfMonth,
+    };
+  };
+
+  year(
+    date:
+      | Temporal.PlainDate
+      | Temporal.PlainDateTime
+      | Temporal.PlainYearMonth
+      | Temporal.PlainDateLike
+      | string
+  ) {
+    return this._isoToNepali(date)?.year;
+  }
+  nepaliMonth() {
+    throw "not implemented";
+  }
+  daysInMonth(
+    date:
+      | string
+      | Temporal.PlainDate
+      | Temporal.PlainDateTime
+      | Temporal.PlainDateLike
+      | Temporal.PlainYearMonth
+  ): number {
+    const { year, month } = this._isoToNepali(date);
+    return NEPALI_CALENDAR_DATA[year][month];
+  }
+  month(date: Temporal.PlainDate | Temporal.PlainDateLike) {
+    return this._isoToNepali(date)?.month;
+  }
+  monthCode(date: Temporal.PlainDate | Temporal.PlainDateLike) {
+    const { month } = this._isoToNepali(date);
+    return buildMonthCode(month!)!;
+  }
+  day(date: Temporal.PlainDate | Temporal.PlainDateLike) {
+    const { day } = this._isoToNepali(date);
+    return day!;
+  }
+  /**
+   *  A custom implementation of these methods (dateFromFields, yearMonthFromFields, monthDayFromFields)
+   *  would convert the calendar-space arguments to the ISO calendar, and return an object created using new Temporal.PlainDate(...isoArgs), with PlainYearMonth and PlainMonthDay substituted for PlainDate as appropriate.
+   *
+   * from nepali -> ISO
+   */
   dateFromFields(fields: CalendarYMD, options?: AssignmentOptions) {
-    const result = this._validateFields(fields);
+    const result = this._nepaliToIso(fields);
     return super.dateFromFields({ ...fields, ...result }, options);
   }
   yearMonthFromFields(fields: CalendarYMD, options?: AssignmentOptions) {
-    const result = this._validateFields(fields);
+    const result = this._nepaliToIso(fields);
     return super.yearMonthFromFields({ ...fields, ...result }, options);
   }
   monthDayFromFields(fields: CalendarYMD, options?: AssignmentOptions) {
-    const result = this._validateFields(fields);
+    const result = this._nepaliToIso(fields);
     return super.monthDayFromFields({ ...fields, ...result }, options);
   }
+}
+
+function buildMonthCode(month: number | string, leap = false) {
+  return `M${month.toString().padStart(2, "0")}${leap ? "L" : ""}`;
 }
 
 export { NepaliCalendar };
 
 type NepaliData = {
   [index: number]: number[];
-};
-
-const localisation = {
-  name: "Nepali",
-  epochs: ["BBS", "ABS"],
-  monthNames: [
-    "Baisakh",
-    "Jestha",
-    "Ashadh",
-    "Shrawan",
-    "Bhadra",
-    "Ashwin",
-    "Kartik",
-    "Mangsir",
-    "Paush",
-    "Mangh",
-    "Falgun",
-    "Chaitra",
-  ],
-  monthNamesShort: [
-    "Bai",
-    "Je",
-    "As",
-    "Shra",
-    "Bha",
-    "Ash",
-    "Kar",
-    "Mang",
-    "Pau",
-    "Ma",
-    "Fal",
-    "Chai",
-  ],
-  dayNames: [
-    "Aaitabaar",
-    "Sombaar",
-    "Manglbaar",
-    "Budhabaar",
-    "Bihibaar",
-    "Shukrabaar",
-    "Shanibaar",
-  ],
-  dayNamesShort: ["Aaita", "Som", "Mangl", "Budha", "Bihi", "Shukra", "Shani"],
-  dayNamesMin: ["Aai", "So", "Man", "Bu", "Bi", "Shu", "Sha"],
-  dateFormat: "dd/mm/yyyy",
-  firstDay: 1,
-  isRTL: false,
 };
 
 const NEPALI_CALENDAR_DATA: NepaliData = {
