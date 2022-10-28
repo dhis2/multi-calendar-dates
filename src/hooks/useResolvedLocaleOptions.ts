@@ -59,9 +59,17 @@ export const useResolvedLocaleOptions = (options: HookOptions) => {
         resolvedOptions,
       };
     } catch (error) {
-      console.error(error);
+      console.error(`locale ${locale} not found - defaulting to en`, error);
+      const { locale: resolvedLocale, ...resolvedOptions } =
+        new Intl.DateTimeFormat("default", {
+          calendar: calendar,
+          timeZone: timeZone,
+          numberingSystem,
+        }).resolvedOptions();
+
       return {
-        resolvedLocale: undefined,
+        resolvedLocale,
+        resolvedOptions,
         error,
       };
     }
