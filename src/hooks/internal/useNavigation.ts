@@ -4,7 +4,6 @@ import { Dispatch, SetStateAction, useMemo } from "react";
 import "../../date-override";
 import calendarLocalisations from "../../utils/calendarLocalisations";
 import { isCustomCalendar } from "../../utils/helpers";
-import { LocaleOptions } from "../useDatePicker";
 
 /**
  * internal hook used by useDatePicker to build the navigation of the calendar
@@ -15,7 +14,12 @@ import { LocaleOptions } from "../useDatePicker";
 export const useNavigation = (
   firstZdtOfVisibleMonth: Temporal.ZonedDateTime,
   setFirstZdtOfVisibleMonth: Dispatch<SetStateAction<Temporal.ZonedDateTime>>,
-  localeOptions: LocaleOptions
+  localeOptions: {
+    locale: string;
+    calendar: Temporal.CalendarProtocol;
+    timeZone: Temporal.TimeZoneProtocol;
+    numberingSystem?: string;
+  }
 ) => {
   return useMemo(() => {
     const prevYear = firstZdtOfVisibleMonth.subtract({ years: 1 });
