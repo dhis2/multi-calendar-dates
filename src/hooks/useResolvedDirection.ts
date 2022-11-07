@@ -26,7 +26,7 @@ type Direction = "ltr" | "rtl";
  * @param localeIdentifier
  * @returns
  */
-export const useResolvedDir = (
+export const useResolvedDirection = (
   dir: Direction,
   localeIdentifier: string | undefined
 ) => {
