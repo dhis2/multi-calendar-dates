@@ -10,14 +10,9 @@ import "../date-override";
 import { isCustomCalendar } from "../utils/helpers";
 import calendarLocalisations from "../utils/calendarLocalisations";
 
-export type LocaleOptions = {
-  locale: string;
-  calendar: Temporal.CalendarProtocol;
-  timeZone: Temporal.TimeZoneProtocol;
-  numberingSystem?: SupportedNumberingSystem;
-};
-
 type DatePickerOptions = {
+  dateString: string;
+  options: LocaleOptions;
   onDateSelect: ({
     dateString,
     zdt,
@@ -25,15 +20,18 @@ type DatePickerOptions = {
     dateString: string;
     zdt: Temporal.ZonedDateTime;
   }) => void;
-  dateString: string;
+};
+
+type LocaleOptions = {
   locale: string;
-  options: LocaleOptions;
+  calendar: Temporal.CalendarProtocol | Temporal.CalendarLike;
+  timeZone: Temporal.TimeZoneLike | Temporal.TimeZoneProtocol;
+  numberingSystem?: string;
 };
 
 export const useDatePicker = ({
   onDateSelect,
   dateString,
-  locale,
   options,
 }: DatePickerOptions) => {
   if (!options.calendar || !options.timeZone) {
@@ -71,6 +69,9 @@ export const useDatePicker = ({
     const zdt = selectedDateZdt || todayZdt;
     return zdt.with({ day: 1 });
   });
+
+  const { locale } = options;
+
   const localeOptions = {
     locale,
     calendar: temporalCalendar,

@@ -1,12 +1,16 @@
 import { useMemo } from "react";
 import { Temporal } from "@js-temporal/polyfill";
 import "../../date-override";
-import { LocaleOptions } from "../useDatePicker";
 import calendarLocalisations from "../../utils/calendarLocalisations";
 
 export const useWeekDayLabels = (
   todayZdt: Temporal.ZonedDateTime,
-  localeOptions: LocaleOptions
+  localeOptions: {
+    locale: string;
+    calendar: Temporal.CalendarProtocol;
+    timeZone: Temporal.TimeZoneLike;
+    numberingSystem?: string;
+  }
 ) =>
   useMemo(() => {
     const daysInWeek = todayZdt.daysInWeek;
@@ -27,7 +31,7 @@ export const useWeekDayLabels = (
             .toLocaleString(localeOptions.locale, {
               weekday: "short",
               calendar: localeOptions.calendar,
-              timeZone: localeOptions.timeZone,
+              timeZone: localeOptions.timeZone as Temporal.TimeZoneProtocol,
             });
       labels.push(weekDayString);
       weekDay++;

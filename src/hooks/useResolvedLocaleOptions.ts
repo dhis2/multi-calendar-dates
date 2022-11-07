@@ -1,4 +1,4 @@
-import { Intl } from "@js-temporal/polyfill"; // eslint-disable-line
+import { Intl, Temporal } from "@js-temporal/polyfill"; // eslint-disable-line
 import { useMemo } from "react";
 import {
   SupportedCalendar,
@@ -16,6 +16,50 @@ type HookOptions = {
   locale: string;
 };
 
+type ResolveLocaleResult = {
+  resolvedLocale: string;
+  resolvedOptions: {
+    calendar: Temporal.CalendarProtocol;
+    numberingSystem: string;
+    timeZone: Temporal.TimeZoneLike;
+  };
+  error?: unknown;
+};
+
+type ResolvedDateTimeFormatOptions = {
+  locale: string;
+  calendar: string;
+  numberingSystem: string;
+  timeZone: string;
+  hour12?: boolean;
+  weekday?: string;
+  era?: string;
+  year?: string;
+  month?: string;
+  day?: string;
+  hour?: string;
+  minute?: string;
+  second?: string;
+  timeZoneName?: string;
+};
+
+const constructResolvedOptions = (
+  locale: string,
+  calendar: SupportedCalendar,
+  options: Omit<ResolvedDateTimeFormatOptions, "locale">,
+  error?: unknown
+) => {
+  return {
+    resolvedLocale: locale,
+    resolvedOptions: {
+      ...options,
+      timeZone: options.timeZone as Temporal.TimeZoneLike,
+      calendar: (customCalendars[calendar]?.calendar ||
+        options.calendar) as Temporal.CalendarProtocol,
+    },
+    error,
+  };
+};
 /**
  * A hook that returns the locale and locale options to be used by the calendar.
  *
@@ -27,7 +71,9 @@ type HookOptions = {
  * @param options
  * @returns
  */
-export const useResolvedLocaleOptions = (options: HookOptions) => {
+export const useResolvedLocaleOptions: (
+  options: HookOptions
+) => ResolveLocaleResult = (options) => {
   const { calendar, locale, timeZone, numberingSystem } = options;
 
   return useMemo(() => {
@@ -45,19 +91,7 @@ export const useResolvedLocaleOptions = (options: HookOptions) => {
           numberingSystem,
         }).resolvedOptions();
 
-      if (customCalendars[calendar]) {
-        return {
-          resolvedLocale: locale,
-          resolvedOptions: {
-            ...resolvedOptions,
-            calendar: customCalendars[calendar]?.calendar,
-          },
-        };
-      }
-      return {
-        resolvedLocale,
-        resolvedOptions,
-      };
+      return constructResolvedOptions(locale, calendar, resolvedOptions);
     } catch (error) {
       console.error(`locale ${locale} not found - defaulting to en`, error);
       const { locale: resolvedLocale, ...resolvedOptions } =
@@ -67,11 +101,7 @@ export const useResolvedLocaleOptions = (options: HookOptions) => {
           numberingSystem,
         }).resolvedOptions();
 
-      return {
-        resolvedLocale,
-        resolvedOptions,
-        error,
-      };
+      return constructResolvedOptions(locale, calendar, resolvedOptions, error);
     }
   }, [calendar, locale, numberingSystem, timeZone]);
 };
