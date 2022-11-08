@@ -11,14 +11,14 @@ import { isCustomCalendar } from "../utils/helpers";
 import calendarLocalisations from "../utils/calendarLocalisations";
 
 type DatePickerOptions = {
-  dateString: string;
+  initialDate: string;
   options: LocaleOptions;
   onDateSelect: ({
-    dateString,
-    zdt,
+    calendarDate,
+    isoDate,
   }: {
-    dateString: string;
-    zdt: Temporal.ZonedDateTime;
+    calendarDate: Temporal.ZonedDateTime;
+    isoDate: Temporal.ZonedDateTime;
   }) => void;
 };
 
@@ -31,19 +31,19 @@ type LocaleOptions = {
 
 export const useDatePicker = ({
   onDateSelect,
-  dateString,
+  initialDate,
   options,
 }: DatePickerOptions) => {
   if (!options.calendar || !options.timeZone) {
     throw new Error("options should include calendar and timeZone");
   }
-  const prevDateStringRef = useRef(dateString);
+  const prevDateStringRef = useRef(initialDate);
   const temporalCalendar = useMemo(
-    () => Temporal.Calendar.from(options.calendar!),
+    () => Temporal.Calendar.from(options.calendar),
     [options]
   );
   const temporalTimeZone = useMemo(
-    () => Temporal.TimeZone.from(options.timeZone!),
+    () => Temporal.TimeZone.from(options.timeZone),
     [options]
   );
 
@@ -54,17 +54,17 @@ export const useDatePicker = ({
         .startOfDay(),
     [temporalCalendar, temporalTimeZone]
   );
+
   const selectedDateZdt = useMemo(
     () =>
-      dateString
-        ? isoDateStringToZdt({
-            dateString,
-            calendar: temporalCalendar,
+      initialDate
+        ? Temporal.PlainDate.from(initialDate).toZonedDateTime({
             timeZone: temporalTimeZone,
           })
         : null,
-    [dateString, temporalCalendar, temporalTimeZone]
+    [initialDate, temporalTimeZone]
   );
+
   const [firstZdtOfVisibleMonth, setFirstZdtOfVisibleMonth] = useState(() => {
     const zdt = selectedDateZdt || todayZdt;
     return zdt.with({ day: 1 });
@@ -85,29 +85,30 @@ export const useDatePicker = ({
   );
   const selectDate = useCallback(
     (zdt: Temporal.ZonedDateTime) => {
-      const dateString = zdtToIsoDateStr(zdt);
-      onDateSelect({ dateString, zdt });
+      onDateSelect({
+        calendarDate: zdt,
+        isoDate: zdt.withCalendar("iso8601"),
+      });
     },
     [onDateSelect]
   );
   const calendarWeekDaysZdts = useCalendarWeekDays(firstZdtOfVisibleMonth);
 
   useEffect(() => {
-    if (dateString === prevDateStringRef.current) {
+    if (initialDate === prevDateStringRef.current) {
       return;
     }
 
-    prevDateStringRef.current = dateString;
+    prevDateStringRef.current = initialDate;
 
-    if (!dateString) {
+    if (!initialDate) {
       return;
     }
 
-    const zdt = isoDateStringToZdt({
-      dateString,
-      calendar: temporalCalendar,
-      timeZone: temporalTimeZone,
-    });
+    const zdt = Temporal.ZonedDateTime.from(initialDate)
+      .withCalendar(temporalCalendar)
+      .withTimeZone(temporalTimeZone);
+
     if (
       (firstZdtOfVisibleMonth.year !== zdt.year ||
         firstZdtOfVisibleMonth.month !== zdt.month) &&
@@ -116,7 +117,7 @@ export const useDatePicker = ({
       setFirstZdtOfVisibleMonth(zdt.subtract({ days: zdt.day - 1 }));
     }
   }, [
-    dateString,
+    initialDate,
     firstZdtOfVisibleMonth,
     calendarWeekDaysZdts,
     temporalCalendar,
@@ -128,6 +129,7 @@ export const useDatePicker = ({
       zdt: selectedDateZdt,
       label: selectedDateZdt?.toLocaleString(locale, {
         ...localeOptions,
+        timeZone: localeOptions.timeZone.id,
         dateStyle: "full",
       }),
     },
