@@ -17,8 +17,8 @@ To drive the functionality of the Calendar Engine, we considered two main option
 | | World Calendars | Temporal API |
 | -- | --- | --- |
 | Standard | ❌ custom implementation | ✅  standard specification but not final and subject to change |
-| Calendar Support | ✅ Supports all calendars we need (except Nepalese) | 🟡 almost all calendars we need |
-| Production-ready | 🟡 although this is based on a battle-tested library we used in dhis2, the standalone implementation was not used in production afaik | ❌ There are polyfills but the API is still work in progress (stage 3 specs) | 
+| Calendar Support | ✅ Supports all calendars we need | 🟡 almost all calendars we need (except Nepalese) |
+| Production-ready | 🟡 although this is based on a battle-tested library we used in dhis2, the standalone implementation was not used in production | ❌ There are polyfills but the API is still work in progress (stage 3 specs) | 
 | Supports addition, subtraction, conversions, calculating durations | 🟡 Yes, and with relatively good test coverage but not sure if it covers all scenarios | ✅ |
 
 
