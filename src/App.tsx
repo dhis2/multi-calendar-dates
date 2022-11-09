@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import React from "react";
 
 function App() {
   return (
