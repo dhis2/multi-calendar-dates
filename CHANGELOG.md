@@ -1,3 +1,10 @@
+# [1.0.0-beta.2](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.1...v1.0.0-beta.2) (2022-11-14)
+
+
+### Bug Fixes
+
+* change react to be a peer dependency ([fbf106c](https://github.com/dhis2/multi-calendar-dates/commit/fbf106cab1ed0dad52d0877c2b61fb3bd6c2540d))
+
 # 1.0.0-beta.1 (2022-11-10)
 
 
