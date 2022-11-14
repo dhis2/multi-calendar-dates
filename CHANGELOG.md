@@ -1,3 +1,10 @@
+# [1.0.0-beta.3](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2022-11-14)
+
+
+### Bug Fixes
+
+* change react dependency to fix issue with docusaurus build ([c58d560](https://github.com/dhis2/multi-calendar-dates/commit/c58d5603f1d30667bcdf241c8a3b02cd06fffdb9))
+
 # [1.0.0-beta.2](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.1...v1.0.0-beta.2) (2022-11-14)
 
 
