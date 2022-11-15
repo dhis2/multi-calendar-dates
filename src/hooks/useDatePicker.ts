@@ -153,7 +153,9 @@ export const useDatePicker = ({
               .toInstant()
               .toLocaleString(locale, { ...localeOptions, day: "numeric" }),
         onClick: () => selectDate(zdt),
-        isSelected: selectedDateZdt && zdt.equals(selectedDateZdt),
+        isSelected: selectedDateZdt
+          ?.withCalendar("iso8601")
+          .equals(zdt.withCalendar("iso8601")),
         isToday: todayZdt && zdt.equals(todayZdt),
         isInCurrentMonth:
           firstZdtOfVisibleMonth && zdt.month === firstZdtOfVisibleMonth.month,
