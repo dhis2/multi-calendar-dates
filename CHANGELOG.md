@@ -1,3 +1,10 @@
+# [1.0.0-beta.4](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2022-11-15)
+
+
+### Bug Fixes
+
+* update current day selection logic to use same calendar system ([adb0dc8](https://github.com/dhis2/multi-calendar-dates/commit/adb0dc8541cd995192441339e7c36ccf49977a07))
+
 # [1.0.0-beta.3](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2022-11-14)
 
 
