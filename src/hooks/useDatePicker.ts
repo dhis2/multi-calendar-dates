@@ -27,6 +27,7 @@ type LocaleOptions = {
   calendar: Temporal.CalendarProtocol | Temporal.CalendarLike;
   timeZone: Temporal.TimeZoneLike | Temporal.TimeZoneProtocol;
   numberingSystem?: string;
+  weekDayFormat?: "narrow" | "short" | "long";
 };
 
 export const useDatePicker = ({
@@ -76,6 +77,7 @@ export const useDatePicker = ({
     locale,
     calendar: temporalCalendar,
     timeZone: temporalTimeZone,
+    weekDayFormat: options.weekDayFormat || "narrow",
   };
   const weekDayLabels = useWeekDayLabels(todayZdt, localeOptions);
   const navigation = useNavigation(

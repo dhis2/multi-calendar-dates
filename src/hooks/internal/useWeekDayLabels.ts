@@ -10,6 +10,7 @@ export const useWeekDayLabels = (
     calendar: Temporal.CalendarProtocol;
     timeZone: Temporal.TimeZoneLike;
     numberingSystem?: string;
+    weekDayFormat: "narrow" | "short" | "long";
   }
 ) =>
   useMemo(() => {
@@ -29,7 +30,7 @@ export const useWeekDayLabels = (
         : currentZonedDateTime
             .toInstant()
             .toLocaleString(localeOptions.locale, {
-              weekday: "short",
+              weekday: localeOptions.weekDayFormat,
               calendar: localeOptions.calendar,
               timeZone: localeOptions.timeZone as Temporal.TimeZoneProtocol,
             });
