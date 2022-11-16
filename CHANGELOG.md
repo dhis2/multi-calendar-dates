@@ -1,3 +1,10 @@
+# [1.0.0-beta.5](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2022-11-16)
+
+
+### Bug Fixes
+
+* change useWeekDayLabels to accept a custom format for day names ([0369006](https://github.com/dhis2/multi-calendar-dates/commit/036900694aad88ed88f9b8242c537f9e01847b40))
+
 # [1.0.0-beta.4](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2022-11-15)
 
 
