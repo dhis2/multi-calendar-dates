@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Temporal } from "@js-temporal/polyfill";
-import { isoDateStringToZdt, zdtToIsoDateStr } from "../utils/conversions";
 import { useCalendarWeekDays } from "./internal/useCalendarWeekDays";
 import { useNavigation } from "./internal/useNavigation";
 import { useWeekDayLabels } from "./internal/useWeekDayLabels";
-import { SupportedNumberingSystem } from "../types";
 
 import "../date-override";
 import { isCustomCalendar } from "../utils/helpers";
 import calendarLocalisations from "../utils/calendarLocalisations";
 
 type DatePickerOptions = {
-  initialDate: string;
+  date: string;
   options: LocaleOptions;
   onDateSelect: ({
     calendarDate,
@@ -32,13 +30,13 @@ type LocaleOptions = {
 
 export const useDatePicker = ({
   onDateSelect,
-  initialDate,
+  date,
   options,
 }: DatePickerOptions) => {
   if (!options.calendar || !options.timeZone) {
     throw new Error("options should include calendar and timeZone");
   }
-  const prevDateStringRef = useRef(initialDate);
+  const prevDateStringRef = useRef(date);
   const temporalCalendar = useMemo(
     () => Temporal.Calendar.from(options.calendar),
     [options]
@@ -58,12 +56,12 @@ export const useDatePicker = ({
 
   const selectedDateZdt = useMemo(
     () =>
-      initialDate
-        ? Temporal.PlainDate.from(initialDate).toZonedDateTime({
+      date
+        ? Temporal.PlainDate.from(date).toZonedDateTime({
             timeZone: temporalTimeZone,
           })
         : null,
-    [initialDate, temporalTimeZone]
+    [date, temporalTimeZone]
   );
 
   const [firstZdtOfVisibleMonth, setFirstZdtOfVisibleMonth] = useState(() => {
@@ -97,17 +95,17 @@ export const useDatePicker = ({
   const calendarWeekDaysZdts = useCalendarWeekDays(firstZdtOfVisibleMonth);
 
   useEffect(() => {
-    if (initialDate === prevDateStringRef.current) {
+    if (date === prevDateStringRef.current) {
       return;
     }
 
-    prevDateStringRef.current = initialDate;
+    prevDateStringRef.current = date;
 
-    if (!initialDate) {
+    if (!date) {
       return;
     }
 
-    const zdt = Temporal.ZonedDateTime.from(initialDate)
+    const zdt = Temporal.ZonedDateTime.from(date)
       .withCalendar(temporalCalendar)
       .withTimeZone(temporalTimeZone);
 
@@ -119,7 +117,7 @@ export const useDatePicker = ({
       setFirstZdtOfVisibleMonth(zdt.subtract({ days: zdt.day - 1 }));
     }
   }, [
-    initialDate,
+    date,
     firstZdtOfVisibleMonth,
     calendarWeekDaysZdts,
     temporalCalendar,

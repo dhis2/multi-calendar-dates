@@ -124,4 +124,5 @@ jobs:
                   name: lib-build
 
             - name: Publish to NPM
+              # run: npx semantic-release
               run: npx @dhis2/cli-utils release --publish npm
