@@ -7,6 +7,8 @@ import { useWeekDayLabels } from "./internal/useWeekDayLabels";
 import "../date-override";
 import { isCustomCalendar } from "../utils/helpers";
 import calendarLocalisations from "../utils/calendarLocalisations";
+import { customCalendars } from "../custom-calendars";
+import { SupportedCalendar } from "../types";
 
 type DatePickerOptions = {
   date: string;
@@ -22,7 +24,7 @@ type DatePickerOptions = {
 
 type LocaleOptions = {
   locale: string;
-  calendar: Temporal.CalendarProtocol | Temporal.CalendarLike;
+  calendar: SupportedCalendar;
   timeZone: Temporal.TimeZoneLike | Temporal.TimeZoneProtocol;
   numberingSystem?: string;
   weekDayFormat?: "narrow" | "short" | "long";
@@ -33,13 +35,22 @@ export const useDatePicker = ({
   date,
   options,
 }: DatePickerOptions) => {
-  if (!options.calendar || !options.timeZone) {
-    throw new Error("options should include calendar and timeZone");
+  if (!options.calendar) {
+    throw new Error("options should include calendar");
   }
   const prevDateStringRef = useRef(date);
+
+  let calendar: Temporal.CalendarProtocol | Temporal.CalendarLike;
+
+  const { calendar: calendarFromOptions } = options;
+
+  const customCalendar = customCalendars[calendarFromOptions]?.calendar;
+
+  calendar = customCalendar || options.calendar;
+
   const temporalCalendar = useMemo(
-    () => Temporal.Calendar.from(options.calendar),
-    [options]
+    () => Temporal.Calendar.from(calendar),
+    [calendar]
   );
   const temporalTimeZone = useMemo(
     () => Temporal.TimeZone.from(options.timeZone),
