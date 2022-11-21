@@ -1,3 +1,11 @@
+# [1.0.0-beta.6](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2022-11-21)
+
+
+### Bug Fixes
+
+* change param for useDatePicker from initialDate to date ([429b2eb](https://github.com/dhis2/multi-calendar-dates/commit/429b2ebb660dfbaf77de9f1748dfa7e7fc0472ea))
+* change the api for nepali calendar to accept a string ([3a51a6f](https://github.com/dhis2/multi-calendar-dates/commit/3a51a6f6b8a48649c0588b0f7421529c3ce64eb0))
+
 # [1.0.0-beta.5](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2022-11-16)
 
 
