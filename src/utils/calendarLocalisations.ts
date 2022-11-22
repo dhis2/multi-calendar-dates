@@ -9,6 +9,7 @@ const calendarLocalisations: Record<
     numbers?: string[];
   }
 > = {
+  // these locales should follow lang-Country (lang from https://icu4c-demos.unicode.org/icu-bin/locexp and countryCode from https://www.iso.org/obp/ui/#search)
   "ne-NP": {
     monthNames: [
       "बैशाख",
@@ -61,7 +62,7 @@ const calendarLocalisations: Record<
       "३१",
     ],
   },
-  "ne-EN": {
+  "en-NP": {
     monthNames: [
       "Baisakh",
       "Jestha",
