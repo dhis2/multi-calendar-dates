@@ -3,7 +3,7 @@ const calendarLocalisations: Record<
   {
     monthNames: string[];
     monthNamesShort?: string[];
-    dayNamesShort: string[];
+    dayNamesShort: string[]; // start the array of days from Monday
     dayNames?: string[];
     dayNamesMin?: string[];
     numbers?: string[];
@@ -24,7 +24,8 @@ const calendarLocalisations: Record<
       "फागुन",
       "चैत",
     ],
-    dayNamesShort: ["आइत", "सोम", "मंगल", "बुध", "बिही", "शुक्र", "शनि"],
+    // starting from Monday
+    dayNamesShort: ["सोम", "मंगल", "बुध", "बिही", "शुक्र", "शनि", "आइत"],
     numbers: [
       "०",
       "१",
@@ -76,13 +77,13 @@ const calendarLocalisations: Record<
       "Chaitra",
     ],
     dayNamesShort: [
-      "Aaita",
       "Som",
       "Mangl",
       "Budha",
       "Bihi",
       "Shukra",
       "Shani",
+      "Aaita",
     ],
 
     monthNamesShort: [

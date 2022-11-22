@@ -82,13 +82,18 @@ export const useDatePicker = ({
 
   const { locale } = options;
 
-  const localeOptions = {
-    locale,
-    calendar: temporalCalendar,
-    timeZone: temporalTimeZone,
-    weekDayFormat: options.weekDayFormat || "narrow",
-  };
-  const weekDayLabels = useWeekDayLabels(todayZdt, localeOptions);
+  const localeOptions = useMemo(
+    () => ({
+      locale,
+      calendar: temporalCalendar,
+      timeZone: temporalTimeZone,
+      weekDayFormat: options.weekDayFormat || "narrow",
+    }),
+    [locale, temporalCalendar, temporalTimeZone, options.weekDayFormat]
+  );
+
+  const weekDayLabels = useWeekDayLabels(localeOptions);
+
   const navigation = useNavigation(
     firstZdtOfVisibleMonth,
     setFirstZdtOfVisibleMonth,

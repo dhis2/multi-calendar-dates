@@ -2,42 +2,45 @@ import { useMemo } from "react";
 import { Temporal } from "@js-temporal/polyfill";
 import "../../date-override";
 import calendarLocalisations from "../../utils/calendarLocalisations";
+import { isCustomCalendar } from "../../utils/helpers";
 
-export const useWeekDayLabels = (
-  todayZdt: Temporal.ZonedDateTime,
-  localeOptions: {
-    locale: string;
-    calendar: Temporal.CalendarProtocol;
-    timeZone: Temporal.TimeZoneLike;
-    numberingSystem?: string;
-    weekDayFormat: "narrow" | "short" | "long";
-  }
-) =>
+type LocaleOptions = {
+  locale: string;
+  calendar: Temporal.CalendarProtocol;
+  timeZone: Temporal.TimeZoneLike;
+  weekDayFormat: "narrow" | "short" | "long";
+};
+
+export const useWeekDayLabels = (localeOptions: LocaleOptions) =>
   useMemo(() => {
-    const daysInWeek = todayZdt.daysInWeek;
+    const today = Temporal.Now.zonedDateTime(localeOptions.calendar)
+      .withTimeZone(localeOptions.timeZone)
+      .startOfDay();
+
+    const startOfWeek = today.subtract({ days: today.dayOfWeek - 1 }); // dayOfWeek is 1-based, where 1 is Monday
+
     const labels = [];
-    const daysToWeekStart = todayZdt.dayOfWeek - 1;
-    let weekDay = 1;
-    let currentZonedDateTime = todayZdt.subtract({
-      days: daysToWeekStart,
-    });
 
-    while (weekDay <= daysInWeek) {
-      const weekDayString = localeOptions.locale?.startsWith("ne")
-        ? calendarLocalisations[localeOptions.locale].dayNamesShort[
-            currentZonedDateTime.dayOfWeek - 1
-          ]
-        : currentZonedDateTime
-            .toInstant()
-            .toLocaleString(localeOptions.locale, {
-              weekday: localeOptions.weekDayFormat,
-              calendar: localeOptions.calendar,
-              timeZone: localeOptions.timeZone as Temporal.TimeZoneProtocol,
-            });
+    for (let i = 0; i < today.daysInWeek; i++) {
+      const currentDate = startOfWeek.add({
+        days: i,
+      });
+
+      const weekDayString = getWeekDayString(currentDate, localeOptions);
       labels.push(weekDayString);
-      weekDay++;
-      currentZonedDateTime = currentZonedDateTime.add({ days: 1 });
     }
-
     return labels;
-  }, [todayZdt, localeOptions]);
+  }, [localeOptions]);
+
+const getWeekDayString: (
+  date: Temporal.ZonedDateTime,
+  localeOptions: LocaleOptions
+) => string = (date, { locale, weekDayFormat, timeZone, calendar }) => {
+  return isCustomCalendar(locale)
+    ? calendarLocalisations[locale].dayNamesShort[date.dayOfWeek - 1] // dayOfWeek is 1-based
+    : date.toInstant().toLocaleString(locale, {
+        weekday: weekDayFormat,
+        calendar: calendar,
+        timeZone: timeZone as Temporal.TimeZoneProtocol,
+      });
+};
