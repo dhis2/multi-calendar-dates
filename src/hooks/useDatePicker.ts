@@ -25,7 +25,7 @@ type DatePickerOptions = {
 type LocaleOptions = {
   locale: string;
   calendar: SupportedCalendar;
-  timeZone: Temporal.TimeZoneLike | Temporal.TimeZoneProtocol;
+  timeZone?: Temporal.TimeZoneLike | Temporal.TimeZoneProtocol;
   numberingSystem?: string;
   weekDayFormat?: "narrow" | "short" | "long";
 };
@@ -38,6 +38,7 @@ export const useDatePicker = ({
   if (!options.calendar) {
     throw new Error("options should include calendar");
   }
+
   const prevDateStringRef = useRef(date);
 
   let calendar: Temporal.CalendarProtocol | Temporal.CalendarLike;
@@ -53,7 +54,12 @@ export const useDatePicker = ({
     [calendar]
   );
   const temporalTimeZone = useMemo(
-    () => Temporal.TimeZone.from(options.timeZone),
+    () =>
+      Temporal.TimeZone.from(
+        options.timeZone ||
+          Intl?.DateTimeFormat?.().resolvedOptions?.()?.timeZone ||
+          "UTC"
+      ),
     [options]
   );
 
