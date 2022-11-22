@@ -1,3 +1,10 @@
+# [1.0.0-beta.8](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2022-11-22)
+
+
+### Bug Fixes
+
+* change english-nepal code to en-NP (not ne-EN) ([7e92aa4](https://github.com/dhis2/multi-calendar-dates/commit/7e92aa4efe7302aca3ad52ebd98d49a52141c15b))
+
 # [1.0.0-beta.7](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2022-11-21)
 
 
