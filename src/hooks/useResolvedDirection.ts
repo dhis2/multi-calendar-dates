@@ -28,9 +28,9 @@ type Direction = "ltr" | "rtl";
  */
 export const useResolvedDirection = (
   dir: Direction,
-  localeIdentifier: string | undefined
+  localeIdentifier: string
 ) => {
-  if (dir) {
+  if (dir && ["ltr", "rtl"].includes(dir)) {
     return dir;
   }
 
