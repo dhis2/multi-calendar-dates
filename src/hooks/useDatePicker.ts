@@ -51,6 +51,19 @@ export const useDatePicker = ({
 
   calendar = customCalendar || options.calendar;
 
+  const isCustom = isCustomCalendar(calendarFromOptions);
+
+  if (isCustom) {
+    const customLocalisations = getCustomCalendarLocales(calendar) || {};
+    const allowedLocales = Object.keys(customLocalisations);
+    if (!allowedLocales.includes(options.locale)) {
+      throw new Error(
+        `For the custom calendar "${
+          options.calendar
+        }", only specific locales are allowed: ${allowedLocales.join(", ")}`
+      );
+    }
+  }
 
   const temporalCalendar = useMemo(
     () => Temporal.Calendar.from(calendar),
