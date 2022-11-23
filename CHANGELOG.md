@@ -1,3 +1,10 @@
+# [1.0.0-beta.10](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2022-11-23)
+
+
+### Bug Fixes
+
+* throw error if non-supported locale is passed for a custom calendar ([293db88](https://github.com/dhis2/multi-calendar-dates/commit/293db88269a079d4b3977859d5f7c62a661fa0f7))
+
 # [1.0.0-beta.9](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2022-11-23)
 
 
