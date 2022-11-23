@@ -40,7 +40,7 @@ it("should return the info needed to render a calendar", () => {
   ]);
 });
 
-it.only("should return the info needed to render an Islamic calendar in Arabic", () => {
+it("should return the info needed to render an Islamic calendar in Arabic", () => {
   const onDateSelect = jest.fn();
   const date = "2018-01-22";
   const options = {
