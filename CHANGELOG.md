@@ -1,3 +1,10 @@
+# [1.0.0-beta.11](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2022-11-23)
+
+
+### Bug Fixes
+
+* use numberinSystem if provided ([b3e82fb](https://github.com/dhis2/multi-calendar-dates/commit/b3e82fba160839beeafdc78f77f601d05e48f345))
+
 # [1.0.0-beta.10](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2022-11-23)
 
 
