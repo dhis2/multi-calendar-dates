@@ -11,6 +11,7 @@ import {
   getCustomCalendarLocales,
 } from "../custom-calendars";
 import { SupportedCalendar } from "../types";
+import { numberingSystems } from "../constants";
 
 type DatePickerOptions = {
   date: string;
@@ -187,9 +188,15 @@ export const useDatePicker = ({
         zdt,
         label: isCustomCalendar(locale)
           ? customLocale?.numbers?.[zdt.day] || zdt.day
-          : zdt
-              .toInstant()
-              .toLocaleString(locale, { ...localeOptions, day: "numeric" }),
+          : zdt.toInstant().toLocaleString(locale, {
+              ...localeOptions,
+              numberingSystem: numberingSystems.includes(
+                options.numberingSystem as typeof numberingSystems[number]
+              )
+                ? options.numberingSystem
+                : undefined,
+              day: "numeric",
+            }),
         onClick: () => selectDate(zdt),
         isSelected: selectedDateZdt
           ?.withCalendar("iso8601")
