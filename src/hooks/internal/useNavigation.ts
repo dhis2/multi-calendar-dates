@@ -3,7 +3,10 @@ import { Dispatch, SetStateAction, useMemo } from "react";
 
 import "../../date-override";
 import { isCustomCalendar } from "../../utils/helpers";
-import { getCustomCalendarLocale } from "../../custom-calendars";
+import {
+  CustomCalendarTypes,
+  getCustomCalendarLocale,
+} from "../../custom-calendars";
 
 /**
  * internal hook used by useDatePicker to build the navigation of the calendar
@@ -44,42 +47,46 @@ export const useNavigation = (
       month: "long" as const,
     };
 
+    const isCustom = isCustomCalendar(
+      localeOptions.calendar.id as CustomCalendarTypes
+    );
+
     return {
       prevYear: {
-        label: isCustomCalendar(locale)
+        label: isCustom
           ? prevYear.year
           : prevYear.toInstant().toLocaleString(locale, yearNumericFormat),
         navigateTo: () => setFirstZdtOfVisibleMonth(prevYear),
       },
       currYear: {
-        label: isCustomCalendar(locale)
+        label: isCustom
           ? firstZdtOfVisibleMonth.year
           : firstZdtOfVisibleMonth
               .toInstant()
               .toLocaleString(locale, yearNumericFormat),
       },
       nextYear: {
-        label: isCustomCalendar(locale)
+        label: isCustom
           ? nextYear.year
           : nextYear.toInstant().toLocaleString(locale, yearNumericFormat),
         navigateTo: () => setFirstZdtOfVisibleMonth(nextYear),
       },
       prevMonth: {
-        label: isCustomCalendar(locale)
-          ? customLocale?.monthNames[prevMonth.month]
+        label: isCustom
+          ? customLocale?.monthNames[prevMonth.month - 1]
           : prevMonth.toInstant().toLocaleString(locale, monthFormat),
         navigateTo: () => setFirstZdtOfVisibleMonth(prevMonth),
       },
       currMonth: {
-        label: isCustomCalendar(locale)
-          ? customLocale?.monthNames[firstZdtOfVisibleMonth.month]
+        label: isCustom
+          ? customLocale?.monthNames[firstZdtOfVisibleMonth.month - 1]
           : firstZdtOfVisibleMonth
               .toInstant()
               .toLocaleString(locale, monthFormat),
       },
       nextMonth: {
-        label: isCustomCalendar(locale)
-          ? customLocale?.monthNames[nextMonth.month]
+        label: isCustom
+          ? customLocale?.monthNames[nextMonth.month - 1]
           : nextMonth.toInstant().toLocaleString(locale, monthFormat),
         navigateTo: () => setFirstZdtOfVisibleMonth(nextMonth),
       },

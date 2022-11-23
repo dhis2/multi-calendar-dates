@@ -15,7 +15,7 @@ it("should covnert from nepali calendar to gregorian", () => {
   expect(result.calendar.id).toEqual("nepali");
 });
 
-it("should covnert from gregorian calendar to nepali", () => {
+it("should convert from gregorian calendar to nepali", () => {
   const nepaliCalendar = new NepaliCalendar();
   const nepaliDate =
     Temporal.PlainDate.from("2022-10-18").withCalendar(nepaliCalendar);

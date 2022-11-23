@@ -7,6 +7,7 @@ import "../date-override";
 import { isCustomCalendar } from "../utils/helpers";
 import {
   customCalendars,
+  CustomCalendarTypes,
   getCustomCalendarLocale,
   getCustomCalendarLocales,
 } from "../custom-calendars";
@@ -91,11 +92,13 @@ export const useDatePicker = ({
   const selectedDateZdt = useMemo(
     () =>
       date
-        ? Temporal.PlainDate.from(date).toZonedDateTime({
-            timeZone: temporalTimeZone,
-          })
+        ? Temporal.PlainDate.from(date)
+            .toZonedDateTime({
+              timeZone: temporalTimeZone,
+            })
+            .withCalendar(temporalCalendar)
         : null,
-    [date, temporalTimeZone]
+    [date, temporalTimeZone, temporalCalendar]
   );
 
   const [firstZdtOfVisibleMonth, setFirstZdtOfVisibleMonth] = useState(() => {
@@ -168,11 +171,13 @@ export const useDatePicker = ({
   return {
     selectedDate: {
       zdt: selectedDateZdt,
-      label: selectedDateZdt?.toLocaleString(locale, {
-        ...localeOptions,
-        timeZone: localeOptions.timeZone.id,
-        dateStyle: "full",
-      }),
+      label: isCustom
+        ? `${selectedDateZdt?.day}-${selectedDateZdt?.month}-${selectedDateZdt?.year}`
+        : selectedDateZdt?.toLocaleString(locale, {
+            ...localeOptions,
+            timeZone: localeOptions.timeZone.id,
+            dateStyle: "full",
+          }),
     },
     today: {
       label: new window.Intl.RelativeTimeFormat(locale, {
@@ -186,7 +191,7 @@ export const useDatePicker = ({
     calendarWeekDays: calendarWeekDaysZdts.map((week) =>
       week.map((zdt) => ({
         zdt,
-        label: isCustomCalendar(locale)
+        label: isCustom
           ? customLocale?.numbers?.[zdt.day] || zdt.day
           : zdt.toInstant().toLocaleString(locale, {
               ...localeOptions,

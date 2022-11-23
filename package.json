@@ -9,9 +9,9 @@
     "@testing-library/react": "^12.1.2",
     "@testing-library/user-event": "^13.5.0",
     "@types/jest": "^27.5.2",
+    "@types/node": "^16.11.65",
     "@types/react": "16.8",
     "@types/react-dom": "16.8",
-    "@types/node": "^16.11.65",
     "classnames": "^2.3.2",
     "react-scripts": "4.0.3",
     "typescript": "^4.8.4",
@@ -55,5 +55,10 @@
     "transformIgnorePatterns": [
       "/!node_modules\\/@js-temporal/"
     ]
+  },
+  "devDependencies": {
+    "@testing-library/react-hooks": "^8.0.1",
+    "react": "16.13",
+    "react-dom": "16.13"
   }
 }

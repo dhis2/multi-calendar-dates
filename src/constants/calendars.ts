@@ -8,7 +8,7 @@ export const calendars = [
   "islamic-tbla",
   "islamic-civil",
   "islamic-rgsa",
-  "islamicc",
+  // "islamicc", this is deprecated - should use islamic-civil instead
   "persian",
   "ethiopic",
   "ethioaa",

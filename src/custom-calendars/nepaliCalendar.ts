@@ -56,6 +56,8 @@ class NepaliCalendar extends Temporal.Calendar {
       if (gregorianDayOfYear < 0) {
         gregorianDayOfYear += Temporal.PlainDate.from({
           year: gregorianYear,
+          day: 1,
+          month: 1,
         }).daysInYear;
       }
     } else {
