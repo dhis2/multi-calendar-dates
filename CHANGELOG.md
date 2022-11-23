@@ -1,3 +1,10 @@
+# [1.0.0-beta.13](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2022-11-23)
+
+
+### Bug Fixes
+
+* remove .only for tests ([72fa7e5](https://github.com/dhis2/multi-calendar-dates/commit/72fa7e5c34cf0ec4e9a2f2ccfd7e705c480d1257))
+
 # [1.0.0-beta.12](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2022-11-23)
 
 
