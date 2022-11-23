@@ -1,3 +1,11 @@
+# [1.0.0-beta.9](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2022-11-23)
+
+
+### Bug Fixes
+
+* default to user timezone or UTC if no timezone passed ([e9c34e1](https://github.com/dhis2/multi-calendar-dates/commit/e9c34e14e0c3f6a7ab59ba7ecdf74959ddf0cc95))
+* ensure that direction is either rtl or ltr ([4a92e91](https://github.com/dhis2/multi-calendar-dates/commit/4a92e91b979c4791613f50ca88c1a4d72a45e9c3))
+
 # [1.0.0-beta.8](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2022-11-22)
 
 
