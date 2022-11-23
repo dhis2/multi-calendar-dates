@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { Temporal } from "@js-temporal/polyfill";
 import "../../date-override";
-import calendarLocalisations from "../../utils/calendarLocalisations";
 import { isCustomCalendar } from "../../utils/helpers";
+import { getCustomCalendarLocale } from "../../custom-calendars";
 
 type LocaleOptions = {
   locale: string;
@@ -36,8 +36,11 @@ const getWeekDayString: (
   date: Temporal.ZonedDateTime,
   localeOptions: LocaleOptions
 ) => string = (date, { locale, weekDayFormat, timeZone, calendar }) => {
-  return isCustomCalendar(locale)
-    ? calendarLocalisations[locale].dayNamesShort[date.dayOfWeek - 1] // dayOfWeek is 1-based
+  const customCalendar = getCustomCalendarLocale(calendar, locale);
+  const customDayString = customCalendar?.dayNamesShort[date.dayOfWeek - 1]; // dayOfWeek is 1-based
+
+  return isCustomCalendar(locale) && customDayString
+    ? customDayString
     : date.toInstant().toLocaleString(locale, {
         weekday: weekDayFormat,
         calendar: calendar,

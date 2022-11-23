@@ -3,11 +3,13 @@ import { Temporal } from "@js-temporal/polyfill";
 import { useCalendarWeekDays } from "./internal/useCalendarWeekDays";
 import { useNavigation } from "./internal/useNavigation";
 import { useWeekDayLabels } from "./internal/useWeekDayLabels";
-
 import "../date-override";
 import { isCustomCalendar } from "../utils/helpers";
-import calendarLocalisations from "../utils/calendarLocalisations";
-import { customCalendars } from "../custom-calendars";
+import {
+  customCalendars,
+  getCustomCalendarLocale,
+  getCustomCalendarLocales,
+} from "../custom-calendars";
 import { SupportedCalendar } from "../types";
 
 type DatePickerOptions = {
@@ -48,6 +50,7 @@ export const useDatePicker = ({
   const customCalendar = customCalendars[calendarFromOptions]?.calendar;
 
   calendar = customCalendar || options.calendar;
+
 
   const temporalCalendar = useMemo(
     () => Temporal.Calendar.from(calendar),
@@ -146,6 +149,8 @@ export const useDatePicker = ({
     temporalTimeZone,
   ]);
 
+  const customLocale = getCustomCalendarLocale(calendar, locale);
+
   return {
     selectedDate: {
       zdt: selectedDateZdt,
@@ -168,9 +173,7 @@ export const useDatePicker = ({
       week.map((zdt) => ({
         zdt,
         label: isCustomCalendar(locale)
-          ? calendarLocalisations[locale].numbers
-            ? calendarLocalisations[locale].numbers?.[zdt.day]
-            : zdt.day
+          ? customLocale?.numbers?.[zdt.day] || zdt.day
           : zdt
               .toInstant()
               .toLocaleString(locale, { ...localeOptions, day: "numeric" }),

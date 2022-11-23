@@ -61,16 +61,17 @@ const groupByWeek = (
 };
 
 /**
- * internal hook used by useDatePicker hook to return the week days in a calendar
+ * internal hook used by useDatePicker hook to return the week days numbers in a calendar
  * @param dayZdt
  * @returns
  */
 export const useCalendarWeekDays = (dayZdt: Temporal.ZonedDateTime) =>
-  useMemo(
-    () =>
-      [...getPriorZdts(dayZdt), dayZdt, ...getSubsequentZdts(dayZdt)].reduce(
-        groupByWeek,
-        []
-      ),
-    [dayZdt]
-  );
+  useMemo(() => {
+    const dates = [
+      ...getPriorZdts(dayZdt),
+      dayZdt,
+      ...getSubsequentZdts(dayZdt),
+    ].reduce(groupByWeek, []);
+
+    return dates;
+  }, [dayZdt]);

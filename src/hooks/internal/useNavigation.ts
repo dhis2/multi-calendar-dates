@@ -2,8 +2,8 @@ import { Temporal } from "@js-temporal/polyfill"; // eslint-disable-line
 import { Dispatch, SetStateAction, useMemo } from "react";
 
 import "../../date-override";
-import calendarLocalisations from "../../utils/calendarLocalisations";
 import { isCustomCalendar } from "../../utils/helpers";
+import { getCustomCalendarLocale } from "../../custom-calendars";
 
 /**
  * internal hook used by useDatePicker to build the navigation of the calendar
@@ -28,6 +28,11 @@ export const useNavigation = (
     const nextMonth = firstZdtOfVisibleMonth.add({ months: 1 });
 
     const { locale, ...otherLocaleOptions } = localeOptions;
+
+    const customLocale = getCustomCalendarLocale(
+      localeOptions.calendar,
+      localeOptions.locale
+    );
 
     const yearNumericFormat = {
       ...otherLocaleOptions,
@@ -61,22 +66,20 @@ export const useNavigation = (
       },
       prevMonth: {
         label: isCustomCalendar(locale)
-          ? calendarLocalisations[locale].monthNames[prevMonth.month]
+          ? customLocale?.monthNames[prevMonth.month]
           : prevMonth.toInstant().toLocaleString(locale, monthFormat),
         navigateTo: () => setFirstZdtOfVisibleMonth(prevMonth),
       },
       currMonth: {
         label: isCustomCalendar(locale)
-          ? calendarLocalisations[locale].monthNames[
-              firstZdtOfVisibleMonth.month
-            ]
+          ? customLocale?.monthNames[firstZdtOfVisibleMonth.month]
           : firstZdtOfVisibleMonth
               .toInstant()
               .toLocaleString(locale, monthFormat),
       },
       nextMonth: {
         label: isCustomCalendar(locale)
-          ? calendarLocalisations[locale].monthNames[nextMonth.month]
+          ? customLocale?.monthNames[nextMonth.month]
           : nextMonth.toInstant().toLocaleString(locale, monthFormat),
         navigateTo: () => setFirstZdtOfVisibleMonth(nextMonth),
       },
