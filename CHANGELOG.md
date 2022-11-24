@@ -1,3 +1,10 @@
+# [1.0.0-beta.14](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.13...v1.0.0-beta.14) (2022-11-24)
+
+
+### Bug Fixes
+
+* force a publish ([feec6c2](https://github.com/dhis2/multi-calendar-dates/commit/feec6c28fd7b49febaa6a8ed98a6fe92979a6704))
+
 # [1.0.0-beta.13](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2022-11-23)
 
 
