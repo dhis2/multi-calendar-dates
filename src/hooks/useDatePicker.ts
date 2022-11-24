@@ -7,7 +7,6 @@ import "../date-override";
 import { isCustomCalendar } from "../utils/helpers";
 import {
   customCalendars,
-  CustomCalendarTypes,
   getCustomCalendarLocale,
   getCustomCalendarLocales,
 } from "../custom-calendars";
@@ -114,8 +113,15 @@ export const useDatePicker = ({
       calendar: temporalCalendar,
       timeZone: temporalTimeZone,
       weekDayFormat: options.weekDayFormat || "narrow",
+      numberingSystem: options.numberingSystem,
     }),
-    [locale, temporalCalendar, temporalTimeZone, options.weekDayFormat]
+    [
+      locale,
+      temporalCalendar,
+      temporalTimeZone,
+      options.weekDayFormat,
+      options.numberingSystem,
+    ]
   );
 
   const weekDayLabels = useWeekDayLabels(localeOptions);

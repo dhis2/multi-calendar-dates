@@ -40,6 +40,7 @@ export const useNavigation = (
     const yearNumericFormat = {
       ...otherLocaleOptions,
       year: "numeric" as const,
+      numberingSystem: localeOptions.numberingSystem,
     };
 
     const monthFormat = {
