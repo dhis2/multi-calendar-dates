@@ -27,7 +27,7 @@ type DatePickerOptions = {
 
 type LocaleOptions = {
   locale: string;
-  calendar: SupportedCalendar;
+  calendar?: SupportedCalendar;
   timeZone?: Temporal.TimeZoneLike | Temporal.TimeZoneProtocol;
   numberingSystem?: string;
   weekDayFormat?: "narrow" | "short" | "long";
@@ -38,18 +38,14 @@ export const useDatePicker = ({
   date,
   options,
 }: DatePickerOptions) => {
-  if (!options.calendar) {
-    throw new Error("options should include calendar");
-  }
-
   const prevDateStringRef = useRef(date);
 
-  const { calendar: calendarFromOptions } = options;
+  const { calendar: calendarFromOptions = "iso8601" } = options;
 
   const customCalendar = customCalendars[calendarFromOptions]?.calendar;
 
   const calendar: Temporal.CalendarProtocol | Temporal.CalendarLike =
-    customCalendar || options.calendar;
+    customCalendar || options.calendar || "iso8601";
 
   const isCustom = isCustomCalendar(calendarFromOptions);
 

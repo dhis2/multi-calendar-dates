@@ -29,8 +29,8 @@ describe("useDatePicker hook", () => {
       const date = "2018-01-22";
       const options = {
         locale: "en-GB",
-        calendar: "iso8601" as const,
         timeZone: "Africa/Khartoum",
+        // no calendar means it should default to iso8601
       };
       const { result } = renderHook(() =>
         useDatePicker({ onDateSelect, date, options })
