@@ -15,7 +15,8 @@ class NepaliCalendar extends Temporal.Calendar {
   }
 
   _nepaliToIso(fields: { day: number; year: number; month: number }) {
-    let { year: nepaliYear, month: nepaliMonth, day: nepaliDay } = fields;
+    let { year: nepaliYear } = fields;
+    const { month: nepaliMonth, day: nepaliDay } = fields;
 
     let gregorianDayOfYear = 0;
 
@@ -89,7 +90,7 @@ class NepaliCalendar extends Temporal.Calendar {
       | string
   ) => {
     // make sure this is iso8601
-    let gregorianDate =
+    const gregorianDate =
       Temporal.PlainDate.from(isoDate).withCalendar("iso8601");
 
     const gregorianYear = gregorianDate.year;
@@ -180,11 +181,11 @@ class NepaliCalendar extends Temporal.Calendar {
   }
   monthCode(date: Temporal.PlainDate | Temporal.PlainDateLike) {
     const { month } = this._isoToNepali(date);
-    return buildMonthCode(month!)!;
+    return buildMonthCode(month);
   }
   day(date: Temporal.PlainDate | Temporal.PlainDateLike) {
     const { day } = this._isoToNepali(date);
-    return day!;
+    return day;
   }
   /**
    *  A custom implementation of these methods (dateFromFields, yearMonthFromFields, monthDayFromFields)

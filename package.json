@@ -5,17 +5,8 @@
   "private": false,
   "dependencies": {
     "@js-temporal/polyfill": "^0.4.2",
-    "@testing-library/jest-dom": "^5.16.5",
-    "@testing-library/react": "^12.1.2",
-    "@testing-library/user-event": "^13.5.0",
-    "@types/jest": "^27.5.2",
-    "@types/node": "^16.11.65",
-    "@types/react": "16.8",
-    "@types/react-dom": "16.8",
     "classnames": "^2.3.2",
-    "react-scripts": "4.0.3",
-    "typescript": "^4.8.4",
-    "web-vitals": "^2.1.4"
+    "react-scripts": "4.0.3"
   },
   "peerDependencies": {
     "react": "16.8",
@@ -26,7 +17,10 @@
     "build": "tsc",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "lint": "echo ====todo===="
+    "lint": "yarn d2-style check \"src/**\"",
+    "lint:staged": "yarn lint --staged",
+    "format": "yarn d2-style apply",
+    "format:staged": "yarn format --staged"
   },
   "eslintConfig": {
     "extends": [
@@ -46,8 +40,8 @@
       "last 1 safari version"
     ]
   },
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "main": "lib/main.js",
+  "types": "lib/main.d.ts",
   "files": [
     "/lib"
   ],
@@ -57,8 +51,17 @@
     ]
   },
   "devDependencies": {
+    "@dhis2/cli-style": "^10.4.3",
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^12.1.2",
     "@testing-library/react-hooks": "^8.0.1",
+    "@testing-library/user-event": "^13.5.0",
+    "@types/jest": "^27.5.2",
+    "@types/node": "^16.11.65",
+    "@types/react": "16.8",
+    "@types/react-dom": "16.8",
     "react": "16.13",
-    "react-dom": "16.13"
+    "react-dom": "16.13",
+    "typescript": "4.4"
   }
 }

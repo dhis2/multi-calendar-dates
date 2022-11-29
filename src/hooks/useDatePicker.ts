@@ -1,17 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Temporal } from "@js-temporal/polyfill";
-import { useCalendarWeekDays } from "./internal/useCalendarWeekDays";
-import { useNavigation } from "./internal/useNavigation";
-import { useWeekDayLabels } from "./internal/useWeekDayLabels";
-import "../date-override";
-import { isCustomCalendar } from "../utils/helpers";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { numberingSystems } from "../constants";
 import {
   customCalendars,
   getCustomCalendarLocale,
   getCustomCalendarLocales,
 } from "../custom-calendars";
 import { SupportedCalendar } from "../types";
-import { numberingSystems } from "../constants";
+import { isCustomCalendar } from "../utils/helpers";
+import { useCalendarWeekDays } from "./internal/useCalendarWeekDays";
+import { useNavigation } from "./internal/useNavigation";
+import { useWeekDayLabels } from "./internal/useWeekDayLabels";
+import "../date-override";
 
 type DatePickerOptions = {
   date: string;
@@ -44,13 +44,12 @@ export const useDatePicker = ({
 
   const prevDateStringRef = useRef(date);
 
-  let calendar: Temporal.CalendarProtocol | Temporal.CalendarLike;
-
   const { calendar: calendarFromOptions } = options;
 
   const customCalendar = customCalendars[calendarFromOptions]?.calendar;
 
-  calendar = customCalendar || options.calendar;
+  const calendar: Temporal.CalendarProtocol | Temporal.CalendarLike =
+    customCalendar || options.calendar;
 
   const isCustom = isCustomCalendar(calendarFromOptions);
 

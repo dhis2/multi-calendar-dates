@@ -1,12 +1,11 @@
-import { Temporal } from "@js-temporal/polyfill"; // eslint-disable-line
+import { Temporal } from "@js-temporal/polyfill";
 import { Dispatch, SetStateAction, useMemo } from "react";
-
-import "../../date-override";
-import { isCustomCalendar } from "../../utils/helpers";
 import {
   CustomCalendarTypes,
   getCustomCalendarLocale,
 } from "../../custom-calendars";
+import { isCustomCalendar } from "../../utils/helpers";
+import "../../date-override";
 
 /**
  * internal hook used by useDatePicker to build the navigation of the calendar
