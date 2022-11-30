@@ -1,3 +1,11 @@
+# [1.0.0-beta.15](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.14...v1.0.0-beta.15) (2022-11-30)
+
+
+### Bug Fixes
+
+* force npm publish ([2ce77b3](https://github.com/dhis2/multi-calendar-dates/commit/2ce77b3e920788b955dc243570e9b4816a3200db))
+* put pack semantic-release config ([4ae3f4c](https://github.com/dhis2/multi-calendar-dates/commit/4ae3f4cf848a7c736b12809a2bc4cb1f41f8ad11))
+
 # [1.0.0-beta.14](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.13...v1.0.0-beta.14) (2022-11-24)
 
 
