@@ -7,13 +7,31 @@ import {
 import { isCustomCalendar } from "../../utils/helpers";
 import "../../date-override";
 
-/**
- * internal hook used by useDatePicker to build the navigation of the calendar
- *
- * @param options
- * @returns
- */
-export const useNavigation = (
+export type UseNavigationReturnType = {
+  prevYear: {
+    label: string | number;
+    navigateTo: () => void;
+  };
+  currYear: {
+    label: string | number;
+  };
+  nextYear: {
+    label: string | number;
+    navigateTo: () => void;
+  };
+  prevMonth: {
+    label: string | undefined;
+    navigateTo: () => void;
+  };
+  currMonth: {
+    label: string | undefined;
+  };
+  nextMonth: {
+    label: string | undefined;
+    navigateTo: () => void;
+  };
+};
+type UseNavigationHook = (
   firstZdtOfVisibleMonth: Temporal.ZonedDateTime,
   setFirstZdtOfVisibleMonth: Dispatch<SetStateAction<Temporal.ZonedDateTime>>,
   localeOptions: {
@@ -22,6 +40,17 @@ export const useNavigation = (
     timeZone: Temporal.TimeZoneProtocol;
     numberingSystem?: string;
   }
+) => UseNavigationReturnType;
+/**
+ * internal hook used by useDatePicker to build the navigation of the calendar
+ *
+ * @param options
+ * @returns
+ */
+export const useNavigation: UseNavigationHook = (
+  firstZdtOfVisibleMonth,
+  setFirstZdtOfVisibleMonth,
+  localeOptions
 ) => {
   return useMemo(() => {
     const prevYear = firstZdtOfVisibleMonth.subtract({ years: 1 });

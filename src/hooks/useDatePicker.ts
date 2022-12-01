@@ -9,7 +9,10 @@ import {
 import { SupportedCalendar } from "../types";
 import { isCustomCalendar } from "../utils/helpers";
 import { useCalendarWeekDays } from "./internal/useCalendarWeekDays";
-import { useNavigation } from "./internal/useNavigation";
+import {
+  useNavigation,
+  UseNavigationReturnType,
+} from "./internal/useNavigation";
 import { useWeekDayLabels } from "./internal/useWeekDayLabels";
 import "../date-override";
 
@@ -33,11 +36,35 @@ type LocaleOptions = {
   weekDayFormat?: "narrow" | "short" | "long";
 };
 
-export const useDatePicker = ({
+export type UseDatePickerReturn = UseNavigationReturnType & {
+  weekDayLabels: string[];
+  selectedDate: {
+    zdt: Temporal.ZonedDateTime | null;
+    label: string | undefined;
+  };
+  today: {
+    label: string;
+    navigateTo: () => void;
+  };
+  calendarWeekDays: {
+    zdt: Temporal.ZonedDateTime;
+    label: string | number;
+    onClick: () => void;
+    isSelected: boolean | undefined;
+    isToday: boolean;
+    isInCurrentMonth: boolean;
+  }[][];
+};
+
+type UseDatePickerHookType = (
+  options: DatePickerOptions
+) => UseDatePickerReturn;
+
+export const useDatePicker: UseDatePickerHookType = ({
   onDateSelect,
   date,
   options,
-}: DatePickerOptions) => {
+}) => {
   const prevDateStringRef = useRef(date);
 
   const { calendar: calendarFromOptions = "iso8601" } = options;
@@ -174,11 +201,13 @@ export const useDatePicker = ({
       zdt: selectedDateZdt,
       label: isCustom
         ? `${selectedDateZdt?.day}-${selectedDateZdt?.month}-${selectedDateZdt?.year}`
-        : selectedDateZdt?.toLocaleString(locale, {
-            ...localeOptions,
-            timeZone: localeOptions.timeZone.id,
-            dateStyle: "full",
-          }),
+        : selectedDateZdt
+            ?.toLocaleString(locale, {
+              ...localeOptions,
+              timeZone: localeOptions.timeZone.id,
+              dateStyle: "full",
+            })
+            .toString(),
     },
     today: {
       label: new window.Intl.RelativeTimeFormat(locale, {
