@@ -1,3 +1,10 @@
+# [1.0.0-beta.16](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.15...v1.0.0-beta.16) (2022-12-01)
+
+
+### Bug Fixes
+
+* force npm publish ([6b7fbf3](https://github.com/dhis2/multi-calendar-dates/commit/6b7fbf3227e1254b7fe651c49d118a258470a9f4))
+
 # [1.0.0-beta.15](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.14...v1.0.0-beta.15) (2022-11-30)
 
 
