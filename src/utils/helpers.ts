@@ -8,6 +8,9 @@ export const isCustomCalendar = (calendar: SupportedCalendar) =>
 export const padWithZeroes = (number: number, count = 2) =>
   String(number).padStart(count, "0");
 
+export const capitalize = (string: string) =>
+  string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+
 export const getCustomCalendarIfExists = (
   calendar: SupportedCalendar,
   locale: string

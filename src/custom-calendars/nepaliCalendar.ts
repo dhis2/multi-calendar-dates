@@ -166,9 +166,6 @@ class NepaliCalendar extends Temporal.Calendar {
   ) {
     return this._isoToNepali(date)?.year;
   }
-  nepaliMonth() {
-    throw "not implemented";
-  }
   daysInMonth(
     date:
       | string

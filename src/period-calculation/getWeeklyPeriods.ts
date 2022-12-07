@@ -1,5 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { padWithZeroes } from "../utils/helpers";
+import { capitalize, padWithZeroes } from "../utils/helpers";
 import { GeneratedPeriodsFunc, PeriodIdentifier } from "./fixed-periods";
 
 const Days = {
@@ -25,7 +25,7 @@ const getStartingDay = (periodType: PeriodIdentifier) => {
     case "WEEKLYWED":
       return Days.Wednesday;
     default:
-      throw `unrecoginsed weekly period: ${periodType}`;
+      throw new Error(`unrecoginsed weekly period type: ${periodType}`);
   }
 };
 export const getWeeklyPeriods: GeneratedPeriodsFunc = ({
@@ -43,9 +43,6 @@ export const getWeeklyPeriods: GeneratedPeriodsFunc = ({
 
   const startingDay = getStartingDay(periodType);
 
-  // date.dayOfWeek = Saturday = 6 => 1/1
-  // startingDay = Wednesday = 3
-  // calculated
   if (date.dayOfWeek !== startingDay) {
     let diff = 7 - date.dayOfWeek + startingDay;
     if (diff > 3) {
@@ -76,8 +73,6 @@ const buildValue = (
   year: number,
   weekIndex: number
 ) => {
-  const capitalize = (string: string) =>
-    string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
   const dayPrefix =
     periodType === "WEEKLY" ? "" : capitalize(periodType.replace("WEEKLY", ""));
 
