@@ -5,6 +5,9 @@ import { SupportedCalendar } from "../types";
 export const isCustomCalendar = (calendar: SupportedCalendar) =>
   !!customCalendars[calendar as CustomCalendarTypes];
 
+export const padWithZeroes = (number: number, count = 2) =>
+  String(number).padStart(count, "0");
+
 export const getCustomCalendarIfExists = (
   calendar: SupportedCalendar,
   locale: string
