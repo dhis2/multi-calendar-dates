@@ -99,7 +99,7 @@ jobs:
                   key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
 
             - name: Test
-              run: yarn test
+              run: yarn test && yarn cucumber
 
     publish:
         runs-on: ubuntu-latest
