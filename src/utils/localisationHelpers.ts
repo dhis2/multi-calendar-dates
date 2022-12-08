@@ -100,7 +100,23 @@ export const localiseWeekDayLabel = (
         timeZone: localeOptions.timeZone,
       });
 };
+
+export const localiseYear = (
+  zdt: Temporal.ZonedDateTime,
+  localeOptions: LocaleOptions,
+  format: Intl.DateTimeFormatOptions
+) => {
+  if (!localeOptions.calendar) {
+    throw new Error("no calendar provided to localise function");
+  }
+  const isCustom = isCustomCalendar(localeOptions.calendar);
+
+  return isCustom
+    ? zdt.year
+    : zdt.toInstant().toLocaleString(localeOptions.locale, format);
+};
 const localisationHelpers = {
+  localiseYear,
   localiseDateLabel,
   localiseWeekLabel,
   localiseMonth,

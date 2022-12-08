@@ -1,7 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { Dispatch, SetStateAction, useMemo } from "react";
-import { CustomCalendarTypes } from "../../custom-calendars";
-import { isCustomCalendar } from "../../utils/helpers";
 import "../../date-override";
 import localisationHelpers from "../../utils/localisationHelpers";
 
@@ -69,28 +67,28 @@ export const useNavigation: UseNavigationHook = (
       month: "long" as const,
     };
 
-    const isCustom = isCustomCalendar(
-      localeOptions.calendar.id as CustomCalendarTypes
-    );
-
     return {
       prevYear: {
-        label: isCustom
-          ? prevYear.year
-          : prevYear.toInstant().toLocaleString(locale, yearNumericFormat),
+        label: localisationHelpers.localiseYear(
+          prevYear,
+          localeOptions,
+          yearNumericFormat
+        ),
         navigateTo: () => setFirstZdtOfVisibleMonth(prevYear),
       },
       currYear: {
-        label: isCustom
-          ? firstZdtOfVisibleMonth.year
-          : firstZdtOfVisibleMonth
-              .toInstant()
-              .toLocaleString(locale, yearNumericFormat),
+        label: localisationHelpers.localiseYear(
+          firstZdtOfVisibleMonth,
+          localeOptions,
+          yearNumericFormat
+        ),
       },
       nextYear: {
-        label: isCustom
-          ? nextYear.year
-          : nextYear.toInstant().toLocaleString(locale, yearNumericFormat),
+        label: localisationHelpers.localiseYear(
+          nextYear,
+          localeOptions,
+          yearNumericFormat
+        ),
         navigateTo: () => setFirstZdtOfVisibleMonth(nextYear),
       },
       prevMonth: {
