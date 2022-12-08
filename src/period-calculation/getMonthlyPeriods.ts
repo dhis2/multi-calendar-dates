@@ -7,7 +7,7 @@ export const getMonthlyPeriods: GeneratedPeriodsFunc = ({
   year,
   calendar,
   periodType,
-  locale,
+  locale = "en",
 }) => {
   let currentMonth = Temporal.PlainYearMonth.from({
     year,
@@ -20,22 +20,30 @@ export const getMonthlyPeriods: GeneratedPeriodsFunc = ({
   const monthToAdd = getMonthsToAdd(periodType);
 
   let index = 1;
-  while (currentMonth.year === year) {
+
+  while (
+    currentMonth.year === year ||
+    needsExtraMonth(periodType, months.length)
+  ) {
     const nextMonth = currentMonth.add({ months: monthToAdd });
-    months.push({
-      label: buildLabel({
-        periodType,
-        month: currentMonth,
-        locale,
-        calendar,
-        nextMonth: nextMonth.subtract({ months: 1 }), // when we display, we want to show the range using previous month
-        index,
-      }),
-      value: buildValue(periodType, currentMonth, index),
-    });
+    if (!ignoreMonth(calendar, currentMonth)) {
+      months.push({
+        label: buildLabel({
+          periodType,
+          month: currentMonth,
+          locale,
+          calendar,
+          nextMonth: nextMonth.subtract({ months: 1 }), // when we display, we want to show the range using previous month
+          index,
+        }),
+        value: buildValue({ periodType, currentMonth, year, index }),
+      });
+    }
+
     currentMonth = Temporal.PlainYearMonth.from(nextMonth);
     index++;
   }
+
   return months;
 };
 
@@ -48,26 +56,46 @@ type BuildLabelFunc = (options: {
   calendar: SupportedCalendar;
 }) => string;
 
-const buildValue = (
-  periodType: PeriodIdentifier,
-  currentMonth: Temporal.PlainYearMonth,
-  index: number
+/**
+ * special cases where we ignore a month
+ */
+const ignoreMonth = (
+  calendar: SupportedCalendar,
+  date: Temporal.PlainYearMonth
 ) => {
+  // in Ethiopic calendar, for periods more than bi-weekly, we ignore the 13th month
+  if (calendar === "ethiopic" && date.month === 13) {
+    return true;
+  }
+  return false;
+};
+
+const buildValue: (options: {
+  periodType: PeriodIdentifier;
+  currentMonth: Temporal.PlainYearMonth;
+  year: number;
+  index: number;
+}) => string = ({ periodType, currentMonth, year, index }) => {
   if (periodType === "BIMONTHLY") {
-    return `${currentMonth.year}${padWithZeroes(index)}B`;
+    return `${year}${padWithZeroes(index)}B`;
   }
   if (periodType === "QUARTERLY") {
-    return `${currentMonth.year}Q${index}`;
+    return `${year}Q${index}`;
   }
   if (periodType === "SIXMONTHLY") {
-    return `${currentMonth.year}S${index}`;
+    return `${year}S${index}`;
+  }
+
+  if (periodType.match(/QUARTERLY/)) {
+    const month = getMonthInfo(periodType)?.name;
+    return `${year}${month}Q${index}`;
   }
 
   if (periodType.match(/SIXMONTHLY/)) {
     const month = getMonthInfo(periodType)?.name;
-    return `${currentMonth.year}${month}S${index}`;
+    return `${year}${month}S${index}`;
   }
-  return `${currentMonth.year}${padWithZeroes(currentMonth.month)}`;
+  return `${year}${padWithZeroes(currentMonth.month)}`;
 };
 
 const buildLabel: BuildLabelFunc = ({
@@ -91,7 +119,7 @@ const buildLabel: BuildLabelFunc = ({
 
   if (
     ["BIMONTHLY", "QUARTERLY", "SIXMONTHLY"].includes(periodType) ||
-    periodType.match(/SIXMONTHLY/)
+    periodType.match(/SIXMONTHLY|QUARTERLY/)
   ) {
     const format =
       month.year === nextMonth.year ? monthOnlyFormat : withYearFormat;
@@ -104,7 +132,7 @@ const buildLabel: BuildLabelFunc = ({
   }
 
   // needed for ethiopic calendar - the default formatter adds the era, which is what we want at DHIS
-  result = result.replace(/ERA\d+$/, "").trim();
+  result = result.replace(/ERA\d+\s*/g, "").trim();
   return result;
 };
 
@@ -112,18 +140,17 @@ const getMonthsToAdd = (periodType: PeriodIdentifier) => {
   if (periodType?.match(/SIXMONTHLY/)) {
     return 6;
   }
-  switch (periodType) {
-    case "MONTHLY":
-      return 1;
-    case "BIMONTHLY":
-      return 2;
-    case "QUARTERLY":
-      return 3;
-    case "SIXMONTHLY":
-      return 6;
-    default:
-      throw new Error(`unrecognised monthly period type ${periodType}`);
+  if (periodType?.match(/QUARTERLY/)) {
+    return 3;
   }
+  if (periodType === "MONTHLY") {
+    return 1;
+  }
+  if (periodType === "BIMONTHLY") {
+    return 2;
+  }
+
+  throw new Error(`unrecognised monthly period type ${periodType}`);
 };
 
 const monthNumbers = {
@@ -142,13 +169,15 @@ const monthNumbers = {
 };
 
 const getMonthInfo = (periodType: PeriodIdentifier) => {
-  const monthString = periodType.replace("SIXMONTHLY", "");
+  const monthString = periodType
+    .replace("SIXMONTHLY", "")
+    .replace("QUARTERLY", "");
 
   return monthNumbers[monthString as keyof typeof monthNumbers];
 };
 const getStartingMonth = (periodType: PeriodIdentifier): number => {
-  if (periodType.match(/SIXMONTHLY/)) {
-    if (periodType === "SIXMONTHLY") {
+  if (periodType.match(/SIXMONTHLY|QUARTERLY/)) {
+    if (periodType === "SIXMONTHLY" || periodType === "QUARTERLY") {
       return 1;
     } else {
       return getMonthInfo(periodType)?.value ?? 1;
@@ -157,3 +186,12 @@ const getStartingMonth = (periodType: PeriodIdentifier): number => {
     return 1;
   }
 };
+function needsExtraMonth(periodType: PeriodIdentifier, length: number) {
+  if (periodType.match(/SIXMONTHLY/)) {
+    return length < 2;
+  }
+  if (periodType.match(/QUARTERLY/)) {
+    return length < 4;
+  }
+  return false;
+}

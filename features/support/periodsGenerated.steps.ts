@@ -3,13 +3,19 @@ import { When, Then } from "@cucumber/cucumber";
 import generateFixedPeriods, {
   PeriodIdentifier,
 } from "../../src/period-calculation/fixed-periods";
-import { MyWorld } from "./features.types";
+import { SupportedCalendar } from "../../src/types";
 
 type DataTable = {
   periodIndex: number;
   periodLabel: string;
   periodValue: string;
 }[];
+
+interface MyWorld {
+  calendar: SupportedCalendar;
+  year: number;
+  periodType: PeriodIdentifier;
+}
 
 When(
   "the user requests {string} periods for {string}",

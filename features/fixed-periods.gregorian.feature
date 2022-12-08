@@ -1,7 +1,9 @@
 Feature: Gregorian Calendar fixed periods
+    Background: Set Calendar
+        Given the calendar type is "gregory"
 
-    Scenario: Fixed Periods for Gregorian Calendar
-        Given the calendar type is gregory
+    Scenario:  Number of generated periods
+        Given the calendar type is "gregory"
         When a year is provided along a period
             | year | periodType    | periodCount |
             | 2022 | MONTHLY       | 12          |
@@ -20,17 +22,16 @@ Feature: Gregorian Calendar fixed periods
             | 2022 | FYNOV         | 10          |
         Then the correct number of periods should be generated
 
-    Scenario: Generate monthly fixed Periods
-        # Given the calendar type is gregory
-        # When the user requests "monthly" periods for "2022"
-        # Then the dates for the period type should be generated
-        #     | periodIndex | periodLabel   | periodValue |
-        #     | 1           | January 2022  | 202201      |
-        #     | 2           | February 2022 | 202202      |
-        #     | 11          | November 2022 | 202211      |
-        #     | 12          | December 2022 | 202212      |
+    Scenario: Generate monthly Periods
+        When the user requests "monthly" periods for "2022"
+        Then the dates for the period type should be generated
+            | periodIndex | periodLabel   | periodValue |
+            | 1           | January 2022  | 202201      |
+            | 2           | February 2022 | 202202      |
+            | 11          | November 2022 | 202211      |
+            | 12          | December 2022 | 202212      |
 
-        Given the calendar type is gregory
+    Scenario: Generate daily Periods
         When the user requests "daily" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel | periodValue |
@@ -41,14 +42,13 @@ Feature: Gregorian Calendar fixed periods
             | 365         | 2022-12-31  | 20221231    |
 
         # leap year
-        Given the calendar type is gregory
         When the user requests "daily" periods for "2020"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel | periodValue |
             | 366         | 2020-12-31  | 20201231    |
 
+    Scenario: Generate Weekly Periods (no start day provided - means starting Monday)
         # Weekly (no start day - means starting Monday)
-        Given the calendar type is gregory
         When the user requests "weekly" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
@@ -58,8 +58,8 @@ Feature: Gregorian Calendar fixed periods
             | 51          | Week 51 - 2022-12-19 - 2022-12-25 | 2022W51     |
             | 52          | Week 52 - 2022-12-26 - 2023-01-01 | 2022W52     |
 
+    Scenario: Generate Weekly Periods (Starting Wednesday)
         # Weekly starting Wednesday
-        Given the calendar type is gregory
         When the user requests "WEEKLYWED" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
@@ -70,8 +70,7 @@ Feature: Gregorian Calendar fixed periods
             | 52          | Week 52 - 2022-12-21 - 2022-12-27 | 2022WedW52  |
             | 53          | Week 53 - 2022-12-28 - 2023-01-03 | 2022WedW53  |
 
-        # Weekly starting Thursday
-        Given the calendar type is gregory
+    Scenario: Generate Weekly Periods (Starting Thursday)
         When the user requests "WEEKLYTHU" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
@@ -81,8 +80,8 @@ Feature: Gregorian Calendar fixed periods
             | 50          | Week 50 - 2022-12-08 - 2022-12-14 | 2022ThuW50  |
             | 51          | Week 51 - 2022-12-15 - 2022-12-21 | 2022ThuW51  |
             | 52          | Week 52 - 2022-12-22 - 2022-12-28 | 2022ThuW52  |
-        # Weekly starting Saturday
-        Given the calendar type is gregory
+
+    Scenario: Generate Weekly Periods (Starting Saturday)
         When the user requests "WEEKLYSAT" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
@@ -92,8 +91,7 @@ Feature: Gregorian Calendar fixed periods
             | 50          | Week 50 - 2022-12-10 - 2022-12-16 | 2022SatW50  |
             | 51          | Week 51 - 2022-12-17 - 2022-12-23 | 2022SatW51  |
             | 52          | Week 52 - 2022-12-24 - 2022-12-30 | 2022SatW52  |
-        # Weekly starting Sunday
-        Given the calendar type is gregory
+    Scenario: Generate Weekly Periods (Starting Sunday)
         When the user requests "WEEKLYSUN" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
@@ -103,8 +101,8 @@ Feature: Gregorian Calendar fixed periods
             | 50          | Week 50 - 2022-12-11 - 2022-12-17 | 2022SunW50  |
             | 51          | Week 51 - 2022-12-18 - 2022-12-24 | 2022SunW51  |
             | 52          | Week 52 - 2022-12-25 - 2022-12-31 | 2022SunW52  |
-        # Bi-weekly
-        Given the calendar type is gregory
+
+    Scenario: Generate Bi-Weekly Periods
         When the user requests "BIWEEKLY" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                          | periodValue |
@@ -115,8 +113,7 @@ Feature: Gregorian Calendar fixed periods
             | 25          | Bi-Week 25 - 2022-12-05 - 2022-12-18 | 2022BiW25   |
             | 26          | Bi-Week 26 - 2022-12-19 - 2023-01-01 | 2022BiW26   |
 
-        # Bi-Monthly
-        Given the calendar type is gregory
+    Scenario: Generate Bi-Monthly Periods
         When the user requests "BIMONTHLY" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel              | periodValue |
@@ -127,8 +124,7 @@ Feature: Gregorian Calendar fixed periods
             | 5           | September - October 2022 | 202205B     |
             | 6           | November - December 2022 | 202206B     |
 
-        # Quarterly
-        Given the calendar type is gregory
+    Scenario: Generate Quarterly Periods
         When the user requests "QUARTERLY" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel             | periodValue |
@@ -137,24 +133,37 @@ Feature: Gregorian Calendar fixed periods
             | 3           | July - September 2022   | 2022Q3      |
             | 4           | October - December 2022 | 2022Q4      |
 
-        # Six-Monthly
-        Given the calendar type is gregory
+    Scenario: Generate Quarterly Periods starting November
+        When the user requests "QUARTERLYNOV" periods for "2022"
+        Then the dates for the period type should be generated
+            | periodIndex | periodLabel                  | periodValue    |
+            | 1           | November 2022 - January 2023 | 2022NovemberQ1 |
+            | 2           | February - April 2023        | 2022NovemberQ2 |
+            | 3           | May - July 2023              | 2022NovemberQ3 |
+            | 4           | August - October 2023        | 2022NovemberQ4 |
+
+    Scenario: Generate Six-Monthly Periods
         When the user requests "SIXMONTHLY" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel          | periodValue |
             | 1           | January - June 2022  | 2022S1      |
             | 2           | July - December 2022 | 2022S2      |
 
-        # Six-Monthyl starting April
-        Given the calendar type is gregory
+    Scenario: Generate Six-Monthly Periods (starting November)
+        When the user requests "SIXMONTHLYNOV" periods for "2022"
+        Then the dates for the period type should be generated
+            | periodIndex | periodLabel                | periodValue    |
+            | 1           | November 2022 - April 2023 | 2022NovemberS1 |
+            | 2           | May - October 2023         | 2022NovemberS2 |
+
+    Scenario: Generate Six-Monthly Periods (starting April)
         When the user requests "SIXMONTHLYAPR" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel               | periodValue |
             | 1           | April - September 2022    | 2022AprilS1 |
             | 2           | October 2022 - March 2023 | 2022AprilS2 |
 
-        # Yearly
-        Given the calendar type is gregory
+    Scenario: Generate Yearly Periods
         When the user requests "YEARLY" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel | periodValue |
@@ -169,8 +178,7 @@ Feature: Gregorian Calendar fixed periods
             | 9           | 2014        | 2014        |
             | 10          | 2013        | 2013        |
 
-        # Financial Year starting November
-        Given the calendar type is gregory
+    Scenario: Generate periods for Financial Year starting November
         When the user requests "FYNOV" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel | periodValue |

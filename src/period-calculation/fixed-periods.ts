@@ -15,8 +15,10 @@ const periodIdentifiers = [
   "MONTHLY",
   "BIMONTHLY",
   "QUARTERLY",
+  "QUARTERLYNOV", // used in Ethiopia
   "SIXMONTHLY",
   "SIXMONTHLYAPR",
+  "SIXMONTHLYNOV", // used in Ethiopia
   "YEARLY",
   "FYNOV",
   "FYOCT",
@@ -33,7 +35,7 @@ type GeneratedPeriodParams = {
   year: number;
   periodType: PeriodIdentifier;
   calendar: SupportedCalendar;
-  locale: string;
+  locale?: string;
   startingDay?: number /** 1 is Monday */;
   yearsCount?: number;
 };
@@ -42,14 +44,21 @@ export type GeneratedPeriodsFunc = (
 ) => Array<FixedPeriod>;
 
 const generateFixedPeriods: GeneratedPeriodsFunc = ({
-  year,
+  year: yearString,
   periodType,
   calendar,
   locale = "en",
   startingDay = 1,
 }) => {
-  if (typeof year !== "number") {
-    throw new Error("year must be a number");
+  let year: number;
+  if (typeof yearString === "number") {
+    year = yearString;
+  } else {
+    if (!isNaN(yearString) && !isNaN(parseInt(yearString))) {
+      year = parseInt(yearString);
+    } else {
+      throw new Error("year must be a number");
+    }
   }
 
   if (periodType?.match("WEEKLY")) {
@@ -65,7 +74,7 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
     // financial year
     return getYearlyPeriods({ year, periodType, locale, calendar });
   }
-  if (periodType.match(/SIXMONTHLY/)) {
+  if (periodType.match(/SIXMONTHLY/) || periodType.match(/QUARTERLY/)) {
     return getMonthlyPeriods({ year, periodType, locale, calendar });
   }
   switch (periodType) {
