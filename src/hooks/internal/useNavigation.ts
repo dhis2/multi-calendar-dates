@@ -1,11 +1,9 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { Dispatch, SetStateAction, useMemo } from "react";
-import {
-  CustomCalendarTypes,
-  getCustomCalendarLocale,
-} from "../../custom-calendars";
+import { CustomCalendarTypes } from "../../custom-calendars";
 import { isCustomCalendar } from "../../utils/helpers";
 import "../../date-override";
+import localisationHelpers from "../../utils/localisationHelpers";
 
 export type UseNavigationReturnType = {
   prevYear: {
@@ -60,11 +58,6 @@ export const useNavigation: UseNavigationHook = (
 
     const { locale, ...otherLocaleOptions } = localeOptions;
 
-    const customLocale = getCustomCalendarLocale(
-      localeOptions.calendar,
-      localeOptions.locale
-    );
-
     const yearNumericFormat = {
       ...otherLocaleOptions,
       year: "numeric" as const,
@@ -101,22 +94,26 @@ export const useNavigation: UseNavigationHook = (
         navigateTo: () => setFirstZdtOfVisibleMonth(nextYear),
       },
       prevMonth: {
-        label: isCustom
-          ? customLocale?.monthNames[prevMonth.month - 1]
-          : prevMonth.toInstant().toLocaleString(locale, monthFormat),
+        label: localisationHelpers.localiseMonth(
+          prevMonth,
+          localeOptions,
+          monthFormat
+        ),
         navigateTo: () => setFirstZdtOfVisibleMonth(prevMonth),
       },
       currMonth: {
-        label: isCustom
-          ? customLocale?.monthNames[firstZdtOfVisibleMonth.month - 1]
-          : firstZdtOfVisibleMonth
-              .toInstant()
-              .toLocaleString(locale, monthFormat),
+        label: localisationHelpers.localiseMonth(
+          firstZdtOfVisibleMonth,
+          localeOptions,
+          monthFormat
+        ),
       },
       nextMonth: {
-        label: isCustom
-          ? customLocale?.monthNames[nextMonth.month - 1]
-          : nextMonth.toInstant().toLocaleString(locale, monthFormat),
+        label: localisationHelpers.localiseMonth(
+          nextMonth,
+          localeOptions,
+          monthFormat
+        ),
         navigateTo: () => setFirstZdtOfVisibleMonth(nextMonth),
       },
     };

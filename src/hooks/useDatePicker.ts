@@ -1,13 +1,8 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { numberingSystems } from "../constants";
-import {
-  customCalendars,
-  getCustomCalendarLocale,
-  getCustomCalendarLocales,
-} from "../custom-calendars";
 import { SupportedCalendar } from "../types";
-import { isCustomCalendar } from "../utils/helpers";
+import { getCustomCalendarIfExists } from "../utils/helpers";
+import localisationHelpers from "../utils/localisationHelpers";
 import { useCalendarWeekDays } from "./internal/useCalendarWeekDays";
 import {
   useNavigation,
@@ -28,7 +23,7 @@ type DatePickerOptions = {
   }) => void;
 };
 
-type LocaleOptions = {
+export type LocaleOptions = {
   locale: string;
   calendar?: SupportedCalendar;
   timeZone?: Temporal.TimeZoneLike | Temporal.TimeZoneProtocol;
@@ -69,24 +64,8 @@ export const useDatePicker: UseDatePickerHookType = ({
 
   const { calendar: calendarFromOptions = "iso8601" } = options;
 
-  const customCalendar = customCalendars[calendarFromOptions]?.calendar;
-
   const calendar: Temporal.CalendarProtocol | Temporal.CalendarLike =
-    customCalendar || options.calendar || "iso8601";
-
-  const isCustom = isCustomCalendar(calendarFromOptions);
-
-  if (isCustom) {
-    const customLocalisations = getCustomCalendarLocales(calendar) || {};
-    const allowedLocales = Object.keys(customLocalisations);
-    if (!allowedLocales.includes(options.locale)) {
-      throw new Error(
-        `For the custom calendar "${
-          options.calendar
-        }", only specific locales are allowed: ${allowedLocales.join(", ")}`
-      );
-    }
-  }
+    getCustomCalendarIfExists(calendarFromOptions, options.locale);
 
   const temporalCalendar = useMemo(
     () => Temporal.Calendar.from(calendar),
@@ -194,20 +173,13 @@ export const useDatePicker: UseDatePickerHookType = ({
     temporalTimeZone,
   ]);
 
-  const customLocale = getCustomCalendarLocale(calendar, locale);
-
   return {
     selectedDate: {
       zdt: selectedDateZdt,
-      label: isCustom
-        ? `${selectedDateZdt?.day}-${selectedDateZdt?.month}-${selectedDateZdt?.year}`
-        : selectedDateZdt
-            ?.toLocaleString(locale, {
-              ...localeOptions,
-              timeZone: localeOptions.timeZone.id,
-              dateStyle: "full",
-            })
-            .toString(),
+      label: localisationHelpers.localiseDateLabel(
+        selectedDateZdt,
+        localeOptions
+      ),
     },
     today: {
       label: new window.Intl.RelativeTimeFormat(locale, {
@@ -221,17 +193,7 @@ export const useDatePicker: UseDatePickerHookType = ({
     calendarWeekDays: calendarWeekDaysZdts.map((week) =>
       week.map((zdt) => ({
         zdt,
-        label: isCustom
-          ? customLocale?.numbers?.[zdt.day] || zdt.day
-          : zdt.toInstant().toLocaleString(locale, {
-              ...localeOptions,
-              numberingSystem: numberingSystems.includes(
-                options.numberingSystem as typeof numberingSystems[number]
-              )
-                ? options.numberingSystem
-                : undefined,
-              day: "numeric",
-            }),
+        label: localisationHelpers.localiseWeekLabel(zdt, localeOptions),
         onClick: () => selectDate(zdt),
         isSelected: selectedDateZdt
           ?.withCalendar("iso8601")

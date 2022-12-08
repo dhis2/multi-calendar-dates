@@ -26,14 +26,3 @@ export const customCalendars: Partial<{
     locales: calendarLocalisations.nepali,
   },
 };
-
-export const getCustomCalendarLocales = (calendar: Temporal.CalendarLike) => {
-  return customCalendars[calendar as CustomCalendarTypes]?.locales;
-};
-
-export const getCustomCalendarLocale = (
-  calendar: Temporal.CalendarLike,
-  locale: string
-) => {
-  return customCalendars[calendar as CustomCalendarTypes]?.locales?.[locale];
-};
