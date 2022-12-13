@@ -1,6 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { useMemo } from "react";
-import "../../date-override";
 
 const groupByWeek = (
   acc: Temporal.ZonedDateTime[][],

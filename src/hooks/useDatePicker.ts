@@ -9,7 +9,6 @@ import {
   UseNavigationReturnType,
 } from "./internal/useNavigation";
 import { useWeekDayLabels } from "./internal/useWeekDayLabels";
-import "../date-override";
 
 type DatePickerOptions = {
   date: string;

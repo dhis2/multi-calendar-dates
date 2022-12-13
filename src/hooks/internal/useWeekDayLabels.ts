@@ -1,6 +1,5 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { useMemo } from "react";
-import "../../date-override";
 import localisationHelpers from "../../utils/localisationHelpers";
 import { LocaleOptions } from "../useDatePicker";
 
