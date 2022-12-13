@@ -1,7 +1,7 @@
 import { renderHook } from "@testing-library/react-hooks";
 import { useResolvedDirection } from "./useResolvedDirection";
 
-describe.only("useResolvedDirection hook", () => {
+describe("useResolvedDirection hook", () => {
   it("should return rtl for locale 'ar'", () => {
     const { result } = renderHook(() => useResolvedDirection(undefined, "ar"));
     expect(result.current).toEqual("rtl");
