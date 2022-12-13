@@ -27,8 +27,8 @@ type Direction = "ltr" | "rtl";
  * @returns
  */
 export const useResolvedDirection = (
-  dir: Direction,
-  localeIdentifier: string
+  dir: Direction | undefined,
+  localeIdentifier: string | undefined
 ) => {
   if (dir && ["ltr", "rtl"].includes(dir)) {
     return dir;
@@ -38,10 +38,7 @@ export const useResolvedDirection = (
     return "ltr";
   }
 
-  const isRtlLocale =
-    localeIdentifier && localeIdentifier.includes("-")
-      ? rtlLocales.has(localeIdentifier.split("-")[0])
-      : rtlLocales.has(localeIdentifier);
+  const isRtlLocale = rtlLocales.has(localeIdentifier.split("-")[0]);
 
   return isRtlLocale ? "rtl" : "ltr";
 };
