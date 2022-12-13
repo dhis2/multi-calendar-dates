@@ -5,7 +5,7 @@ import { useDatePicker, UseDatePickerReturn } from "./useDatePicker";
 const renderCalendar = (
   weekDayFormat: "long" | "narrow" | "short",
   locale: string,
-  calendar: SupportedCalendar = "iso8601"
+  calendar: SupportedCalendar = "gregory"
 ) => {
   const onDateSelect = jest.fn();
   const date = "2018-01-22";
@@ -29,7 +29,7 @@ describe("useDatePicker hook", () => {
       const options = {
         locale: "en-GB",
         timeZone: "Africa/Khartoum",
-        // no calendar means it should default to iso8601
+        // no calendar means it should default to gregory
       };
       const renderedHook = renderHook(() =>
         useDatePicker({ onDateSelect, date, options })
@@ -208,7 +208,7 @@ describe("useDatePicker hook", () => {
       const date = "2018-01-22";
       const options = {
         locale: "en-GB",
-        calendar: "iso8601" as const,
+        calendar: "gregory" as const,
         numberingSystem: "arab",
       };
       const renderedHook = renderHook(() =>

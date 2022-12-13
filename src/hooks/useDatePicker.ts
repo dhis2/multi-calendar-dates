@@ -54,7 +54,7 @@ export const useDatePicker: UseDatePickerHookType = ({
 }) => {
   const prevDateStringRef = useRef(date);
 
-  const { calendar: calendarFromOptions = "gregory" } = options;
+  const { calendar: calendarFromOptions = "gregory", locale = "en" } = options;
 
   const calendar: Temporal.CalendarLike = getCustomCalendarIfExists(
     calendarFromOptions,
@@ -99,8 +99,6 @@ export const useDatePicker: UseDatePickerHookType = ({
     const zdt = selectedDateZdt || todayZdt;
     return zdt.with({ day: 1 });
   });
-
-  const { locale } = options;
 
   const localeOptions = useMemo(
     () => ({

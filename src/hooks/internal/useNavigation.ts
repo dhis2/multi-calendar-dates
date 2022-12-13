@@ -51,6 +51,7 @@ export const useNavigation: UseNavigationHook = (
     const nextMonth = firstZdtOfVisibleMonth.add({ months: 1 });
 
     const options = {
+      locale: localeOptions.locale,
       calendar: localeOptions.calendar,
       numberingSystem: localeOptions.numberingSystem,
     };
