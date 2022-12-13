@@ -2,6 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { Dispatch, SetStateAction, useMemo } from "react";
 import "../../date-override";
 import localisationHelpers from "../../utils/localisationHelpers";
+import { LocaleOptions } from "../useDatePicker";
 
 export type UseNavigationReturnType = {
   prevYear: {
@@ -30,12 +31,7 @@ export type UseNavigationReturnType = {
 type UseNavigationHook = (
   firstZdtOfVisibleMonth: Temporal.ZonedDateTime,
   setFirstZdtOfVisibleMonth: Dispatch<SetStateAction<Temporal.ZonedDateTime>>,
-  localeOptions: {
-    locale: string;
-    calendar: Temporal.CalendarProtocol;
-    timeZone: Temporal.TimeZoneProtocol;
-    numberingSystem?: string;
-  }
+  localeOptions: LocaleOptions
 ) => UseNavigationReturnType;
 /**
  * internal hook used by useDatePicker to build the navigation of the calendar
@@ -54,16 +50,18 @@ export const useNavigation: UseNavigationHook = (
     const prevMonth = firstZdtOfVisibleMonth.subtract({ months: 1 });
     const nextMonth = firstZdtOfVisibleMonth.add({ months: 1 });
 
-    const { locale, ...otherLocaleOptions } = localeOptions;
-
-    const yearNumericFormat = {
-      ...otherLocaleOptions,
-      year: "numeric" as const,
+    const options = {
+      calendar: localeOptions.calendar,
       numberingSystem: localeOptions.numberingSystem,
     };
 
-    const monthFormat = {
-      ...otherLocaleOptions,
+    const yearNumericFormat: Intl.DateTimeFormatOptions = {
+      ...options,
+      year: "numeric" as const,
+    };
+
+    const monthFormat: Intl.DateTimeFormatOptions = {
+      ...options,
       month: "long" as const,
     };
 

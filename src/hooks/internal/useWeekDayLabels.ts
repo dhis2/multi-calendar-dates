@@ -2,19 +2,16 @@ import { Temporal } from "@js-temporal/polyfill";
 import { useMemo } from "react";
 import "../../date-override";
 import localisationHelpers from "../../utils/localisationHelpers";
-
-type LocaleOptions = {
-  locale: string;
-  calendar: Temporal.CalendarProtocol;
-  timeZone: Temporal.TimeZoneLike;
-  weekDayFormat: "narrow" | "short" | "long";
-};
+import { LocaleOptions } from "../useDatePicker";
 
 export const useWeekDayLabels = (localeOptions: LocaleOptions) =>
   useMemo(() => {
-    const today = Temporal.Now.zonedDateTime(localeOptions.calendar)
-      .withTimeZone(localeOptions.timeZone)
-      .startOfDay();
+    if (!localeOptions.calendar) {
+      throw new Error("a calendar must be provided to useWeekDayLabels");
+    }
+    const today = Temporal.Now.zonedDateTime(
+      localeOptions.calendar
+    ).startOfDay();
 
     const startOfWeek = today.subtract({ days: today.dayOfWeek - 1 }); // dayOfWeek is 1-based, where 1 is Monday
 

@@ -26,7 +26,7 @@ type DatePickerOptions = {
 export type LocaleOptions = {
   locale: string;
   calendar?: SupportedCalendar;
-  timeZone?: Temporal.TimeZoneLike | Temporal.TimeZoneProtocol;
+  timeZone?: Temporal.TimeZoneLike;
   numberingSystem?: string;
   weekDayFormat?: "narrow" | "short" | "long";
 };
@@ -111,7 +111,7 @@ export const useDatePicker: UseDatePickerHookType = ({
   const localeOptions = useMemo(
     () => ({
       locale,
-      calendar: temporalCalendar,
+      calendar: temporalCalendar as unknown as SupportedCalendar,
       timeZone: temporalTimeZone,
       weekDayFormat: options.weekDayFormat || "narrow",
       numberingSystem: options.numberingSystem,

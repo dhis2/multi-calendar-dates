@@ -12,11 +12,18 @@ const getCustomCalendarLocale = (
 };
 
 const localiseDateLabel = (
-  selectedDateZdt: Temporal.ZonedDateTime,
+  selectedDateZdt: Temporal.ZonedDateTime | null,
   localeOptions: LocaleOptions
 ) => {
   if (!localeOptions.calendar) {
     throw new Error("no calendar provided to localise function");
+  }
+  if (!selectedDateZdt) {
+    throw new Error("a date must be provided to localiseDateLabel");
+  }
+
+  if (!localeOptions.timeZone) {
+    throw "";
   }
 
   const isCustom = isCustomCalendar(localeOptions.calendar);
@@ -24,9 +31,9 @@ const localiseDateLabel = (
   return isCustom
     ? `${selectedDateZdt?.day}-${selectedDateZdt?.month}-${selectedDateZdt?.year}`
     : selectedDateZdt
-        ?.toLocaleString(localeOptions.locale, {
-          ...localeOptions,
-          timeZone: localeOptions.timeZone.id,
+        ?.toPlainDate()
+        .toLocaleString(localeOptions.locale, {
+          calendar: localeOptions.calendar,
           dateStyle: "full",
         })
         .toString();
@@ -47,8 +54,8 @@ const localiseWeekLabel = (
 
   return isCustom
     ? customLocale?.numbers?.[zdt.day] || zdt.day
-    : zdt.toInstant().toLocaleString(localeOptions.locale, {
-        ...localeOptions,
+    : zdt.toPlainDate().toLocaleString(localeOptions.locale, {
+        calendar: localeOptions.calendar,
         numberingSystem: numberingSystems.includes(
           localeOptions.numberingSystem as typeof numberingSystems[number]
         )
@@ -74,7 +81,7 @@ const localiseMonth = (
 
   return isCustom
     ? customLocale?.monthNames[zdt.month - 1]
-    : zdt.toInstant().toLocaleString(localeOptions.locale, format);
+    : zdt.toPlainYearMonth().toLocaleString(localeOptions.locale, format);
 };
 
 export const localiseWeekDayLabel = (
@@ -94,10 +101,9 @@ export const localiseWeekDayLabel = (
 
   return isCustom && customDayString
     ? customDayString
-    : zdt.toInstant().toLocaleString(localeOptions.locale, {
+    : zdt.toPlainDate().toLocaleString(localeOptions.locale, {
         weekday: localeOptions.weekDayFormat,
         calendar: localeOptions.calendar,
-        timeZone: localeOptions.timeZone,
       });
 };
 
@@ -113,7 +119,7 @@ export const localiseYear = (
 
   return isCustom
     ? zdt.year
-    : zdt.toInstant().toLocaleString(localeOptions.locale, format);
+    : zdt.toPlainYearMonth().toLocaleString(localeOptions.locale, format);
 };
 const localisationHelpers = {
   localiseYear,
