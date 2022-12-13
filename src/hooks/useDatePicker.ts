@@ -33,10 +33,6 @@ export type LocaleOptions = {
 
 export type UseDatePickerReturn = UseNavigationReturnType & {
   weekDayLabels: string[];
-  selectedDate: {
-    zdt: Temporal.ZonedDateTime | null;
-    label: string | undefined;
-  };
   calendarWeekDays: {
     zdt: Temporal.ZonedDateTime;
     label: string | number;
@@ -58,10 +54,12 @@ export const useDatePicker: UseDatePickerHookType = ({
 }) => {
   const prevDateStringRef = useRef(date);
 
-  const { calendar: calendarFromOptions = "iso8601" } = options;
+  const { calendar: calendarFromOptions = "gregory" } = options;
 
-  const calendar: Temporal.CalendarProtocol | Temporal.CalendarLike =
-    getCustomCalendarIfExists(calendarFromOptions, options.locale);
+  const calendar: Temporal.CalendarLike = getCustomCalendarIfExists(
+    calendarFromOptions,
+    options.locale
+  );
 
   const temporalCalendar = useMemo(
     () => Temporal.Calendar.from(calendar),
@@ -170,13 +168,6 @@ export const useDatePicker: UseDatePickerHookType = ({
   ]);
 
   return {
-    selectedDate: {
-      zdt: selectedDateZdt,
-      label: localisationHelpers.localiseDateLabel(
-        selectedDateZdt,
-        localeOptions
-      ),
-    },
     calendarWeekDays: calendarWeekDaysZdts.map((week) =>
       week.map((weekDayZdt) => ({
         zdt: weekDayZdt,
