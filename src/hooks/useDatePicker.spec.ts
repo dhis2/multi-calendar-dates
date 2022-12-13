@@ -52,7 +52,6 @@ describe("useDatePicker hook", () => {
       expect(result.nextYear.label).toEqual("2019");
       expect(result.prevYear.label).toEqual("2017");
       expect(result.selectedDate.label).toEqual("Monday, 22 January 2018");
-      expect(result.today.label).toEqual("today");
       expect(result.weekDayLabels).toEqual(["M", "T", "W", "T", "F", "S", "S"]);
     });
 
@@ -80,7 +79,6 @@ describe("useDatePicker hook", () => {
       expect(result.selectedDate.label).toEqual(
         "الاثنين، ٥ جمادى الأولى ١٤٣٩ هـ"
       );
-      expect(result.today.label).toEqual("اليوم");
       expect(result.weekDayLabels).toEqual([
         "الاثنين",
         "الثلاثاء",
@@ -122,7 +120,6 @@ describe("useDatePicker hook", () => {
       expect(result.nextYear.label).toEqual("2016");
       expect(result.prevYear.label).toEqual("2014");
       expect(result.selectedDate.label).toEqual("ማክሰኞ፣ 13 ኅዳር 2015 ERA1");
-      expect(result.today.label).toEqual("ዛሬ");
       expect(result.weekDayLabels).toEqual([
         "ሰኞ",
         "ማክሰኞ",
@@ -268,7 +265,6 @@ describe("custom calendars", () => {
       expect(result.prevYear.label).toEqual(2077);
 
       expect(result.selectedDate.label).toEqual("28-9-2078");
-      expect(result.today.label).toEqual("आज");
       expect(result.weekDayLabels).toEqual([
         "सोम",
         "मंगल",
@@ -313,7 +309,6 @@ describe("custom calendars", () => {
         [19, 20, 21, 22, 23, 24, 25],
         [26, 27, 28, 29, 1, 2, 3],
       ]);
-      expect(result.today.label).toEqual("today");
       expect(result.selectedDate.label).toEqual("7-8-2079");
       expect(result.currYear.label).toEqual(2079);
       expect(result.nextYear.label).toEqual(2080);

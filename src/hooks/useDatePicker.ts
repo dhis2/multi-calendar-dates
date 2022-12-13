@@ -37,10 +37,6 @@ export type UseDatePickerReturn = UseNavigationReturnType & {
     zdt: Temporal.ZonedDateTime | null;
     label: string | undefined;
   };
-  today: {
-    label: string;
-    navigateTo: () => void;
-  };
   calendarWeekDays: {
     zdt: Temporal.ZonedDateTime;
     label: string | number;
@@ -181,26 +177,18 @@ export const useDatePicker: UseDatePickerHookType = ({
         localeOptions
       ),
     },
-    today: {
-      label: new window.Intl.RelativeTimeFormat(locale, {
-        numeric: "auto",
-      }).format(0, "day"),
-      navigateTo: () =>
-        setFirstZdtOfVisibleMonth(
-          todayZdt.subtract({ days: todayZdt.day - 1 })
-        ),
-    },
     calendarWeekDays: calendarWeekDaysZdts.map((week) =>
-      week.map((zdt) => ({
-        zdt,
-        label: localisationHelpers.localiseWeekLabel(zdt, localeOptions),
-        onClick: () => selectDate(zdt),
+      week.map((weekDayZdt) => ({
+        zdt: weekDayZdt,
+        label: localisationHelpers.localiseWeekLabel(weekDayZdt, localeOptions),
+        onClick: () => selectDate(weekDayZdt),
         isSelected: selectedDateZdt
           ?.withCalendar("iso8601")
-          .equals(zdt.withCalendar("iso8601")),
-        isToday: todayZdt && zdt.equals(todayZdt),
+          .equals(weekDayZdt.withCalendar("iso8601")),
+        isToday: todayZdt && weekDayZdt.equals(todayZdt),
         isInCurrentMonth:
-          firstZdtOfVisibleMonth && zdt.month === firstZdtOfVisibleMonth.month,
+          firstZdtOfVisibleMonth &&
+          weekDayZdt.month === firstZdtOfVisibleMonth.month,
       }))
     ),
     ...navigation,
