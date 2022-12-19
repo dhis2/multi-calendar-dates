@@ -1,4 +1,4 @@
-@only
+@draft
 Feature: Nepali Calendar fixed periods
     Background: Set Calendar
         Given the calendar type is "nepali"
