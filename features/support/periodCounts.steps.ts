@@ -15,6 +15,7 @@ type DataTable = {
 type MyWorld = {
   calendar: SupportedCalendar;
   year: number;
+  locale: string;
   results: Array<DataTable & { generatedPeriods: FixedPeriod[] }>;
   periodType: PeriodIdentifier;
 };
@@ -23,6 +24,13 @@ Given(
   "the calendar type is {string}",
   function (this: MyWorld, calendar: SupportedCalendar) {
     this.calendar = calendar;
+  }
+);
+
+Given(
+  "the locale is set to {string}",
+  function (this: MyWorld, locale: string) {
+    this.locale = locale;
   }
 );
 
@@ -35,7 +43,7 @@ When("a year is provided along a period", function (this: MyWorld, dataTable) {
         year: yearNo,
         periodType: row.periodType,
         calendar: this.calendar,
-        locale: "en-GB",
+        locale: this.locale ?? "en",
       }),
     };
   });
@@ -48,7 +56,7 @@ Then(
       assert.equal(
         result.generatedPeriods.length,
         result.periodCount,
-        `${result.periodType} has wrong number of periods`
+        `${result.periodType} has wrong number of periods (expected: ${result.periodCount} / actual: ${result.generatedPeriods.length})`
       );
     });
   }

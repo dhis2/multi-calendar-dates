@@ -13,6 +13,7 @@ type DataTable = {
 
 interface MyWorld {
   calendar: SupportedCalendar;
+  locale: string;
   year: number;
   periodType: PeriodIdentifier;
 }
@@ -32,7 +33,7 @@ Then(
       year: this.year,
       periodType: this.periodType,
       calendar: this.calendar,
-      locale: "en",
+      locale: this.locale ?? "en",
     });
 
     (dataTable.hashes() as DataTable).forEach((row) => {

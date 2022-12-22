@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { SupportedCalendar } from "../types";
-import { padWithZeroes } from "../utils/helpers";
+import { isCustomCalendar, padWithZeroes } from "../utils/helpers";
+import localisationHelpers from "../utils/localisationHelpers";
 import { GeneratedPeriodsFunc, PeriodIdentifier } from "./fixed-periods";
 
 export const getMonthlyPeriods: GeneratedPeriodsFunc = ({
@@ -9,9 +10,10 @@ export const getMonthlyPeriods: GeneratedPeriodsFunc = ({
   periodType,
   locale = "en",
 }) => {
-  let currentMonth = Temporal.PlainYearMonth.from({
+  let currentMonth = Temporal.PlainDate.from({
     year,
     month: getStartingMonth(periodType),
+    day: calendar.toString() === "nepali" ? 14 : 1,
     calendar,
   });
 
@@ -40,7 +42,7 @@ export const getMonthlyPeriods: GeneratedPeriodsFunc = ({
       });
     }
 
-    currentMonth = Temporal.PlainYearMonth.from(nextMonth);
+    currentMonth = Temporal.PlainDate.from(nextMonth);
     index++;
   }
 
@@ -49,8 +51,8 @@ export const getMonthlyPeriods: GeneratedPeriodsFunc = ({
 
 type BuildLabelFunc = (options: {
   periodType: PeriodIdentifier;
-  month: Temporal.PlainYearMonth;
-  nextMonth: Temporal.PlainYearMonth;
+  month: Temporal.PlainDate;
+  nextMonth: Temporal.PlainDate;
   index: number;
   locale: string;
   calendar: SupportedCalendar;
@@ -59,10 +61,7 @@ type BuildLabelFunc = (options: {
 /**
  * special cases where we ignore a month
  */
-const ignoreMonth = (
-  calendar: SupportedCalendar,
-  date: Temporal.PlainYearMonth
-) => {
+const ignoreMonth = (calendar: SupportedCalendar, date: Temporal.PlainDate) => {
   // in Ethiopic calendar, for periods more than bi-weekly, we ignore the 13th month
   if (calendar === "ethiopic" && date.month === 13) {
     return true;
@@ -72,7 +71,7 @@ const ignoreMonth = (
 
 const buildValue: (options: {
   periodType: PeriodIdentifier;
-  currentMonth: Temporal.PlainYearMonth;
+  currentMonth: Temporal.PlainDate;
   year: number;
   index: number;
 }) => string = ({ periodType, currentMonth, year, index }) => {
@@ -98,13 +97,13 @@ const buildValue: (options: {
   return `${year}${padWithZeroes(currentMonth.month)}`;
 };
 
-const buildLabel: BuildLabelFunc = ({
-  periodType,
-  month,
-  nextMonth,
-  calendar,
-  locale,
-}) => {
+const buildLabel: BuildLabelFunc = (options) => {
+  const { periodType, month, nextMonth, calendar, locale } = options;
+
+  if (isCustomCalendar(calendar)) {
+    return buildLabelForCustomCalendar(options);
+  }
+
   const withYearFormat = {
     month: "long" as const,
     year: "numeric" as const,
@@ -133,6 +132,39 @@ const buildLabel: BuildLabelFunc = ({
 
   // needed for ethiopic calendar - the default formatter adds the era, which is what we want at DHIS
   result = result.replace(/ERA\d+\s*/g, "").trim();
+  return result;
+};
+
+const buildLabelForCustomCalendar: BuildLabelFunc = ({
+  periodType,
+  month,
+  nextMonth,
+  calendar,
+  locale,
+}) => {
+  let result = "";
+
+  if (
+    ["BIMONTHLY", "QUARTERLY", "SIXMONTHLY"].includes(periodType) ||
+    periodType.match(/SIXMONTHLY|QUARTERLY/)
+  ) {
+    const showYear = month.year !== nextMonth.year;
+    result = `${localisationHelpers.localiseMonth(
+      month,
+      { locale, calendar },
+      {}
+    )}${showYear ? ` ${month.year}` : ""} - ${localisationHelpers.localiseMonth(
+      nextMonth,
+      { locale, calendar },
+      {}
+    )} ${nextMonth.year}`;
+  } else {
+    result = `${localisationHelpers.localiseMonth(
+      month,
+      { locale, calendar },
+      {}
+    )} ${nextMonth.year}`;
+  }
   return result;
 };
 

@@ -20,6 +20,7 @@
   },
   "include": ["src"],
   "exclude": ["lib"],
+  // this ts-node config is needed for cucumberjs to work with TypeScript
   "ts-node": {
     "esm": true,
     // It is faster to skip typechecking.

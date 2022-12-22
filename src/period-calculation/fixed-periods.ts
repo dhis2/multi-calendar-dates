@@ -1,4 +1,5 @@
 import { SupportedCalendar } from "../types";
+import { getCustomCalendarIfExists } from "../utils/helpers";
 import { getDailyPeriods } from "./getDailyPeriods";
 import { getMonthlyPeriods } from "./getMonthlyPeriods";
 import { getWeeklyPeriods } from "./getWeeklyPeriods";
@@ -46,7 +47,7 @@ export type GeneratedPeriodsFunc = (
 const generateFixedPeriods: GeneratedPeriodsFunc = ({
   year: yearString,
   periodType,
-  calendar,
+  calendar: requestedCalendar,
   locale = "en",
   startingDay = 1,
 }) => {
@@ -60,6 +61,10 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
       throw new Error("year must be a number");
     }
   }
+  const calendar = getCustomCalendarIfExists(
+    requestedCalendar,
+    locale
+  ) as SupportedCalendar;
 
   if (periodType?.match("WEEKLY")) {
     return getWeeklyPeriods({

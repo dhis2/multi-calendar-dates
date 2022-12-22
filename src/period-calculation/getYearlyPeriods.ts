@@ -8,9 +8,10 @@ export const getYearlyPeriods: GeneratedPeriodsFunc = ({
   periodType,
   yearsCount = 10,
 }) => {
-  const currentYear = Temporal.PlainYearMonth.from({
+  const currentYear = Temporal.PlainDate.from({
     year,
     month: 1,
+    day: 1,
     calendar,
   });
 

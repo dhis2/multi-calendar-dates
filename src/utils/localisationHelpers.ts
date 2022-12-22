@@ -66,7 +66,7 @@ const localiseWeekLabel = (
 };
 
 const localiseMonth = (
-  zdt: Temporal.ZonedDateTime,
+  zdt: Temporal.ZonedDateTime | Temporal.PlainYearMonth | Temporal.PlainDate,
   localeOptions: LocaleOptions,
   format: Intl.DateTimeFormatOptions
 ) => {
@@ -81,7 +81,7 @@ const localiseMonth = (
 
   return isCustom
     ? customLocale?.monthNames[zdt.month - 1]
-    : zdt.toPlainYearMonth().toLocaleString(localeOptions.locale, format);
+    : zdt.toLocaleString(localeOptions.locale, format);
 };
 
 export const localiseWeekDayLabel = (
