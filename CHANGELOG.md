@@ -1,3 +1,45 @@
+# 1.0.0-alpha.1 (2022-12-26)
+
+
+### Bug Fixes
+
+* change english-nepal code to en-NP (not ne-EN) ([7e92aa4](https://github.com/dhis2/multi-calendar-dates/commit/7e92aa4efe7302aca3ad52ebd98d49a52141c15b))
+* change param for useDatePicker from initialDate to date ([429b2eb](https://github.com/dhis2/multi-calendar-dates/commit/429b2ebb660dfbaf77de9f1748dfa7e7fc0472ea))
+* change react dependency to fix issue with docusaurus build ([c58d560](https://github.com/dhis2/multi-calendar-dates/commit/c58d5603f1d30667bcdf241c8a3b02cd06fffdb9))
+* change react to be a peer dependency ([fbf106c](https://github.com/dhis2/multi-calendar-dates/commit/fbf106cab1ed0dad52d0877c2b61fb3bd6c2540d))
+* change the api for nepali calendar to accept a string ([3a51a6f](https://github.com/dhis2/multi-calendar-dates/commit/3a51a6f6b8a48649c0588b0f7421529c3ce64eb0))
+* change useWeekDayLabels to accept a custom format for day names ([0369006](https://github.com/dhis2/multi-calendar-dates/commit/036900694aad88ed88f9b8242c537f9e01847b40))
+* default to user timezone or UTC if no timezone passed ([e9c34e1](https://github.com/dhis2/multi-calendar-dates/commit/e9c34e14e0c3f6a7ab59ba7ecdf74959ddf0cc95))
+* ensure that direction is either rtl or ltr ([4a92e91](https://github.com/dhis2/multi-calendar-dates/commit/4a92e91b979c4791613f50ca88c1a4d72a45e9c3))
+* fallback to default locale if passed a wrong locale ([785a1b9](https://github.com/dhis2/multi-calendar-dates/commit/785a1b94c134b0ff42613b71d673505816186cbd))
+* fix period generation for Nepali ([157e6a7](https://github.com/dhis2/multi-calendar-dates/commit/157e6a7812ab7480f190413c60a66f4bb86f68c0))
+* force a publish ([feec6c2](https://github.com/dhis2/multi-calendar-dates/commit/feec6c28fd7b49febaa6a8ed98a6fe92979a6704))
+* force npm publish ([d22e470](https://github.com/dhis2/multi-calendar-dates/commit/d22e4700511505fd699b0f1d1814064f885af8b5))
+* force npm publish ([e5cb2ff](https://github.com/dhis2/multi-calendar-dates/commit/e5cb2ff91b9f72dd842af044aff64b8f5351554a))
+* force npm publish ([39bd827](https://github.com/dhis2/multi-calendar-dates/commit/39bd827b7ff6a65cfb7e831b55dc8ded2716d509))
+* force npm publish ([6f95463](https://github.com/dhis2/multi-calendar-dates/commit/6f95463988925465e09e90538b18f04ad1d09daf))
+* force npm publish ([6b7fbf3](https://github.com/dhis2/multi-calendar-dates/commit/6b7fbf3227e1254b7fe651c49d118a258470a9f4))
+* force npm publish ([2ce77b3](https://github.com/dhis2/multi-calendar-dates/commit/2ce77b3e920788b955dc243570e9b4816a3200db))
+* force npm publish ([3e43ce4](https://github.com/dhis2/multi-calendar-dates/commit/3e43ce4592bd907ee0936ee81bc02949010ae50e))
+* put pack semantic-release config ([4ae3f4c](https://github.com/dhis2/multi-calendar-dates/commit/4ae3f4cf848a7c736b12809a2bc4cb1f41f8ad11))
+* remove .only for tests ([72fa7e5](https://github.com/dhis2/multi-calendar-dates/commit/72fa7e5c34cf0ec4e9a2f2ccfd7e705c480d1257))
+* remove .only from test ([c685e34](https://github.com/dhis2/multi-calendar-dates/commit/c685e3496ffc8a46155d8564327570ddfd1efc7d))
+* test npm publish ([40de24f](https://github.com/dhis2/multi-calendar-dates/commit/40de24f05a0e3d8277c0d3f39e7295d0dbf11f23))
+* test npm publish ([69eb402](https://github.com/dhis2/multi-calendar-dates/commit/69eb4026e06340c2a7e6f34e77da9e8e5a7887d4))
+* throw error if non-supported locale is passed for a custom calendar ([293db88](https://github.com/dhis2/multi-calendar-dates/commit/293db88269a079d4b3977859d5f7c62a661fa0f7))
+* update current day selection logic to use same calendar system ([adb0dc8](https://github.com/dhis2/multi-calendar-dates/commit/adb0dc8541cd995192441339e7c36ccf49977a07))
+* use numberinSystem if provided ([b3e82fb](https://github.com/dhis2/multi-calendar-dates/commit/b3e82fba160839beeafdc78f77f601d05e48f345))
+
+
+### Features
+
+* implement first iteration of the engine ([51526db](https://github.com/dhis2/multi-calendar-dates/commit/51526dbc08342c3ccaf59871f251af37aaf0b290))
+* implement nepali calendar ([bcb66c6](https://github.com/dhis2/multi-calendar-dates/commit/bcb66c6b38db7ebab720c737d658ac0a0d67dcf5))
+* implement nepali calendar from gregorian conversion ([4ee9173](https://github.com/dhis2/multi-calendar-dates/commit/4ee91733d6405b2ba53e8304c2dbabafff52e4a1))
+* implement period calculation special cases for ethiopic calendar ([62b3de3](https://github.com/dhis2/multi-calendar-dates/commit/62b3de325450ab86d271b825d58ab2c83f18818c))
+* implement rest of period calculations for gregrorian calendar ([9f83099](https://github.com/dhis2/multi-calendar-dates/commit/9f83099a4ad5361d6458be4606cfae8110ba44e1))
+* implement some fixed period calculations for gregrorian calendar ([040bd8e](https://github.com/dhis2/multi-calendar-dates/commit/040bd8ed1afe9f9594513bace74b2ab23d35a80f))
+
 # [1.0.0-beta.20](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.19...v1.0.0-beta.20) (2022-12-13)
 
 
