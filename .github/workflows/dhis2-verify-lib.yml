@@ -123,6 +123,9 @@ jobs:
               with:
                   name: lib-build
 
+            - name: test unpublish
+              run: npm unpublish multi-calendar-dates@v1.0.0-alpha.1
+
             - name: Publish to NPM
               # run: npx semantic-release
               run: npx @dhis2/cli-utils release --publish npm
