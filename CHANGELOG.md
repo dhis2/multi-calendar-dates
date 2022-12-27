@@ -1,3 +1,10 @@
+# [1.0.0-alpha.4](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.3...v1.0.0-alpha.4) (2022-12-27)
+
+
+### Bug Fixes
+
+* force npm publish ([bacacf2](https://github.com/dhis2/multi-calendar-dates/commit/bacacf26327e1b36f0fed21859b67e7d87cfe7da))
+
 # [1.0.0-alpha.3](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.2...v1.0.0-alpha.3) (2022-12-27)
 
 
