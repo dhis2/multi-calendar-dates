@@ -29,8 +29,11 @@ const periodIdentifiers = [
 
 export type PeriodIdentifier = typeof periodIdentifiers[number];
 export type FixedPeriod = {
-  label: string;
-  value: string;
+  id: string;
+  iso: string;
+  name: string;
+  startDate?: string;
+  endDate?: string;
 };
 type GeneratedPeriodParams = {
   year: number;

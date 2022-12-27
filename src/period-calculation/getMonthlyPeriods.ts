@@ -29,8 +29,12 @@ export const getMonthlyPeriods: GeneratedPeriodsFunc = ({
   ) {
     const nextMonth = currentMonth.add({ months: monthToAdd });
     if (!ignoreMonth(calendar, currentMonth)) {
+      const id = buildValue({ periodType, currentMonth, year, index });
+
       months.push({
-        label: buildLabel({
+        id,
+        iso: id,
+        name: buildLabel({
           periodType,
           month: currentMonth,
           locale,
@@ -38,7 +42,6 @@ export const getMonthlyPeriods: GeneratedPeriodsFunc = ({
           nextMonth: nextMonth.subtract({ months: 1 }), // when we display, we want to show the range using previous month
           index,
         }),
-        value: buildValue({ periodType, currentMonth, year, index }),
       });
     }
 

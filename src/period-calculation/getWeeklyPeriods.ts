@@ -58,9 +58,11 @@ export const getWeeklyPeriods: GeneratedPeriodsFunc = ({
 
   do {
     const nextWeek = date.add({ days: daysToAdd });
+    const value = buildValue(periodType, year, i);
     days.push({
-      label: buildLabel({ periodType, date, nextWeek, weekIndex: i }),
-      value: buildValue(periodType, year, i),
+      id: value,
+      iso: value,
+      name: buildLabel({ periodType, date, nextWeek, weekIndex: i }),
     });
     date = Temporal.PlainDate.from(nextWeek).add({ days: 1 });
     i++;

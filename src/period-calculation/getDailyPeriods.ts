@@ -16,11 +16,14 @@ export const getDailyPeriods: GeneratedPeriodsFunc = ({
   const days = [];
   for (let i = 0; i < day.daysInYear; i++) {
     const nextDay = day.add({ days: i });
+    const value = `${day.year}${String(nextDay.month).padStart(2, "0")}${String(
+      nextDay.day
+    ).padStart(2, "0")}`;
+
     days.push({
-      label: `${day.year}-${String(nextDay.month).padStart(2, "0")}-${String(
-        nextDay.day
-      ).padStart(2, "0")}`,
-      value: `${day.year}${String(nextDay.month).padStart(2, "0")}${String(
+      id: value,
+      iso: value,
+      name: `${day.year}-${String(nextDay.month).padStart(2, "0")}-${String(
         nextDay.day
       ).padStart(2, "0")}`,
     });

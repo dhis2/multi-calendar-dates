@@ -19,9 +19,11 @@ export const getYearlyPeriods: GeneratedPeriodsFunc = ({
 
   for (let i = 0; i < yearsCount; i++) {
     const { year } = currentYear.subtract({ years: i });
+    const value = buildValue(periodType, year.toString());
     years.push({
-      label: year.toString(),
-      value: buildValue(periodType, year.toString()),
+      id: value,
+      iso: value,
+      name: year.toString(),
     });
   }
   return years;

@@ -84,12 +84,12 @@ Then("the 13th month \\(Pagumen) should be returned", function () {
     ...periodOptions,
   });
 
-  assert.equal(result[result.length - 1]?.label, "2015-13-06");
+  assert.equal(result[result.length - 1]?.name, "2015-13-06");
 
   result = generateFixedPeriods({
     year: nonLeapYear,
     ...periodOptions,
   });
 
-  assert.equal(result[result.length - 1]?.label, "2014-13-05");
+  assert.equal(result[result.length - 1]?.name, "2014-13-05");
 });
