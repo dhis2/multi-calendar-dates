@@ -1,3 +1,10 @@
+# [1.0.0-alpha.3](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.2...v1.0.0-alpha.3) (2022-12-27)
+
+
+### Bug Fixes
+
+* make nepali calendar default to en-NP if no valid locale provided ([a074789](https://github.com/dhis2/multi-calendar-dates/commit/a074789125840bb349f581a4a70e0cf2b6dc928f))
+
 # [1.0.0-alpha.2](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.1...v1.0.0-alpha.2) (2022-12-27)
 
 
