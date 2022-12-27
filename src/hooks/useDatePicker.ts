@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { dhis2CalendarsMap } from "../constants";
 import { SupportedCalendar } from "../types";
 import { getCustomCalendarIfExists } from "../utils/helpers";
 import localisationHelpers from "../utils/localisationHelpers";
@@ -55,8 +56,9 @@ export const useDatePicker: UseDatePickerHookType = ({
 
   const { calendar: calendarFromOptions = "gregory", locale = "en" } = options;
 
-  const calendar: Temporal.CalendarLike =
-    getCustomCalendarIfExists(calendarFromOptions);
+  const calendar: Temporal.CalendarLike = getCustomCalendarIfExists(
+    dhis2CalendarsMap[calendarFromOptions] ?? calendarFromOptions
+  );
 
   const temporalCalendar = useMemo(
     () => Temporal.Calendar.from(calendar),

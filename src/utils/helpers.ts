@@ -1,8 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { customCalendars, CustomCalendarTypes } from "../custom-calendars";
-import { SupportedCalendar } from "../types";
 
-export const isCustomCalendar = (calendar: SupportedCalendar) =>
+export const isCustomCalendar = (calendar: Temporal.CalendarLike) =>
   !!customCalendars[calendar as CustomCalendarTypes];
 
 export const padWithZeroes = (number: number, count = 2) =>
@@ -12,7 +11,7 @@ export const capitalize = (string: string) =>
   string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
 
 export const getCustomCalendarIfExists = (
-  calendar: SupportedCalendar
+  calendar: Temporal.CalendarLike
 ): Temporal.CalendarProtocol | Temporal.CalendarLike => {
   const isCustom = isCustomCalendar(calendar);
   if (!isCustom) {
