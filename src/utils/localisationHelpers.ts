@@ -1,14 +1,33 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { numberingSystems } from "../constants";
-import { customCalendars, CustomCalendarTypes } from "../custom-calendars";
+import {
+  CalendarCustomLocale,
+  customCalendars,
+  CustomCalendarTypes,
+} from "../custom-calendars";
 import { LocaleOptions } from "../hooks/useDatePicker";
 import { isCustomCalendar } from "./helpers";
 
 const getCustomCalendarLocale = (
   calendar: Temporal.CalendarLike,
   locale: string
-) => {
-  return customCalendars[calendar as CustomCalendarTypes]?.locales?.[locale];
+): CalendarCustomLocale | undefined => {
+  const customCalendar = customCalendars[calendar as CustomCalendarTypes];
+
+  if (!customCalendar) {
+    return undefined;
+  }
+  const customLocalisations = customCalendar.locales || {};
+  const result =
+    customLocalisations?.[locale] ??
+    customLocalisations?.[customCalendar.defaultLocale];
+
+  if (!result) {
+    throw new Error(
+      `no localisation found for custom calendar ${calendar}. Requested locale: ${locale}, Default locale ${customCalendar.defaultLocale}`
+    );
+  }
+  return result;
 };
 
 const localiseDateLabel = (

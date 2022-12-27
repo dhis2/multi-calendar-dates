@@ -55,10 +55,8 @@ export const useDatePicker: UseDatePickerHookType = ({
 
   const { calendar: calendarFromOptions = "gregory", locale = "en" } = options;
 
-  const calendar: Temporal.CalendarLike = getCustomCalendarIfExists(
-    calendarFromOptions,
-    options.locale
-  );
+  const calendar: Temporal.CalendarLike =
+    getCustomCalendarIfExists(calendarFromOptions);
 
   const temporalCalendar = useMemo(
     () => Temporal.Calendar.from(calendar),

@@ -12,8 +12,7 @@ export const capitalize = (string: string) =>
   string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
 
 export const getCustomCalendarIfExists = (
-  calendar: SupportedCalendar,
-  locale: string
+  calendar: SupportedCalendar
 ): Temporal.CalendarProtocol | Temporal.CalendarLike => {
   const isCustom = isCustomCalendar(calendar);
   if (!isCustom) {
@@ -28,15 +27,5 @@ export const getCustomCalendarIfExists = (
     throw new Error(`No implemenation found for custom calendar ${calendar}`);
   }
 
-  const customLocalisations =
-    customCalendars[calendar as CustomCalendarTypes]?.locales || {};
-  const allowedLocales = Object.keys(customLocalisations);
-  if (!allowedLocales.includes(locale)) {
-    throw new Error(
-      `For the custom calendar "${calendar}", only specific locales are allowed: ${allowedLocales.join(
-        ", "
-      )}`
-    );
-  }
   return customCalendar;
 };

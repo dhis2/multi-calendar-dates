@@ -307,6 +307,21 @@ describe("custom calendars", () => {
       expect(result.nextYear.label).toEqual(2080);
       expect(result.prevYear.label).toEqual(2078);
     });
+    it("should allow a non-supported locale and default to english", () => {
+      const onDateSelect = jest.fn();
+      const date = "2022-11-23";
+      const options = {
+        locale: "de-DE", // non-supported locale
+        calendar: "nepali" as const,
+        timeZone: "Africa/Khartoum",
+      };
+      const renderedHook = renderHook(() =>
+        useDatePicker({ onDateSelect, date, options })
+      );
+      const result = renderedHook?.result.current as UseDatePickerReturn;
+
+      expect(result.prevMonth.label).toEqual("Ashwin");
+    });
   });
   describe("rendering Nepali (custom) day names", () => {
     it("should render Nepali with ne-NP passed", () => {

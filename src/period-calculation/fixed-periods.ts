@@ -62,8 +62,7 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
     }
   }
   const calendar = getCustomCalendarIfExists(
-    requestedCalendar,
-    locale
+    requestedCalendar
   ) as SupportedCalendar;
 
   if (periodType?.match("WEEKLY")) {
