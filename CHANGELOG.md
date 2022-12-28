@@ -1,3 +1,10 @@
+# [1.0.0-alpha.9](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.8...v1.0.0-alpha.9) (2022-12-28)
+
+
+### Bug Fixes
+
+* respect startingDay for weekly period generation ([5f1196a](https://github.com/dhis2/multi-calendar-dates/commit/5f1196aff2bad6b77bdaa5fdd52b38bf720eea0b))
+
 # [1.0.0-alpha.8](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.7...v1.0.0-alpha.8) (2022-12-28)
 
 
