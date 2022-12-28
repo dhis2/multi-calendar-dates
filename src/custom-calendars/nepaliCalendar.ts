@@ -24,6 +24,9 @@ class NepaliCalendar extends Temporal.Calendar {
     const nepaliYear = _isoToNepali({ year, month, day })?.year;
     return nepaliYear;
   }
+  eraYear(date: Temporal.PlainDate | Temporal.PlainDateTime) {
+    return this.year(date);
+  }
   daysInMonth(date: Temporal.PlainDate | Temporal.PlainDateTime): number {
     const { year, month } = date;
     return NEPALI_CALENDAR_DATA[year][month];

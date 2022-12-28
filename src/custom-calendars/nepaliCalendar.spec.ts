@@ -73,6 +73,7 @@ describe("from greogorian to nepali", () => {
       Temporal.PlainDate.from("2022-10-18").withCalendar(calendar);
 
     expect(nepaliDate.year).toEqual(2079);
+    expect(nepaliDate.eraYear).toEqual(2079);
     expect(nepaliDate.day).toEqual(1);
     expect(nepaliDate.month).toEqual(7);
   });
