@@ -2,7 +2,11 @@ import { Temporal } from "@js-temporal/polyfill";
 import { SupportedCalendar } from "../types";
 import { isCustomCalendar, padWithZeroes } from "../utils/helpers";
 import localisationHelpers from "../utils/localisationHelpers";
-import { GeneratedPeriodsFunc, PeriodIdentifier } from "./fixed-periods";
+import {
+  FixedPeriod,
+  GeneratedPeriodsFunc,
+  PeriodIdentifier,
+} from "./fixed-periods";
 
 export const getMonthlyPeriods: GeneratedPeriodsFunc = ({
   year,
@@ -17,7 +21,7 @@ export const getMonthlyPeriods: GeneratedPeriodsFunc = ({
     calendar,
   });
 
-  const months = [];
+  const months: FixedPeriod[] = [];
 
   const monthToAdd = getMonthsToAdd(periodType);
 

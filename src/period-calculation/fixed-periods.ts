@@ -1,3 +1,4 @@
+import { dhis2CalendarsMap } from "../constants/dhis2CalendarsMap";
 import { SupportedCalendar } from "../types";
 import { getCustomCalendarIfExists } from "../utils/helpers";
 import { getDailyPeriods } from "./getDailyPeriods";
@@ -65,7 +66,7 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
     }
   }
   const calendar = getCustomCalendarIfExists(
-    requestedCalendar
+    dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
   ) as SupportedCalendar;
 
   if (periodType?.match("WEEKLY")) {
