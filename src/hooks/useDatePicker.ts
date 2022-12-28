@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { dhis2CalendarsMap } from "../constants";
+import { dhis2CalendarsMap } from "../constants/dhis2CalendarsMap";
 import { SupportedCalendar } from "../types";
 import { getCustomCalendarIfExists } from "../utils/helpers";
 import localisationHelpers from "../utils/localisationHelpers";
