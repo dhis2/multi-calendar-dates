@@ -1,3 +1,10 @@
+# [1.0.0-alpha.7](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.6...v1.0.0-alpha.7) (2022-12-28)
+
+
+### Bug Fixes
+
+* add eraYear to nepali calendar ([c725d96](https://github.com/dhis2/multi-calendar-dates/commit/c725d96b0613c58567e1193e542d5f5eff58041c))
+
 # [1.0.0-alpha.6](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.5...v1.0.0-alpha.6) (2022-12-28)
 
 
