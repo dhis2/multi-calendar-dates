@@ -1,3 +1,10 @@
+# [1.0.0-alpha.10](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.9...v1.0.0-alpha.10) (2022-12-28)
+
+
+### Bug Fixes
+
+* update labels for Financial Year period types ([f6c9b68](https://github.com/dhis2/multi-calendar-dates/commit/f6c9b68d2a15cfc1b6a2322b98524324cb319329))
+
 # [1.0.0-alpha.9](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.8...v1.0.0-alpha.9) (2022-12-28)
 
 
