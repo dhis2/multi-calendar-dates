@@ -192,7 +192,7 @@ const getMonthsToAdd = (periodType: PeriodIdentifier) => {
   throw new Error(`unrecognised monthly period type ${periodType}`);
 };
 
-const monthNumbers = {
+export const monthNumbers = {
   JAN: { value: 1, name: "January" },
   FEB: { value: 2, name: "February" },
   MAR: { value: 3, name: "March" },

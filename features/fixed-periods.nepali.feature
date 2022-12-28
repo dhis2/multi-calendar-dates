@@ -210,14 +210,14 @@ Feature: Nepali Calendar fixed periods
     Scenario: Generate periods for Financial Year starting November
         When the user requests "FYNOV" periods for "2078"
         Then the dates for the period type should be generated
-            | periodIndex | periodLabel | periodValue |
-            | 1           | 2078        | 2078Nov     |
-            | 2           | 2077        | 2077Nov     |
-            | 3           | 2076        | 2076Nov     |
-            | 4           | 2075        | 2075Nov     |
-            | 5           | 2074        | 2074Nov     |
-            | 6           | 2073        | 2073Nov     |
-            | 7           | 2072        | 2072Nov     |
-            | 8           | 2071        | 2071Nov     |
-            | 9           | 2070        | 2070Nov     |
-            | 10          | 2069        | 2069Nov     |
+            | periodIndex | periodLabel               | periodValue |
+            | 1           | Falgun 2078 - Falgun 2079 | 2078Nov     |
+            | 2           | Falgun 2077 - Falgun 2078 | 2077Nov     |
+            | 3           | Falgun 2076 - Falgun 2077 | 2076Nov     |
+            | 4           | Falgun 2075 - Falgun 2076 | 2075Nov     |
+            | 5           | Falgun 2074 - Falgun 2075 | 2074Nov     |
+            | 6           | Falgun 2073 - Falgun 2074 | 2073Nov     |
+            | 7           | Falgun 2072 - Falgun 2073 | 2072Nov     |
+            | 8           | Falgun 2071 - Falgun 2072 | 2071Nov     |
+            | 9           | Falgun 2070 - Falgun 2071 | 2070Nov     |
+            | 10          | Falgun 2069 - Falgun 2070 | 2069Nov     |

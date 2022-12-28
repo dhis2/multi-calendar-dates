@@ -206,15 +206,15 @@ Feature: Ethiopic Calendar fixed periods
     Scenario: Generate periods for Financial Year starting the 11th Month
         When the user requests "FYNOV" periods for "2015"
         Then the dates for the period type should be generated
-            | periodIndex | periodLabel | periodValue |
-            | 1           | 2015        | 2015Nov     |
-            | 2           | 2014        | 2014Nov     |
-            | 3           | 2013        | 2013Nov     |
-            | 4           | 2012        | 2012Nov     |
-            | 5           | 2011        | 2011Nov     |
-            | 6           | 2010        | 2010Nov     |
-            | 7           | 2009        | 2009Nov     |
-            | 8           | 2008        | 2008Nov     |
-            | 9           | 2007        | 2007Nov     |
-            | 10          | 2006        | 2006Nov     |
+            | periodIndex | periodLabel             | periodValue |
+            | 1           | Hamle 2015 - Hamle 2016 | 2015Nov     |
+            | 2           | Hamle 2014 - Hamle 2015 | 2014Nov     |
+            | 3           | Hamle 2013 - Hamle 2014 | 2013Nov     |
+            | 4           | Hamle 2012 - Hamle 2013 | 2012Nov     |
+            | 5           | Hamle 2011 - Hamle 2012 | 2011Nov     |
+            | 6           | Hamle 2010 - Hamle 2011 | 2010Nov     |
+            | 7           | Hamle 2009 - Hamle 2010 | 2009Nov     |
+            | 8           | Hamle 2008 - Hamle 2009 | 2008Nov     |
+            | 9           | Hamle 2007 - Hamle 2008 | 2007Nov     |
+            | 10          | Hamle 2006 - Hamle 2007 | 2006Nov     |
 

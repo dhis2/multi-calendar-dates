@@ -181,14 +181,14 @@ Feature: Gregorian Calendar fixed periods
     Scenario: Generate periods for Financial Year starting November
         When the user requests "FYNOV" periods for "2022"
         Then the dates for the period type should be generated
-            | periodIndex | periodLabel | periodValue |
-            | 1           | 2022        | 2022Nov     |
-            | 2           | 2021        | 2021Nov     |
-            | 3           | 2020        | 2020Nov     |
-            | 4           | 2019        | 2019Nov     |
-            | 5           | 2018        | 2018Nov     |
-            | 6           | 2017        | 2017Nov     |
-            | 7           | 2016        | 2016Nov     |
-            | 8           | 2015        | 2015Nov     |
-            | 9           | 2014        | 2014Nov     |
-            | 10          | 2013        | 2013Nov     |
+            | periodIndex | periodLabel                   | periodValue |
+            | 1           | November 2022 - November 2023 | 2022Nov     |
+            | 2           | November 2021 - November 2022 | 2021Nov     |
+            | 3           | November 2020 - November 2021 | 2020Nov     |
+            | 4           | November 2019 - November 2020 | 2019Nov     |
+            | 5           | November 2018 - November 2019 | 2018Nov     |
+            | 6           | November 2017 - November 2018 | 2017Nov     |
+            | 7           | November 2016 - November 2017 | 2016Nov     |
+            | 8           | November 2015 - November 2016 | 2015Nov     |
+            | 9           | November 2014 - November 2015 | 2014Nov     |
+            | 10          | November 2013 - November 2014 | 2013Nov     |
