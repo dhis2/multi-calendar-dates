@@ -1,3 +1,10 @@
+# [1.0.0-alpha.8](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.7...v1.0.0-alpha.8) (2022-12-28)
+
+
+### Bug Fixes
+
+* make sure period calculation works with non-standard dhis2 calendar IDs ([7c56b1a](https://github.com/dhis2/multi-calendar-dates/commit/7c56b1a219e95dce7b781a3642e5b486d028ab7c))
+
 # [1.0.0-alpha.7](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.6...v1.0.0-alpha.7) (2022-12-28)
 
 
