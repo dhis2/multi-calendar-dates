@@ -11,11 +11,14 @@ const Days = {
   Saturday: 6,
   Sunday: 7,
 };
-const getStartingDay = (periodType: PeriodIdentifier) => {
+const getStartingDay = (
+  periodType: PeriodIdentifier,
+  startingDay: number | undefined
+) => {
   switch (periodType) {
     case "WEEKLY":
     case "BIWEEKLY":
-      return Days.Monday;
+      return startingDay || Days.Monday;
     case "WEEKLYSAT":
       return Days.Saturday;
     case "WEEKLYSUN":
@@ -32,6 +35,7 @@ export const getWeeklyPeriods: GeneratedPeriodsFunc = ({
   year,
   calendar,
   periodType,
+  startingDay: passedStartingDay,
   locale = "en-GB",
 }) => {
   let date = Temporal.PlainDate.from({
@@ -41,7 +45,7 @@ export const getWeeklyPeriods: GeneratedPeriodsFunc = ({
     calendar,
   });
 
-  const startingDay = getStartingDay(periodType);
+  const startingDay = getStartingDay(periodType, passedStartingDay);
 
   if (date.dayOfWeek !== startingDay) {
     let diff = 7 - date.dayOfWeek + startingDay;
