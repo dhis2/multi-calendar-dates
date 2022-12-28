@@ -1,3 +1,10 @@
+# [1.0.0-alpha.5](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.4...v1.0.0-alpha.5) (2022-12-28)
+
+
+### Features
+
+* expose a method to return today date in specific calendar ([1213b45](https://github.com/dhis2/multi-calendar-dates/commit/1213b453a71f4eef5393cd72f2204e7deea2b998))
+
 # [1.0.0-alpha.4](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.3...v1.0.0-alpha.4) (2022-12-27)
 
 
