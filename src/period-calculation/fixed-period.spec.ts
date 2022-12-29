@@ -37,14 +37,12 @@ describe("fixed period calculation", () => {
 
         expect(result[0]).toEqual({
           id: "2015Nov",
-          iso: "2015Nov",
-          name: "November 2015 - November 2016",
+          name: "November 2015 - October 2016",
         });
 
         expect(result[result.length - 1]).toEqual({
           id: "2006Nov",
-          iso: "2006Nov",
-          name: "November 2006 - November 2007",
+          name: "November 2006 - October 2007",
         });
       });
 
@@ -56,14 +54,12 @@ describe("fixed period calculation", () => {
 
         expect(result[0]).toEqual({
           id: "2015Apr",
-          iso: "2015Apr",
-          name: "April 2015 - April 2016",
+          name: "April 2015 - March 2016",
         });
 
         expect(result[result.length - 1]).toEqual({
           id: "2006Apr",
-          iso: "2006Apr",
-          name: "April 2006 - April 2007",
+          name: "April 2006 - March 2007",
         });
       });
 
@@ -100,14 +96,12 @@ describe("fixed period calculation", () => {
 
         expect(result[0]).toEqual({
           id: "2015Nov",
-          iso: "2015Nov",
-          name: "Hamle 2015 - Hamle 2016",
+          name: "Hamle 2015 - Sene 2016",
         });
 
         expect(result[result.length - 1]).toEqual({
           id: "2006Nov",
-          iso: "2006Nov",
-          name: "Hamle 2006 - Hamle 2007",
+          name: "Hamle 2006 - Sene 2007",
         });
       });
 
@@ -119,14 +113,12 @@ describe("fixed period calculation", () => {
 
         expect(result[0]).toEqual({
           id: "2015Apr",
-          iso: "2015Apr",
-          name: "Tahsas 2015 - Tahsas 2016",
+          name: "Tahsas 2015 - Hedar 2016",
         });
 
         expect(result[result.length - 1]).toEqual({
           id: "2006Apr",
-          iso: "2006Apr",
-          name: "Tahsas 2006 - Tahsas 2007",
+          name: "Tahsas 2006 - Hedar 2007",
         });
       });
 
@@ -164,14 +156,12 @@ describe("fixed period calculation", () => {
 
         expect(result[0]).toEqual({
           id: "2078Nov",
-          iso: "2078Nov",
-          name: "Falgun 2078 - Falgun 2079",
+          name: "Falgun 2078 - Mangh 2079",
         });
 
         expect(result[result.length - 1]).toEqual({
           id: "2069Nov",
-          iso: "2069Nov",
-          name: "Falgun 2069 - Falgun 2070",
+          name: "Falgun 2069 - Mangh 2070",
         });
       });
 
@@ -183,14 +173,12 @@ describe("fixed period calculation", () => {
 
         expect(result[0]).toEqual({
           id: "2078Apr",
-          iso: "2078Apr",
-          name: "Shrawan 2078 - Shrawan 2079",
+          name: "Shrawan 2078 - Ashadh 2079",
         });
 
         expect(result[result.length - 1]).toEqual({
           id: "2069Apr",
-          iso: "2069Apr",
-          name: "Shrawan 2069 - Shrawan 2070",
+          name: "Shrawan 2069 - Ashadh 2070",
         });
       });
 

@@ -39,7 +39,6 @@ Then(
     (dataTable.hashes() as DataTable).forEach((row) => {
       assert.equal(result[row.periodIndex - 1].name, row.periodLabel);
       assert.equal(result[row.periodIndex - 1].id, row.periodValue);
-      assert.equal(result[row.periodIndex - 1].iso, row.periodValue);
     });
   }
 );
