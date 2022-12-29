@@ -1,3 +1,4 @@
+import { result } from "lodash";
 import { SupportedCalendar } from "../types";
 import generateFixedPeriods from "./fixed-periods";
 
@@ -20,6 +21,40 @@ describe("fixed period calculation", () => {
       });
 
       expect(resultStartingMonday[0]).not.toEqual(resultStartingTuesday[0]);
+    });
+
+    it("should omit last week if most of it is in next year", () => {
+      const results = generateFixedPeriods({
+        periodType: "WEEKLY",
+        year: 2014,
+        calendar: "gregory",
+        locale: "en",
+        startingDay: 1,
+      });
+      expect(results[results.length - 1]).toEqual({
+        id: "2014W52",
+        iso: "2014W52",
+        name: "Week 52 - 2014-12-22 - 2014-12-28",
+      });
+    });
+    it("should start the year before if necessary", () => {
+      const results = generateFixedPeriods({
+        periodType: "WEEKLYSUN",
+        year: 2014,
+        calendar: "gregory",
+        locale: "en",
+        startingDay: 1,
+      });
+      expect(results[0]).toEqual({
+        id: "2014SunW1",
+        iso: "2014SunW1",
+        name: "Week 1 - 2013-12-29 - 2014-01-04",
+      });
+      expect(results[52]).toEqual({
+        id: "2014SunW53",
+        iso: "2014SunW53",
+        name: "Week 53 - 2014-12-28 - 2015-01-03",
+      });
     });
   });
   describe("financial year", () => {
@@ -53,12 +88,12 @@ describe("fixed period calculation", () => {
         });
 
         expect(result[0]).toEqual({
-          id: "2015Apr",
+          id: "2015April",
           name: "April 2015 - March 2016",
         });
 
         expect(result[result.length - 1]).toEqual({
-          id: "2006Apr",
+          id: "2006April",
           name: "April 2006 - March 2007",
         });
       });
@@ -112,12 +147,12 @@ describe("fixed period calculation", () => {
         });
 
         expect(result[0]).toEqual({
-          id: "2015Apr",
+          id: "2015April",
           name: "Tahsas 2015 - Hedar 2016",
         });
 
         expect(result[result.length - 1]).toEqual({
-          id: "2006Apr",
+          id: "2006April",
           name: "Tahsas 2006 - Hedar 2007",
         });
       });
@@ -172,12 +207,12 @@ describe("fixed period calculation", () => {
         });
 
         expect(result[0]).toEqual({
-          id: "2078Apr",
+          id: "2078April",
           name: "Shrawan 2078 - Ashadh 2079",
         });
 
         expect(result[result.length - 1]).toEqual({
-          id: "2069Apr",
+          id: "2069April",
           name: "Shrawan 2069 - Ashadh 2070",
         });
       });

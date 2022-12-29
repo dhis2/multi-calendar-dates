@@ -56,7 +56,7 @@ Then(
       assert.equal(
         result.generatedPeriods.length,
         result.periodCount,
-        `${result.periodType} has wrong number of periods (expected: ${result.periodCount} / actual: ${result.generatedPeriods.length})`
+        `${result.periodType} ${result.year} has wrong number of periods (expected: ${result.periodCount} / actual: ${result.generatedPeriods.length})`
       );
     });
   }

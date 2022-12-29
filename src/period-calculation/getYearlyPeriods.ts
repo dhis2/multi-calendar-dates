@@ -16,9 +16,10 @@ export const getYearlyPeriods: GeneratedPeriodsFunc = ({
   yearsCount = 10,
   locale,
 }) => {
+  const month = getMonth(periodType);
   const currentYear = Temporal.PlainDate.from({
     year,
-    month: getMonth(periodType),
+    month,
     day: calendar.toString() === "nepali" ? 14 : 1,
     calendar,
   });
@@ -27,7 +28,11 @@ export const getYearlyPeriods: GeneratedPeriodsFunc = ({
 
   for (let i = 0; i < yearsCount; i++) {
     const previousYear = currentYear.subtract({ years: i });
-    const value = buildValue(periodType, previousYear.year.toString());
+    const value = buildValue({
+      periodType,
+      year: previousYear.year,
+      month,
+    });
     const year: FixedPeriod = {
       id: value,
       iso: value,
@@ -107,13 +112,35 @@ const buildLabelForCustomCalendar = (
   return result;
 };
 
-const buildValue = (periodType: PeriodIdentifier, year: string) => {
+const monthValueKeys: Record<number, string> = {
+  1: "",
+  2: "Feb",
+  3: "March", // some keys are full month-names, some are short ... for some reason
+  4: "April",
+  5: "May",
+  6: "Jun",
+  7: "July",
+  8: "Aug",
+  9: "Sep",
+  10: "Oct",
+  11: "Nov",
+  12: "Dec",
+};
+const buildValue = ({
+  periodType,
+  year,
+  month,
+}: {
+  periodType: PeriodIdentifier;
+  year: number;
+  month: number;
+}): string => {
   if (periodType === "YEARLY") {
-    return year;
+    return year.toString();
   }
   // financial year
   if (isFinancialYear(periodType)) {
-    const yearType = capitalize(periodType?.replace("FY", ""));
+    const yearType = monthValueKeys[month]; // capitalize(periodType?.replace("FY", ""));
     return `${year}${yearType}`;
   }
   throw new Error(

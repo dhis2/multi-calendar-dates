@@ -10,7 +10,6 @@ Feature: Ethiopic Calendar fixed periods
             | 2014 | DAILY         | 365         |
             | 2014 | WEEKLY        | 52          |
             | 2015 | WEEKLY        | 52          |
-            | 2011 | WEEKLY        | 53          |
             | 2015 | BIWEEKLY      | 26          |
             | 2015 | BIMONTHLY     | 6           |
             | 2015 | QUARTERLY     | 4           |
@@ -107,7 +106,6 @@ Feature: Ethiopic Calendar fixed periods
             | 50          | Week 50 - 2015-12-14 - 2015-12-20 | 2015SatW50  |
             | 51          | Week 51 - 2015-12-21 - 2015-12-27 | 2015SatW51  |
             | 52          | Week 52 - 2015-12-28 - 2015-13-04 | 2015SatW52  |
-            | 53          | Week 53 - 2015-13-05 - 2016-01-05 | 2015SatW53  |
 
     @abyot # same - should the last week here be added or not?
     Scenario: Generate Weekly Periods (Starting Sunday)
@@ -120,7 +118,6 @@ Feature: Ethiopic Calendar fixed periods
             | 50          | Week 50 - 2015-12-15 - 2015-12-21 | 2015SunW50  |
             | 51          | Week 51 - 2015-12-22 - 2015-12-28 | 2015SunW51  |
             | 52          | Week 52 - 2015-12-29 - 2015-13-05 | 2015SunW52  |
-            | 53          | Week 53 - 2015-13-06 - 2016-01-06 | 2015SunW53  |
 
     @abyot # could you confirm what we want to do with the 13th month in bi-weekly? does the last item here period#26 look correct to you?
     Scenario: Generate Bi-Weekly Periods

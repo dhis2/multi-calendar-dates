@@ -1,6 +1,11 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { capitalize, padWithZeroes } from "../utils/helpers";
-import { GeneratedPeriodsFunc, PeriodIdentifier } from "./fixed-periods";
+import { SupportedCalendar } from "../types";
+import { padWithZeroes } from "../utils/helpers";
+import {
+  FixedPeriod,
+  GeneratedPeriodsFunc,
+  PeriodIdentifier,
+} from "./fixed-periods";
 
 const Days = {
   Monday: 1,
@@ -11,6 +16,7 @@ const Days = {
   Saturday: 6,
   Sunday: 7,
 };
+
 const getStartingDay = (
   periodType: PeriodIdentifier,
   startingDay: number | undefined
@@ -31,58 +37,98 @@ const getStartingDay = (
       throw new Error(`unrecoginsed weekly period type: ${periodType}`);
   }
 };
+
 export const getWeeklyPeriods: GeneratedPeriodsFunc = ({
   year,
   calendar,
   periodType,
-  startingDay: passedStartingDay,
+  startingDay,
   locale = "en-GB",
 }) => {
-  let date = Temporal.PlainDate.from({
+  const startingDayToUse = getStartingDay(periodType, startingDay);
+  let date = getStartingDate({
     year,
-    month: 1,
-    day: 1,
     calendar,
+    periodType,
+    startingDay: startingDayToUse,
   });
 
-  const startingDay = getStartingDay(periodType, passedStartingDay);
-
-  if (date.dayOfWeek !== startingDay) {
-    let diff = 7 - date.dayOfWeek + startingDay;
-    if (diff > 3) {
-      diff = (startingDay - date.dayOfWeek) % 7;
-    }
-    date = date.add({ days: diff });
-  }
-
-  const days = [];
+  const days: FixedPeriod[] = [];
   let i = 1;
 
   const daysToAdd = periodType === "BIWEEKLY" ? 13 : 6;
 
   do {
     const nextWeek = date.add({ days: daysToAdd });
-    const value = buildValue(periodType, year, i);
-    days.push({
-      id: value,
-      iso: value,
-      name: buildLabel({ periodType, date, nextWeek, weekIndex: i }),
+    const value = buildValue({
+      periodType,
+      startingDay: startingDayToUse,
+      year,
+      weekIndex: i,
     });
+    if (!(nextWeek.year === year + 1 && nextWeek.day >= 4)) {
+      days.push({
+        id: value,
+        iso: value,
+        name: buildLabel({ periodType, date, nextWeek, weekIndex: i }),
+      });
+    }
     date = Temporal.PlainDate.from(nextWeek).add({ days: 1 });
     i++;
   } while (date.year === year); // important to have the condition after since the very first day can be in the previous year
   return days;
 };
 
-const buildValue = (
-  periodType: PeriodIdentifier,
-  year: number,
-  weekIndex: number
-) => {
-  const dayPrefix =
-    periodType === "WEEKLY" ? "" : capitalize(periodType.replace("WEEKLY", ""));
+const getStartingDate = (options: {
+  year: number;
+  startingDay: number;
+  calendar: SupportedCalendar;
+  periodType: PeriodIdentifier;
+}) => {
+  const { year, calendar, startingDay } = options;
 
-  return `${year}${dayPrefix}W${weekIndex}`;
+  // first week in every year has the 4th in the first month
+  const fourthOfFirstMonth = Temporal.PlainDate.from({
+    year,
+    month: 1,
+    day: 4,
+    calendar,
+  });
+
+  const dayDiff = fourthOfFirstMonth.dayOfWeek - startingDay;
+
+  if (dayDiff > 0) {
+    return fourthOfFirstMonth.subtract({ days: dayDiff });
+  } else if (dayDiff < 0) {
+    return fourthOfFirstMonth.subtract({ days: dayDiff + 7 });
+  }
+
+  return fourthOfFirstMonth;
+};
+
+const DaysKeys: Record<number, string> = {
+  1: "", // Monday is the default and has no key
+  2: "Tue",
+  3: "Wed",
+  4: "Thu",
+  5: "Fri",
+  6: "Sat",
+  7: "Sun",
+};
+
+const buildValue = ({
+  startingDay,
+  periodType,
+  year,
+  weekIndex,
+}: {
+  periodType: PeriodIdentifier;
+  startingDay: number;
+  year: number;
+  weekIndex: number;
+}) => {
+  const periodKey = periodType === "BIWEEKLY" ? "BiW" : "W";
+  return `${year}${DaysKeys[startingDay]}${periodKey}${weekIndex}`;
 };
 
 type BuildLabelFunc = (options: {

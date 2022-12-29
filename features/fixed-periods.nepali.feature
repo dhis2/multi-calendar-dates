@@ -11,10 +11,11 @@ Feature: Nepali Calendar fixed periods
             | 2078 | DAILY         | 365         |
             | 2077 | DAILY         | 366         |
             | 2080 | WEEKLY        | 52          |
-            | 2078 | WEEKLY        | 53          |
-            | 2077 | WEEKLY        | 53          |
+            | 2078 | WEEKLY        | 52          |
+            | 2078 | WEEKLYSUN     | 53          |
+            | 2077 | WEEKLY        | 52          |
             | 2080 | BIWEEKLY      | 26          |
-            | 2078 | BIWEEKLY      | 27          |
+            | 2078 | BIWEEKLY      | 26          |
             | 2078 | BIMONTHLY     | 6           |
             | 2078 | QUARTERLY     | 4           |
             | 2078 | SIXMONTHLY    | 2           |
@@ -85,7 +86,6 @@ Feature: Nepali Calendar fixed periods
             | 3           | Week 3 - 2078-01-13 - 2078-01-19  | 2078W3      |
             | 51          | Week 51 - 2078-12-14 - 2078-12-20 | 2078W51     |
             | 52          | Week 52 - 2078-12-21 - 2078-12-27 | 2078W52     |
-            | 53          | Week 53 - 2078-12-28 - 2079-01-04 | 2078W53     |
 
 
     Scenario: Generate Weekly Periods (Starting Wednesday)
@@ -97,7 +97,7 @@ Feature: Nepali Calendar fixed periods
             | 3           | Week 3 - 2078-01-15 - 2078-01-21  | 2078WedW3   |
             | 51          | Week 51 - 2078-12-16 - 2078-12-22 | 2078WedW51  |
             | 52          | Week 52 - 2078-12-23 - 2078-12-29 | 2078WedW52  |
-            | 53          | Week 53 - 2078-12-30 - 2079-01-06 | 2078WedW53  |
+
     Scenario: Generate Weekly Periods (Starting Thursday)
         When the user requests "WEEKLYTHU" periods for "2078"
         Then the dates for the period type should be generated
@@ -124,12 +124,13 @@ Feature: Nepali Calendar fixed periods
         When the user requests "WEEKLYSUN" periods for "2078"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
-            | 1           | Week 1 - 2078-01-05 - 2078-01-11  | 2078SunW1   |
-            | 2           | Week 2 - 2078-01-12 - 2078-01-18  | 2078SunW2   |
-            | 3           | Week 3 - 2078-01-19 - 2078-01-25  | 2078SunW3   |
-            | 50          | Week 50 - 2078-12-13 - 2078-12-19 | 2078SunW50  |
-            | 51          | Week 51 - 2078-12-20 - 2078-12-26 | 2078SunW51  |
-            | 52          | Week 52 - 2078-12-27 - 2079-01-03 | 2078SunW52  |
+            | 1           | Week 1 - 2077-12-29 - 2078-01-04  | 2078SunW1   |
+            | 2           | Week 2 - 2078-01-05 - 2078-01-11  | 2078SunW2   |
+            | 3           | Week 3 - 2078-01-12 - 2078-01-18  | 2078SunW3   |
+            | 50          | Week 50 - 2078-12-06 - 2078-12-12 | 2078SunW50  |
+            | 51          | Week 51 - 2078-12-13 - 2078-12-19 | 2078SunW51  |
+            | 52          | Week 52 - 2078-12-20 - 2078-12-26 | 2078SunW52  |
+            | 53          | Week 53 - 2078-12-27 - 2079-01-03 | 2078SunW53  |
 
     Scenario: Generate Bi-Weekly Periods
         When the user requests "BIWEEKLY" periods for "2078"
