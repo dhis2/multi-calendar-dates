@@ -1,3 +1,15 @@
+# [1.0.0-alpha.12](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.11...v1.0.0-alpha.12) (2023-01-02)
+
+
+### Bug Fixes
+
+* update weekly period logic to match analytics tests ([2faf567](https://github.com/dhis2/multi-calendar-dates/commit/2faf567adcb5705d35f4d3d5930fb03aa7b343ef))
+
+
+### Features
+
+* update period generation to add start and end date ([9adb0aa](https://github.com/dhis2/multi-calendar-dates/commit/9adb0aa8a5d14dc7d89a02382e391823638cde24))
+
 # [1.0.0-alpha.11](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.10...v1.0.0-alpha.11) (2022-12-29)
 
 
