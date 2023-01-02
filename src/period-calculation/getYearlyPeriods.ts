@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { SupportedCalendar } from "../types";
-import { capitalize, isCustomCalendar } from "../utils/helpers";
+import { formatYyyyMmDD, isCustomCalendar } from "../utils/helpers";
 import localisationHelpers from "../utils/localisationHelpers";
 import {
   FixedPeriod,
@@ -27,19 +27,20 @@ export const getYearlyPeriods: GeneratedPeriodsFunc = ({
   const years: FixedPeriod[] = [];
 
   for (let i = 0; i < yearsCount; i++) {
-    const previousYear = currentYear.subtract({ years: i });
+    const dateToAdd = currentYear.subtract({ years: i });
     const value = buildValue({
       periodType,
-      year: previousYear.year,
+      year: dateToAdd.year,
       month,
     });
     const year: FixedPeriod = {
       id: value,
       iso: value,
-      name: buildLabel(periodType, previousYear, {
+      name: buildLabel(periodType, dateToAdd, {
         locale: locale || "en",
         calendar,
       }),
+      ...buildStartAndEndDates(dateToAdd),
     };
     if (isFinancialYear(periodType)) {
       delete year.iso;
@@ -47,6 +48,19 @@ export const getYearlyPeriods: GeneratedPeriodsFunc = ({
     years.push(year);
   }
   return years;
+};
+
+const buildStartAndEndDates = (date: Temporal.PlainDate) => {
+  const endDate = Temporal.PlainDate.from({
+    year: date.year + 1,
+    month: date.month,
+    day: 1,
+    calendar: date.calendar,
+  }).subtract({ days: 1 });
+  return {
+    startDate: formatYyyyMmDD(date, "startOfMonth"),
+    endDate: formatYyyyMmDD(endDate, "endOfMonth"),
+  };
 };
 
 const getMonth = (periodType: string) => {

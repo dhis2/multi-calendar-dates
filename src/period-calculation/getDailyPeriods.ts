@@ -1,11 +1,8 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { GeneratedPeriodsFunc } from "./fixed-periods";
+import { formatYyyyMmDD } from "../utils/helpers";
+import { FixedPeriod, GeneratedPeriodsFunc } from "./fixed-periods";
 
-export const getDailyPeriods: GeneratedPeriodsFunc = ({
-  year,
-  calendar,
-  locale = "en-GB",
-}) => {
+export const getDailyPeriods: GeneratedPeriodsFunc = ({ year, calendar }) => {
   const day = Temporal.PlainDate.from({
     year,
     month: 1,
@@ -13,7 +10,7 @@ export const getDailyPeriods: GeneratedPeriodsFunc = ({
     calendar,
   });
 
-  const days = [];
+  const days: FixedPeriod[] = [];
   for (let i = 0; i < day.daysInYear; i++) {
     const nextDay = day.add({ days: i });
     const value = `${day.year}${String(nextDay.month).padStart(2, "0")}${String(
@@ -23,9 +20,9 @@ export const getDailyPeriods: GeneratedPeriodsFunc = ({
     days.push({
       id: value,
       iso: value,
-      name: `${day.year}-${String(nextDay.month).padStart(2, "0")}-${String(
-        nextDay.day
-      ).padStart(2, "0")}`,
+      name: formatYyyyMmDD(nextDay),
+      startDate: formatYyyyMmDD(nextDay),
+      endDate: formatYyyyMmDD(nextDay),
     });
   }
   return days;

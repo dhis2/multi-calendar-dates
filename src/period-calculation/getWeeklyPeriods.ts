@@ -1,6 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { SupportedCalendar } from "../types";
-import { padWithZeroes } from "../utils/helpers";
+import { formatYyyyMmDD, padWithZeroes } from "../utils/helpers";
 import {
   FixedPeriod,
   GeneratedPeriodsFunc,
@@ -71,6 +71,8 @@ export const getWeeklyPeriods: GeneratedPeriodsFunc = ({
         id: value,
         iso: value,
         name: buildLabel({ periodType, date, nextWeek, weekIndex: i }),
+        startDate: formatYyyyMmDD(date),
+        endDate: formatYyyyMmDD(nextWeek),
       });
     }
     date = Temporal.PlainDate.from(nextWeek).add({ days: 1 });

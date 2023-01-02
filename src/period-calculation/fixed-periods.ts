@@ -33,8 +33,8 @@ export type FixedPeriod = {
   id: string;
   iso?: string;
   name: string;
-  startDate?: string;
-  endDate?: string;
+  startDate: string;
+  endDate: string;
 };
 type GeneratedPeriodParams = {
   year: number;

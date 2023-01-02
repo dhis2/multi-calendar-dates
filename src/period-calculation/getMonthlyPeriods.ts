@@ -1,6 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { SupportedCalendar } from "../types";
-import { isCustomCalendar, padWithZeroes } from "../utils/helpers";
+import {
+  formatYyyyMmDD,
+  isCustomCalendar,
+  padWithZeroes,
+} from "../utils/helpers";
 import localisationHelpers from "../utils/localisationHelpers";
 import {
   FixedPeriod,
@@ -46,6 +50,7 @@ export const getMonthlyPeriods: GeneratedPeriodsFunc = ({
           nextMonth: nextMonth.subtract({ months: 1 }), // when we display, we want to show the range using previous month
           index,
         }),
+        ...buildStartAndEndDate(currentMonth, nextMonth),
       });
     }
 
@@ -234,3 +239,23 @@ function needsExtraMonth(periodType: PeriodIdentifier, length: number) {
   }
   return false;
 }
+const buildStartAndEndDate = (
+  currentMonth: Temporal.PlainDate,
+  nextMonth: Temporal.PlainDate
+) => {
+  if (currentMonth.calendar === ("ethiopic" as Temporal.CalendarLike)) {
+    console.warn(
+      "todo: confirm the special cases for the 13th month with Abyot, then update the start/end dates for Ethiopic calendar"
+    );
+  }
+  const endDate = Temporal.PlainDate.from({
+    year: nextMonth.year,
+    month: nextMonth.month,
+    day: 1,
+    calendar: nextMonth.calendar,
+  }).subtract({ days: 1 });
+  return {
+    startDate: formatYyyyMmDD(currentMonth, "startOfMonth"),
+    endDate: formatYyyyMmDD(endDate, "endOfMonth"),
+  };
+};

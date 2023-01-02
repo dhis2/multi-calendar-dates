@@ -18,7 +18,11 @@ class NepaliCalendar extends Temporal.Calendar {
     return "nepali";
   }
 
-  /** year, month, day return nepali date */
+  /**
+   * The methods year, month, day return the Nepali date
+   *
+   * A custom implementation of these methods is used to convert the ISO calendar date to the calendar-space arguments.
+   */
   year(date: Temporal.PlainDate | Temporal.PlainDateTime) {
     const { isoYear: year, isoMonth: month, isoDay: day } = date.getISOFields();
     const nepaliYear = _isoToNepali({ year, month, day })?.year;
@@ -45,10 +49,9 @@ class NepaliCalendar extends Temporal.Calendar {
     return nepaliDay;
   }
   /**
-   *  A custom implementation of these methods (dateFromFields, yearMonthFromFields, monthDayFromFields)
-   *  would convert the calendar-space arguments to the ISO calendar, and return an object created using new Temporal.PlainDate(...isoArgs), with PlainYearMonth and PlainMonthDay substituted for PlainDate as appropriate.
+   * The methods dateFromFields, yearMonthFromFields, monthDayFromFields convert from nepali to iso
    *
-   * from nepali -> ISO
+   * A custom implementation of these methods is used to convert the calendar-space arguments to the ISO calendar.
    */
   dateFromFields(
     fields: CalendarYMD,
