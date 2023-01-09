@@ -142,7 +142,7 @@ const buildLabel: BuildLabelFunc = (options) => {
     result = `${month.toLocaleString(locale, withYearFormat)}`;
   }
 
-  // needed for ethiopic calendar - the default formatter adds the era, which is what we want at DHIS
+  // needed for ethiopic calendar - the default formatter adds the era, which is not what we want in DHIS2
   result = result.replace(/ERA\d+\s*/g, "").trim();
   return result;
 };
