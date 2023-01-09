@@ -10,7 +10,7 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "module": "ES2015",
+    "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -20,11 +20,8 @@
   },
   "include": ["src"],
   "exclude": ["lib"],
-  // this ts-node config is needed for cucumberjs to work with TypeScript
   "ts-node": {
     "esm": true,
-    // It is faster to skip typechecking.
-    // Remove if you want ts-node to do typechecking.
     "transpileOnly": true,
     "compilerOptions": {
       "module": "commonjs"
