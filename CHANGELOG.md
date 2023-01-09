@@ -1,3 +1,10 @@
+# [1.0.0-alpha.13](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.12...v1.0.0-alpha.13) (2023-01-09)
+
+
+### Bug Fixes
+
+* force publish to @dhis2/multi-calendar-dates ([0bc26f1](https://github.com/dhis2/multi-calendar-dates/commit/0bc26f15f8165febc3e60883bc1e6bde7fb0226b))
+
 # [1.0.0-alpha.12](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.11...v1.0.0-alpha.12) (2023-01-02)
 
 
