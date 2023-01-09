@@ -2,7 +2,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { dhis2CalendarsMap } from "../constants/dhis2CalendarsMap";
 import { SupportedCalendar } from "../types";
-import { getCustomCalendarIfExists } from "../utils/helpers";
+import { formatYyyyMmDD, getCustomCalendarIfExists } from "../utils/helpers";
 import localisationHelpers from "../utils/localisationHelpers";
 import { useCalendarWeekDays } from "./internal/useCalendarWeekDays";
 import {
@@ -16,10 +16,10 @@ type DatePickerOptions = {
   options: LocaleOptions;
   onDateSelect: ({
     calendarDate,
-    isoDate,
+    calendarDateString,
   }: {
     calendarDate: Temporal.ZonedDateTime;
-    isoDate: Temporal.ZonedDateTime;
+    calendarDateString: string;
   }) => void;
 };
 
@@ -47,11 +47,23 @@ type UseDatePickerHookType = (
   options: DatePickerOptions
 ) => UseDatePickerReturn;
 
+const fromDateParts = (date: string) => {
+  const dateParts = date.split("-");
+  if (dateParts.length !== 3) {
+    throw new Error(
+      `Invalid date ${date} - date should be in the format YYYY-MM-DD`
+    );
+  }
+  const [year, month, day] = dateParts;
+  return { year: Number(year), month: Number(month), day: Number(day) };
+};
 export const useDatePicker: UseDatePickerHookType = ({
   onDateSelect,
-  date,
+  date: dateParts,
   options,
 }) => {
+  const date = fromDateParts(dateParts);
+
   const prevDateStringRef = useRef(date);
 
   const { calendar: calendarFromOptions = "gregory", locale = "en" } = options;
@@ -85,13 +97,13 @@ export const useDatePicker: UseDatePickerHookType = ({
   const selectedDateZdt = useMemo(
     () =>
       date
-        ? Temporal.PlainDate.from(date)
+        ? Temporal.Calendar.from(temporalCalendar)
+            .dateFromFields(date)
             .toZonedDateTime({
               timeZone: temporalTimeZone,
             })
-            .withCalendar(temporalCalendar)
         : null,
-    [date, temporalTimeZone, temporalCalendar]
+    [date, temporalCalendar, temporalTimeZone]
   );
 
   const [firstZdtOfVisibleMonth, setFirstZdtOfVisibleMonth] = useState(() => {
@@ -127,7 +139,7 @@ export const useDatePicker: UseDatePickerHookType = ({
     (zdt: Temporal.ZonedDateTime) => {
       onDateSelect({
         calendarDate: zdt,
-        isoDate: zdt.withCalendar("iso8601"),
+        calendarDateString: formatYyyyMmDD(zdt),
       });
     },
     [onDateSelect]
