@@ -1,2 +1,2 @@
-export * from "./calendars";
-export * from "./numberingSystems";
+export * from './calendars'
+export * from './numberingSystems'

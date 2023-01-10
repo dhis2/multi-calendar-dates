@@ -1,96 +1,96 @@
 {
-  "name": "@dhis2/multi-calendar-dates",
-  "version": "1.0.0-beta.21",
-  "license": "BSD-3-Clause",
-  "publishConfig": {
-    "access": "public"
-  },
-  "dependencies": {
-    "@js-temporal/polyfill": "^0.4.2",
-    "classnames": "^2.3.2"
-  },
-  "peerDependencies": {
-    "react": "16.8",
-    "react-dom": "16.8"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "tsc",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "lint": "yarn d2-style check \"src/**\"",
-    "lint:staged": "yarn lint --staged",
-    "format": "yarn d2-style apply",
-    "format:staged": "yarn format --staged",
-    "cucumber": "NODE_OPTIONS=\"--loader ts-node/esm --no-warnings --experimental-specifier-resolution=node\" cucumber-js --require-module ts-node/register --require **/features/**/*.ts"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
+    "name": "@dhis2/multi-calendar-dates",
+    "version": "1.0.0-beta.21",
+    "license": "BSD-3-Clause",
+    "publishConfig": {
+        "access": "public"
+    },
+    "dependencies": {
+        "@js-temporal/polyfill": "^0.4.2",
+        "classnames": "^2.3.2"
+    },
+    "peerDependencies": {
+        "react": "16.8",
+        "react-dom": "16.8"
+    },
+    "scripts": {
+        "start": "react-scripts start",
+        "build": "tsc",
+        "test": "react-scripts test",
+        "eject": "react-scripts eject",
+        "lint": "yarn d2-style check \"src/**\"",
+        "lint:staged": "yarn lint --staged",
+        "format": "yarn d2-style apply",
+        "format:staged": "yarn format --staged",
+        "cucumber": "NODE_OPTIONS=\"--loader ts-node/esm --no-warnings --experimental-specifier-resolution=node\" cucumber-js --require-module ts-node/register --require **/features/**/*.ts"
+    },
+    "eslintConfig": {
+        "extends": [
+            "react-app",
+            "react-app/jest"
+        ]
+    },
+    "browserslist": {
+        "production": [
+            ">0.2%",
+            "not dead",
+            "not op_mini all"
+        ],
+        "development": [
+            "last 1 chrome version",
+            "last 1 firefox version",
+            "last 1 safari version"
+        ]
+    },
+    "main": "lib/main.js",
+    "types": "lib/main.d.ts",
+    "files": [
+        "/lib"
     ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "main": "lib/main.js",
-  "types": "lib/main.d.ts",
-  "files": [
-    "/lib"
-  ],
-  "jest": {
-    "transformIgnorePatterns": [
-      "/!node_modules\\/@js-temporal/"
-    ]
-  },
-  "devDependencies": {
-    "@cucumber/cucumber": "^8.9.0",
-    "@dhis2/cli-style": "^10.4.3",
-    "@testing-library/jest-dom": "^5.16.5",
-    "@testing-library/react": "^12.1.2",
-    "@testing-library/react-hooks": "^8.0.1",
-    "@testing-library/user-event": "^13.5.0",
-    "@types/jest": "^27.5.2",
-    "@types/node": "^16.11.65",
-    "@types/react": "16.8",
-    "@types/react-dom": "16.8",
-    "@types/testing-library__react": "^10.2.0",
-    "@types/testing-library__react-hooks": "^4.0.0",
-    "jest-cucumber": "^3.0.1",
-    "react": "16.13",
-    "react-dom": "16.13",
-    "react-scripts": "4.0.3",
-    "ts-node": "^10.9.1",
-    "typescript": "4.4"
-  },
-  "release": {
-    "branches": [
-      {
-        "name": "main"
-      },
-      {
-        "name": "next",
-        "channel": "next"
-      },
-      {
-        "name": "beta",
-        "channel": "beta",
-        "prerelease": true
-      },
-      {
-        "name": "alpha",
-        "channel": "alpha",
-        "prerelease": true
-      }
-    ]
-  }
+    "jest": {
+        "transformIgnorePatterns": [
+            "/!node_modules\\/@js-temporal/"
+        ]
+    },
+    "devDependencies": {
+        "@cucumber/cucumber": "^8.9.0",
+        "@dhis2/cli-style": "^10.4.3",
+        "@testing-library/jest-dom": "^5.16.5",
+        "@testing-library/react": "^12.1.2",
+        "@testing-library/react-hooks": "^8.0.1",
+        "@testing-library/user-event": "^13.5.0",
+        "@types/jest": "^27.5.2",
+        "@types/node": "^16.11.65",
+        "@types/react": "16.8",
+        "@types/react-dom": "16.8",
+        "@types/testing-library__react": "^10.2.0",
+        "@types/testing-library__react-hooks": "^4.0.0",
+        "jest-cucumber": "^3.0.1",
+        "react": "16.13",
+        "react-dom": "16.13",
+        "react-scripts": "4.0.3",
+        "ts-node": "^10.9.1",
+        "typescript": "4.4"
+    },
+    "release": {
+        "branches": [
+            {
+                "name": "main"
+            },
+            {
+                "name": "next",
+                "channel": "next"
+            },
+            {
+                "name": "beta",
+                "channel": "beta",
+                "prerelease": true
+            },
+            {
+                "name": "alpha",
+                "channel": "alpha",
+                "prerelease": true
+            }
+        ]
+    }
 }

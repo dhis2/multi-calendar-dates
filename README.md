@@ -8,4 +8,4 @@ This [document](https://docs.google.com/document/d/19zjyB45oBbqC5KeubaU8E7cw9fGh
 
 ## Architecture Design Records
 
-- [Use Temporal API as the backbone of the engine](./doc/architecture/decisions/0002-use-temporal-api-as-the-backbone-for-the-engine.md)
+-   [Use Temporal API as the backbone of the engine](./doc/architecture/decisions/0002-use-temporal-api-as-the-backbone-for-the-engine.md)

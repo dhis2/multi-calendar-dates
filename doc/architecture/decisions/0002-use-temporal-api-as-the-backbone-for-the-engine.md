@@ -14,13 +14,12 @@ To drive the functionality of the Calendar Engine, we considered two main option
 
 1. The other possibility is to based the Engine on the [Temporal API](https://tc39.es/proposal-temporal/docs/). This is a standard that is currently in stage 3, and should be supported natively by browsers in the future.
 
-| | World Calendars | Temporal API |
-| -- | --- | --- |
-| Standard | ❌ custom implementation | ✅  standard specification but not final and subject to change |
-| Calendar Support | ✅ Supports all calendars we need | 🟡 almost all calendars we need (except Nepalese) |
-| Production-ready | 🟡 although this is based on a battle-tested library we used in dhis2, the standalone implementation was not used in production | ❌ There are polyfills but the API is still work in progress (stage 3 specs) | 
-| Supports addition, subtraction, conversions, calculating durations | 🟡 Yes, and with relatively good test coverage but not sure if it covers all scenarios | ✅ |
-
+|                                                                    | World Calendars                                                                                                                 | Temporal API                                                                 |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Standard                                                           | ❌ custom implementation                                                                                                        | ✅ standard specification but not final and subject to change                |
+| Calendar Support                                                   | ✅ Supports all calendars we need                                                                                               | 🟡 almost all calendars we need (except Nepalese)                            |
+| Production-ready                                                   | 🟡 although this is based on a battle-tested library we used in dhis2, the standalone implementation was not used in production | ❌ There are polyfills but the API is still work in progress (stage 3 specs) |
+| Supports addition, subtraction, conversions, calculating durations | 🟡 Yes, and with relatively good test coverage but not sure if it covers all scenarios                                          | ✅                                                                           |
 
 ## Decision
 
@@ -38,7 +37,7 @@ For Nepali, localisation is a bit awkward as it is not a language natively by th
 
 ## Resources
 
-- [Temporal API specifications](https://tc39.es/proposal-temporal/docs/index.html)
-- [Implementing Custom Calendars](https://tc39.es/proposal-temporal/docs/calendar.html)
-- [Discussion about implementing Nepali](https://github.com/js-temporal/temporal-polyfill/discussions/190)
-- [DHIS2 Multi-Calendar requirements and design docs](https://docs.google.com/document/d/19zjyB45oBbqC5KeubaU8E7cw9fGhFc3tOXY0GkzZKqc/edit?userstoinvite=hendrik%40dhis2.org#)
+-   [Temporal API specifications](https://tc39.es/proposal-temporal/docs/index.html)
+-   [Implementing Custom Calendars](https://tc39.es/proposal-temporal/docs/calendar.html)
+-   [Discussion about implementing Nepali](https://github.com/js-temporal/temporal-polyfill/discussions/190)
+-   [DHIS2 Multi-Calendar requirements and design docs](https://docs.google.com/document/d/19zjyB45oBbqC5KeubaU8E7cw9fGhFc3tOXY0GkzZKqc/edit?userstoinvite=hendrik%40dhis2.org#)

@@ -1,33 +1,33 @@
 {
-  "compilerOptions": {
-    "outDir": "lib",
-    "target": "ES2015",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "module": "ES2015",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "declaration": true,
-    "jsx": "react",
-    "noEmit": false
-  },
-  "include": ["src"],
-  "exclude": ["lib"],
-  // this ts-node config is needed for cucumberjs to work with TypeScript
-  "ts-node": {
-    "esm": true,
-    // It is faster to skip typechecking.
-    // Remove if you want ts-node to do typechecking.
-    "transpileOnly": true,
     "compilerOptions": {
-      "module": "commonjs"
+        "outDir": "lib",
+        "target": "ES2015",
+        "lib": ["dom", "dom.iterable", "esnext"],
+        "allowJs": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "strict": true,
+        "forceConsistentCasingInFileNames": true,
+        "noFallthroughCasesInSwitch": true,
+        "module": "ES2015",
+        "moduleResolution": "node",
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "declaration": true,
+        "jsx": "react",
+        "noEmit": false
+    },
+    "include": ["src"],
+    "exclude": ["lib"],
+    // this ts-node config is needed for cucumberjs to work with TypeScript
+    "ts-node": {
+        "esm": true,
+        // It is faster to skip typechecking.
+        // Remove if you want ts-node to do typechecking.
+        "transpileOnly": true,
+        "compilerOptions": {
+            "module": "commonjs"
+        }
     }
-  }
 }
