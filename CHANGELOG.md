@@ -1,3 +1,10 @@
+# [1.0.0-alpha.14](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.13...v1.0.0-alpha.14) (2023-01-10)
+
+
+### Bug Fixes
+
+* change getNowInCalendar to default to user timezone rather than utc ([03caf6d](https://github.com/dhis2/multi-calendar-dates/commit/03caf6d4a8c0b83924cf47e0aacecb7987168d80))
+
 # [1.0.0-alpha.13](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.12...v1.0.0-alpha.13) (2023-01-09)
 
 
