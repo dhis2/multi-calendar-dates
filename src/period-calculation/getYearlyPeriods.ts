@@ -64,7 +64,7 @@ const buildStartAndEndDates = (date: Temporal.PlainDate) => {
 };
 
 const getMonth = (periodType: string) => {
-  const yearType = periodType?.replace("FY", "").toUpperCase();
+  const yearType = periodType.replace("FY", "").toUpperCase();
   const monthInfo = monthNumbers[yearType as keyof typeof monthNumbers];
 
   return monthInfo?.value || 1;
@@ -117,7 +117,7 @@ const buildLabelForCustomCalendar = (
 
   const nextYearDate = Temporal.PlainDate.from({
     year: date.year + 1,
-    month: (date.month - 1) % date.monthsInYear,
+    month: date.month - 1,
     day: 1,
     calendar: options.calendar,
   });
@@ -154,7 +154,7 @@ const buildValue = ({
   }
   // financial year
   if (isFinancialYear(periodType)) {
-    const yearType = monthValueKeys[month]; // capitalize(periodType?.replace("FY", ""));
+    const yearType = monthValueKeys[month];
     return `${year}${yearType}`;
   }
   throw new Error(
@@ -163,5 +163,5 @@ const buildValue = ({
 };
 
 const isFinancialYear = (periodType: PeriodIdentifier) => {
-  return periodType?.startsWith("FY");
+  return periodType.startsWith("FY");
 };

@@ -59,23 +59,28 @@ export const getWeeklyPeriods: GeneratedPeriodsFunc = ({
   const daysToAdd = periodType === "BIWEEKLY" ? 13 : 6;
 
   do {
-    const nextWeek = date.add({ days: daysToAdd });
+    const endofWeek = date.add({ days: daysToAdd });
     const value = buildValue({
       periodType,
       startingDay: startingDayToUse,
       year,
       weekIndex: i,
     });
-    if (!(nextWeek.year === year + 1 && nextWeek.day >= 4)) {
+    if (!(endofWeek.year === year + 1 && endofWeek.day >= 4)) {
       days.push({
         id: value,
         iso: value,
-        name: buildLabel({ periodType, date, nextWeek, weekIndex: i }),
+        name: buildLabel({
+          periodType,
+          date,
+          nextWeek: endofWeek,
+          weekIndex: i,
+        }),
         startDate: formatYyyyMmDD(date),
-        endDate: formatYyyyMmDD(nextWeek),
+        endDate: formatYyyyMmDD(endofWeek),
       });
     }
-    date = Temporal.PlainDate.from(nextWeek).add({ days: 1 });
+    date = Temporal.PlainDate.from(endofWeek).add({ days: 1 });
     i++;
   } while (date.year === year); // important to have the condition after since the very first day can be in the previous year
   return days;
