@@ -11,7 +11,7 @@ import { getCustomCalendarIfExists, isCustomCalendar } from "../utils/helpers";
  */
 const getNowInCalendar = (
   calendarToUse = "gregory",
-  timeZone = "UTC"
+  timeZone = Intl?.DateTimeFormat?.().resolvedOptions?.()?.timeZone || "UTC"
 ): Temporal.ZonedDateTime => {
   const gregorianDate = Temporal.Now.zonedDateTime("gregory", timeZone);
   let calendar: Temporal.CalendarLike =
