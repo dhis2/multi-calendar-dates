@@ -99,7 +99,7 @@ jobs:
                   key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
 
             - name: Test
-              run: yarn test
+              run: yarn test && yarn cucumber --tags 'not @draft'
 
     publish:
         runs-on: ubuntu-latest
@@ -124,5 +124,4 @@ jobs:
                   name: lib-build
 
             - name: Publish to NPM
-              # run: npx semantic-release
               run: npx @dhis2/cli-utils release --publish npm

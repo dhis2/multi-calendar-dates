@@ -1,7 +1,17 @@
 type NepaliData = {
-  [index: number]: number[];
+  [nepaliYear: number]: number[];
 };
 
+/**
+ * Data for the nepali calendar.
+ *
+ * - The key (1970...) is the Nepali year.
+ * - The first colummn is what day does the year starts on Paush.
+ *    - The year always starts in Paush (the 9th month) but it is somewhere between 17 to 19th of Paush.
+ * - The other 12 columns show how many days are in each month.
+ *
+ * The data starts from 1970 (1913 in gregorian calendar) to 2100 (2044 in gregorian calendar)
+ */
 export const NEPALI_CALENDAR_DATA: NepaliData = {
   // This data are from http://www.ashesh.com.np
   1970: [18, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],

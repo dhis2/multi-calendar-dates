@@ -1,13 +1,35 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { customCalendars, CustomCalendarTypes } from "../custom-calendars";
-import { SupportedCalendar } from "../types";
 
-export const isCustomCalendar = (calendar: SupportedCalendar) =>
+export const isCustomCalendar = (calendar: Temporal.CalendarLike) =>
   !!customCalendars[calendar as CustomCalendarTypes];
 
+export const padWithZeroes = (number: number, count = 2) =>
+  String(number).padStart(count, "0");
+
+type DayType = "endOfMonth" | "startOfMonth";
+
+export const formatYyyyMmDD = (date: Temporal.PlainDate, dayType?: DayType) => {
+  const year = date.eraYear ?? date.year;
+  const month = padWithZeroes(date.month);
+  let day = date.day;
+
+  if (dayType === "endOfMonth") {
+    day = date.daysInMonth;
+  } else if (dayType === "startOfMonth") {
+    day = 1;
+  }
+
+  const dayString = padWithZeroes(day);
+
+  return `${year}-${month}-${dayString}`;
+};
+
+export const capitalize = (string: string) =>
+  string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+
 export const getCustomCalendarIfExists = (
-  calendar: SupportedCalendar,
-  locale: string
+  calendar: Temporal.CalendarLike
 ): Temporal.CalendarProtocol | Temporal.CalendarLike => {
   const isCustom = isCustomCalendar(calendar);
   if (!isCustom) {
@@ -22,15 +44,5 @@ export const getCustomCalendarIfExists = (
     throw new Error(`No implemenation found for custom calendar ${calendar}`);
   }
 
-  const customLocalisations =
-    customCalendars[calendar as CustomCalendarTypes]?.locales || {};
-  const allowedLocales = Object.keys(customLocalisations);
-  if (!allowedLocales.includes(locale)) {
-    throw new Error(
-      `For the custom calendar "${calendar}", only specific locales are allowed: ${allowedLocales.join(
-        ", "
-      )}`
-    );
-  }
   return customCalendar;
 };
