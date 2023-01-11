@@ -1,3 +1,10 @@
+# [1.0.0-alpha.15](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.14...v1.0.0-alpha.15) (2023-01-11)
+
+
+### Bug Fixes
+
+* update useDatePicker to accept the calendar date rather than the iso one ([a65fc3d](https://github.com/dhis2/multi-calendar-dates/commit/a65fc3db33321c737c873bb5ef972f1e4a698da3))
+
 # [1.0.0-beta.21](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.20...v1.0.0-beta.21) (2023-01-10)
 
 
