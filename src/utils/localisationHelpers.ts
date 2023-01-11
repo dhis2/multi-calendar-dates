@@ -41,10 +41,6 @@ const localiseDateLabel = (
         throw new Error('a date must be provided to localiseDateLabel')
     }
 
-    if (!localeOptions.timeZone) {
-        throw ''
-    }
-
     const isCustom = isCustomCalendar(localeOptions.calendar)
 
     return isCustom

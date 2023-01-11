@@ -9,7 +9,10 @@ export const padWithZeroes = (number: number, count = 2) =>
 
 type DayType = 'endOfMonth' | 'startOfMonth'
 
-export const formatYyyyMmDD = (date: Temporal.PlainDate, dayType?: DayType) => {
+export const formatYyyyMmDD = (
+    date: Temporal.PlainDate | Temporal.ZonedDateTime,
+    dayType?: DayType
+) => {
     const year = date.eraYear ?? date.year
     const month = padWithZeroes(date.month)
     let day = date.day

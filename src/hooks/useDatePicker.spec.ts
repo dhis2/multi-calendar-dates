@@ -1,5 +1,6 @@
 import { renderHook } from '@testing-library/react-hooks'
 import { SupportedCalendar } from '../types'
+import localisationHelpers from '../utils/localisationHelpers'
 import { useDatePicker, UseDatePickerReturn } from './useDatePicker'
 
 const renderCalendar = (
@@ -64,7 +65,7 @@ describe('useDatePicker hook', () => {
 
         it('should render an Islamic calendar in Arabic', () => {
             const onDateSelect = jest.fn()
-            const date = '2018-01-22'
+            const date = '1439-01-22'
             const options = {
                 locale: 'ar-EG',
                 calendar: 'islamic-civil' as const,
@@ -77,9 +78,9 @@ describe('useDatePicker hook', () => {
 
             const result = renderdHook.result?.current as UseDatePickerReturn
 
-            expect(result.currMonth.label).toEqual('جمادى الأولى')
-            expect(result.nextMonth.label).toEqual('جمادى الآخرة')
-            expect(result.prevMonth.label).toEqual('ربيع الآخر')
+            expect(result.currMonth.label).toEqual('محرم')
+            expect(result.nextMonth.label).toEqual('صفر')
+            expect(result.prevMonth.label).toEqual('ذو الحجة')
             expect(result.currYear.label).toEqual('١٤٣٩ هـ')
             expect(result.nextYear.label).toEqual('١٤٤٠ هـ')
             expect(result.prevYear.label).toEqual('١٤٣٨ هـ')
@@ -95,16 +96,16 @@ describe('useDatePicker hook', () => {
             expect(
                 result.calendarWeekDays.map((week) => week.map((d) => d.label))
             ).toEqual([
-                ['٢٧', '٢٨', '٢٩', '١', '٢', '٣', '٤'],
-                ['٥', '٦', '٧', '٨', '٩', '١٠', '١١'],
-                ['١٢', '١٣', '١٤', '١٥', '١٦', '١٧', '١٨'],
-                ['١٩', '٢٠', '٢١', '٢٢', '٢٣', '٢٤', '٢٥'],
-                ['٢٦', '٢٧', '٢٨', '٢٩', '٣٠', '١', '٢'],
+                ['٢٦', '٢٧', '٢٨', '٢٩', '١', '٢', '٣'],
+                ['٤', '٥', '٦', '٧', '٨', '٩', '١٠'],
+                ['١١', '١٢', '١٣', '١٤', '١٥', '١٦', '١٧'],
+                ['١٨', '١٩', '٢٠', '٢١', '٢٢', '٢٣', '٢٤'],
+                ['٢٥', '٢٦', '٢٧', '٢٨', '٢٩', '٣٠', '١'],
             ])
         })
         it('should render an Ethiopic calendar in Amharic', () => {
             const onDateSelect = jest.fn()
-            const date = '2022-11-22'
+            const date = '2015-01-22'
             const options = {
                 locale: 'am-ET',
                 calendar: 'ethiopic' as const,
@@ -117,9 +118,9 @@ describe('useDatePicker hook', () => {
 
             const result = renderedHook?.result?.current as UseDatePickerReturn
 
-            expect(result.currMonth.label).toEqual('ኅዳር')
-            expect(result.nextMonth.label).toEqual('ታኅሣሥ')
-            expect(result.prevMonth.label).toEqual('ጥቅምት')
+            expect(result.currMonth.label).toEqual('መስከረም')
+            expect(result.nextMonth.label).toEqual('ጥቅምት')
+            expect(result.prevMonth.label).toEqual('ጳጉሜን')
             expect(result.currYear.label).toEqual('2015')
             expect(result.nextYear.label).toEqual('2016')
             expect(result.prevYear.label).toEqual('2014')
@@ -135,11 +136,11 @@ describe('useDatePicker hook', () => {
             expect(
                 result.calendarWeekDays.map((week) => week.map((d) => d.label))
             ).toEqual([
-                ['28', '29', '30', '1', '2', '3', '4'],
-                ['5', '6', '7', '8', '9', '10', '11'],
-                ['12', '13', '14', '15', '16', '17', '18'],
-                ['19', '20', '21', '22', '23', '24', '25'],
-                ['26', '27', '28', '29', '30', '1', '2'],
+                ['1', '2', '3', '4', '5', '1', '2'],
+                ['3', '4', '5', '6', '7', '8', '9'],
+                ['10', '11', '12', '13', '14', '15', '16'],
+                ['17', '18', '19', '20', '21', '22', '23'],
+                ['24', '25', '26', '27', '28', '29', '30'],
             ])
         })
     })
@@ -256,7 +257,7 @@ describe('custom calendars', () => {
     describe('nepali calendar', () => {
         it('should return the Nepali calendar info in nepali', () => {
             const onDateSelect = jest.fn()
-            const date = '2022-01-12'
+            const date = '2079-01-12'
             const options = {
                 locale: 'ne-NP',
                 calendar: 'nepali' as const,
@@ -271,19 +272,19 @@ describe('custom calendars', () => {
             expect(
                 result.calendarWeekDays.map((week) => week.map((d) => d.label))
             ).toEqual([
-                ['२७', '२८', '२९', '१', '२', '३', '४'],
+                ['२८', '२९', '३०', '१', '२', '३', '४'],
                 ['५', '६', '७', '८', '९', '१०', '११'],
                 ['१२', '१३', '१४', '१५', '१६', '१७', '१८'],
                 ['१९', '२०', '२१', '२२', '२३', '२४', '२५'],
-                ['२६', '२७', '२८', '२९', '३०', '१', '२'],
+                ['२६', '२७', '२८', '२९', '३०', '३१', '१'],
             ])
-            expect(result.currMonth.label).toEqual('पौष')
-            expect(result.nextMonth.label).toEqual('माघ')
-            expect(result.prevMonth.label).toEqual('कार्तिक')
+            expect(result.currMonth.label).toEqual('बैशाख')
+            expect(result.nextMonth.label).toEqual('जेठ')
+            expect(result.prevMonth.label).toEqual('चैत')
 
-            expect(result.currYear.label).toEqual(2078)
-            expect(result.nextYear.label).toEqual(2079)
-            expect(result.prevYear.label).toEqual(2077)
+            expect(result.currYear.label).toEqual(2079)
+            expect(result.nextYear.label).toEqual(2080)
+            expect(result.prevYear.label).toEqual(2078)
 
             expect(result.weekDayLabels).toEqual([
                 'सोम',
@@ -297,7 +298,7 @@ describe('custom calendars', () => {
         })
         it('should return the Nepali calendar info in latin letters', () => {
             const onDateSelect = jest.fn()
-            const date = '2022-11-23'
+            const date = '2079-11-23'
             const options = {
                 locale: 'en-NP',
                 calendar: 'nepali' as const,
@@ -308,9 +309,9 @@ describe('custom calendars', () => {
             )
             const result = renderedHook?.result.current as UseDatePickerReturn
 
-            expect(result.prevMonth.label).toEqual('Ashwin')
-            expect(result.currMonth.label).toEqual('Mangsir')
-            expect(result.nextMonth.label).toEqual('Paush')
+            expect(result.prevMonth.label).toEqual('Mangh')
+            expect(result.currMonth.label).toEqual('Falgun')
+            expect(result.nextMonth.label).toEqual('Chaitra')
             expect(result.weekDayLabels).toEqual([
                 'Som',
                 'Mangl',
@@ -323,11 +324,11 @@ describe('custom calendars', () => {
             expect(
                 result.calendarWeekDays.map((week) => week.map((d) => d.label))
             ).toEqual([
-                [28, 29, 30, 1, 2, 3, 4],
-                [5, 6, 7, 8, 9, 10, 11],
-                [12, 13, 14, 15, 16, 17, 18],
-                [19, 20, 21, 22, 23, 24, 25],
-                [26, 27, 28, 29, 1, 2, 3],
+                [1, 2, 3, 4, 5, 6, 7],
+                [8, 9, 10, 11, 12, 13, 14],
+                [15, 16, 17, 18, 19, 20, 21],
+                [22, 23, 24, 25, 26, 27, 28],
+                [29, 30, 1, 2, 3, 4, 5],
             ])
             expect(result.currYear.label).toEqual(2079)
             expect(result.nextYear.label).toEqual(2080)
@@ -335,7 +336,7 @@ describe('custom calendars', () => {
         })
         it('should allow a non-supported locale and default to english', () => {
             const onDateSelect = jest.fn()
-            const date = '2022-11-23'
+            const date = '2079-03-32'
             const options = {
                 locale: 'de-DE', // non-supported locale
                 calendar: 'nepali' as const,
@@ -346,7 +347,7 @@ describe('custom calendars', () => {
             )
             const result = renderedHook?.result.current as UseDatePickerReturn
 
-            expect(result.prevMonth.label).toEqual('Ashwin')
+            expect(result.currMonth.label).toEqual('Ashadh')
         })
     })
     describe('rendering Nepali (custom) day names', () => {
@@ -375,5 +376,78 @@ describe('custom calendars', () => {
                 'Aaita',
             ])
         })
+    })
+})
+
+describe('clicking a day', () => {
+    const renderForClick = ({
+        calendar,
+        date,
+    }: {
+        calendar: SupportedCalendar
+        date: string
+    }) => {
+        const onDateSelect = jest.fn()
+
+        const options = {
+            locale: 'en-GB',
+            timeZone: 'Africa/Khartoum',
+            calendar,
+            // no calendar means it should default to gregory
+        }
+        const renderedHook = renderHook(() =>
+            useDatePicker({ onDateSelect, date, options })
+        )
+        const result = renderedHook.result?.current as UseDatePickerReturn
+
+        result.calendarWeekDays[0][0].onClick()
+
+        const mockCallArgs = onDateSelect.mock.calls[0][0]
+        return mockCallArgs
+    }
+    it('should call the callback with correct info for Gregorian calendar', () => {
+        const date = '2018-01-22'
+        const { calendarDate, calendarDateString } = renderForClick({
+            calendar: 'gregory',
+            date,
+        })
+        expect(calendarDate.toString()).toEqual(
+            '2018-01-01T00:00:00+02:00[Africa/Khartoum][u-ca=gregory]'
+        )
+        expect(calendarDateString).toEqual('2018-01-01')
+    })
+    it('should call the callback with correct info for Ethiopic calendar', () => {
+        const date = '2015-13-02'
+        const { calendarDate, calendarDateString } = renderForClick({
+            calendar: 'ethiopic',
+            date,
+        })
+        expect(calendarDateString).toEqual('2015-12-30')
+        expect(
+            calendarDate.toLocaleString('en-GB', {
+                month: 'long',
+                year: 'numeric',
+                day: 'numeric',
+                calendar: 'ethiopic',
+            })
+        ).toEqual('30 Nehasse 2015 ERA0')
+    })
+    it('should call the callback with correct info for a custom (Nepali) calendar', () => {
+        const date = '2077-13-02'
+        const { calendarDate, calendarDateString } = renderForClick({
+            calendar: 'nepali',
+            date,
+        })
+        expect(calendarDateString).toEqual('2077-12-30')
+        expect(
+            localisationHelpers.localiseMonth(
+                calendarDate,
+                {
+                    locale: 'en-NP',
+                    calendar: 'nepali',
+                },
+                {}
+            )
+        ).toEqual('Chaitra')
     })
 })
