@@ -1,4 +1,6 @@
+import { render } from '@testing-library/react'
 import { renderHook } from '@testing-library/react-hooks'
+import React from 'react'
 import { SupportedCalendar } from '../types'
 import localisationHelpers from '../utils/localisationHelpers'
 import { useDatePicker, UseDatePickerReturn } from './useDatePicker'
@@ -449,5 +451,30 @@ describe('clicking a day', () => {
                 {}
             )
         ).toEqual('Chaitra')
+    })
+})
+
+describe('changing the calendar on the fly', () => {
+    // re-creating bug from storybook when changing a calendar on the fly
+    // causes the hook to fail with: cannot format PlainYearMonth with calendar "oldCalendar" in locale with calendar "newCalendar"
+    it('should allow changing the calendar on same component', () => {
+        const Component = ({ calendar }: { calendar: SupportedCalendar }) => {
+            const onDateSelect = jest.fn()
+            const date = '2018-01-22'
+            const options = {
+                locale: 'en-GB',
+                calendar,
+            }
+            const result = useDatePicker({ onDateSelect, date, options })
+
+            return <div>{result.currMonth.label}</div>
+        }
+
+        const { getByText, rerender } = render(<Component calendar="gregory" />)
+        expect(getByText('January')).toBeDefined()
+        rerender(<Component calendar="ethiopic" />)
+        expect(getByText('Tahsas')).toBeDefined()
+        rerender(<Component calendar="nepali" />)
+        expect(getByText('Paush')).toBeDefined()
     })
 })

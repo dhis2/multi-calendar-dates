@@ -138,7 +138,7 @@ export const useDatePicker: UseDatePickerHookType = ({
     const weekDayLabels = useWeekDayLabels(localeOptions)
 
     const navigation = useNavigation(
-        firstZdtOfVisibleMonth,
+        firstZdtOfVisibleMonth.withCalendar(localeOptions.calendar),
         setFirstZdtOfVisibleMonth,
         localeOptions
     )
@@ -192,7 +192,7 @@ export const useDatePicker: UseDatePickerHookType = ({
             week.map((weekDayZdt) => ({
                 zdt: weekDayZdt,
                 label: localisationHelpers.localiseWeekLabel(
-                    weekDayZdt,
+                    weekDayZdt.withCalendar(localeOptions.calendar),
                     localeOptions
                 ),
                 onClick: () => selectDate(weekDayZdt),
