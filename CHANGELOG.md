@@ -1,3 +1,10 @@
+# [1.0.0-alpha.16](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.15...v1.0.0-alpha.16) (2023-01-24)
+
+
+### Bug Fixes
+
+* handle on-the-fly changes to selected calendar ([89f0427](https://github.com/dhis2/multi-calendar-dates/commit/89f04278aba25b131cbf57fe21809abd1a3fec9e))
+
 # [1.0.0-alpha.15](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.14...v1.0.0-alpha.15) (2023-01-11)
 
 
