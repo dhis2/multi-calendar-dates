@@ -7,10 +7,12 @@ import {
 } from '../utils/helpers'
 import localisationHelpers from '../utils/localisationHelpers'
 import {
-    FixedPeriod,
-    GeneratedPeriodsFunc,
-    PeriodIdentifier,
-} from './fixed-periods'
+    MONTHLY_OFFSET_PERIOD_TYPES,
+    MULTI_MONTH_PERIOD_TYPES,
+    QUARTERLY_PERIOD_TYPES,
+    SIXMONTHLY_PERIOD_TYPES,
+} from './period-types'
+import { FixedPeriod, GeneratedPeriodsFunc, PeriodIdentifier } from './types'
 
 export const getMonthlyPeriods: GeneratedPeriodsFunc = ({
     year,
@@ -97,15 +99,16 @@ const buildValue: (options: {
         return `${year}S${index}`
     }
 
-    if (periodType.match(/QUARTERLY/)) {
+    if (QUARTERLY_PERIOD_TYPES.includes(periodType)) {
         const month = getMonthInfo(periodType)?.name
         return `${year}${month}Q${index}`
     }
 
-    if (periodType.match(/SIXMONTHLY/)) {
+    if (SIXMONTHLY_PERIOD_TYPES.includes(periodType)) {
         const month = getMonthInfo(periodType)?.name
         return `${year}${month}S${index}`
     }
+
     return `${year}${padWithZeroes(currentMonth.month)}`
 }
 
@@ -128,10 +131,7 @@ const buildLabel: BuildLabelFunc = (options) => {
 
     let result = ''
 
-    if (
-        ['BIMONTHLY', 'QUARTERLY', 'SIXMONTHLY'].includes(periodType) ||
-        periodType.match(/SIXMONTHLY|QUARTERLY/)
-    ) {
+    if (MULTI_MONTH_PERIOD_TYPES.includes(periodType)) {
         const format =
             month.year === nextMonth.year ? monthOnlyFormat : withYearFormat
         result = `${month.toLocaleString(
@@ -156,10 +156,7 @@ const buildLabelForCustomCalendar: BuildLabelFunc = ({
 }) => {
     let result = ''
 
-    if (
-        ['BIMONTHLY', 'QUARTERLY', 'SIXMONTHLY'].includes(periodType) ||
-        periodType.match(/SIXMONTHLY|QUARTERLY/)
-    ) {
+    if (MULTI_MONTH_PERIOD_TYPES.includes(periodType)) {
         const showYear = month.year !== nextMonth.year
         result = `${localisationHelpers.localiseMonth(
             month,
@@ -183,10 +180,10 @@ const buildLabelForCustomCalendar: BuildLabelFunc = ({
 }
 
 const getMonthsToAdd = (periodType: PeriodIdentifier) => {
-    if (periodType?.match(/SIXMONTHLY/)) {
+    if (SIXMONTHLY_PERIOD_TYPES.includes(periodType)) {
         return 6
     }
-    if (periodType?.match(/QUARTERLY/)) {
+    if (QUARTERLY_PERIOD_TYPES.includes(periodType)) {
         return 3
     }
     if (periodType === 'MONTHLY') {
@@ -215,32 +212,28 @@ export const monthNumbers = {
 }
 
 const getMonthInfo = (periodType: PeriodIdentifier) => {
-    const monthString = periodType
-        .replace('SIXMONTHLY', '')
-        .replace('QUARTERLY', '')
-
+    const monthString = periodType.slice(-3)
     return monthNumbers[monthString as keyof typeof monthNumbers]
 }
+
 const getStartingMonth = (periodType: PeriodIdentifier): number => {
-    if (periodType.match(/SIXMONTHLY|QUARTERLY/)) {
-        if (periodType === 'SIXMONTHLY' || periodType === 'QUARTERLY') {
-            return 1
-        } else {
-            return getMonthInfo(periodType)?.value ?? 1
-        }
-    } else {
-        return 1
-    }
+    return MONTHLY_OFFSET_PERIOD_TYPES.includes(periodType)
+        ? getMonthInfo(periodType).value
+        : 1
 }
+
 function needsExtraMonth(periodType: PeriodIdentifier, length: number) {
-    if (periodType.match(/SIXMONTHLY/)) {
+    if (SIXMONTHLY_PERIOD_TYPES.includes(periodType)) {
         return length < 2
     }
-    if (periodType.match(/QUARTERLY/)) {
+
+    if (QUARTERLY_PERIOD_TYPES.includes(periodType)) {
         return length < 4
     }
+
     return false
 }
+
 const buildStartAndEndDate = (
     currentMonth: Temporal.PlainDate,
     nextMonth: Temporal.PlainDate

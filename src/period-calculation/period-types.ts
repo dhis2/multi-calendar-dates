@@ -22,9 +22,10 @@ const allPeriods: PeriodIdentifier[] = [
     'FYAPR',
 ]
 
-export const WEEKLY_PERIOD_TYPES: PeriodIdentifier[] = allPeriods.filter(
-    (period) => period.match(/^WEEKLY/)
-)
+export const WEEKLY_PERIOD_TYPES: PeriodIdentifier[] = [
+    ...allPeriods.filter((period) => period.match(/^WEEKLY/)),
+    'BIWEEKLY',
+]
 
 export const MONTLY_PERIOD_TYPES: PeriodIdentifier[] = [
     'MONTHLY',
