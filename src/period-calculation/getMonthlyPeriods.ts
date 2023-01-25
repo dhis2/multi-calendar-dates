@@ -38,7 +38,9 @@ export const getMonthlyPeriods: GeneratedPeriodsFunc = ({
         needsExtraMonth(periodType, months.length)
     ) {
         const nextMonth = currentMonth.add({ months: monthToAdd })
-        if (!ignoreMonth(calendar, currentMonth)) {
+        const ignoreMonth = isEthiopic13thMonth(calendar, currentMonth)
+
+        if (!ignoreMonth) {
             const id = buildId({ periodType, currentMonth, year, index })
 
             months.push({
@@ -75,11 +77,15 @@ type BuildLabelFunc = (options: {
 /**
  * special cases where we ignore a month
  */
-const ignoreMonth = (calendar: SupportedCalendar, date: Temporal.PlainDate) => {
+const isEthiopic13thMonth = (
+    calendar: SupportedCalendar,
+    date: Temporal.PlainDate
+) => {
     // in Ethiopic calendar, for periods more than bi-weekly, we ignore the 13th month
     if (calendar === 'ethiopic' && date.month === 13) {
         return true
     }
+
     return false
 }
 
