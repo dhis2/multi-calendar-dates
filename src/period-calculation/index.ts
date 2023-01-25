@@ -1,1 +1,1 @@
-export { default as generateFixedPeriods } from './fixed-periods'
+export { generateFixedPeriods } from './fixed-periods'

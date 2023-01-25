@@ -2,12 +2,8 @@ import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../types'
 import { formatYyyyMmDD, isCustomCalendar } from '../utils/helpers'
 import localisationHelpers from '../utils/localisationHelpers'
-import {
-    FixedPeriod,
-    GeneratedPeriodsFunc,
-    PeriodIdentifier,
-} from './fixed-periods'
-import { monthNumbers } from './getMonthlyPeriods'
+import monthNumbers from './month-numbers'
+import { FixedPeriod, GeneratedPeriodsFunc, PeriodIdentifier } from './types'
 
 export const getYearlyPeriods: GeneratedPeriodsFunc = ({
     year,

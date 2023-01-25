@@ -1,5 +1,135 @@
 import { SupportedCalendar } from '../types'
-import generateFixedPeriods from './fixed-periods'
+import { getPeriodByDate, generateFixedPeriods } from './fixed-periods'
+
+describe('Gregorian Calendar period by date calculation', () => {
+    describe('monthly periods', () => {
+        it('should return "MONTHLY" for period type "2022-01-01" on "202201"', () => {
+            const periodType = 'MONTHLY'
+            const date = '2022-01-01'
+            const calendar = 'gregory'
+            const actual = getPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('202201')
+        })
+
+        it('should return "MONTHLY" for period type "2022-02-01" on "202202"', () => {
+            const periodType = 'MONTHLY'
+            const date = '2022-02-01'
+            const calendar = 'gregory'
+            const actual = getPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('202202')
+        })
+
+        it('should return "BIMONTHLY" for period type "2022-01-01" on "202201B"', () => {
+            const periodType = 'BIMONTHLY'
+            const date = '2022-01-01'
+            const calendar = 'gregory'
+            const actual = getPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('202201B')
+        })
+
+        it('should return "BIMONTHLY" for period type "2022-03-01" on "202202B"', () => {
+            const periodType = 'BIMONTHLY'
+            const date = '2022-03-01'
+            const calendar = 'gregory'
+            const actual = getPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('202202B')
+        })
+
+        it('should return "QUARTERLY" for period type "2022-01-01" on "2022Q1"', () => {
+            const periodType = 'QUARTERLY'
+            const date = '2022-01-01'
+            const calendar = 'gregory'
+            const actual = getPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('2022Q1')
+        })
+
+        it('should return "QUARTERLY" for period type "2022-04-01" on "2022Q2"', () => {
+            const periodType = 'QUARTERLY'
+            const date = '2022-04-01'
+            const calendar = 'gregory'
+            const actual = getPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('2022Q2')
+        })
+
+        it('should return "QUARTERLYNOV" for period type "2022-10-31" on "2021NovemberQ4"', () => {
+            const periodType = 'QUARTERLYNOV'
+            const date = '2022-10-31'
+            const calendar = 'gregory'
+            const actual = getPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('2021NovemberQ4')
+        })
+
+        it('should return "QUARTERLYNOV" for period type "2022-11-01" on "2022NovemberQ1"', () => {
+            const periodType = 'QUARTERLYNOV'
+            const date = '2022-11-01'
+            const calendar = 'gregory'
+            const actual = getPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('2022NovemberQ1')
+        })
+
+        it('should return "SIXMONTHLY" for period type "2022-01-01" on "2022S1"', () => {
+            const periodType = 'SIXMONTHLY'
+            const date = '2022-01-01'
+            const calendar = 'gregory'
+            const actual = getPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('2022S1')
+        })
+
+        it('should return "SIXMONTHLY" for period type "2022-07-01" on "2022S2"', () => {
+            const periodType = 'SIXMONTHLY'
+            const date = '2022-07-01'
+            const calendar = 'gregory'
+            const actual = getPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('2022S2')
+        })
+
+        it('should return "SIXMONTHLYNOV" for period type "2022-01-01" on "2021NovemberS2"', () => {
+            const periodType = 'SIXMONTHLYNOV'
+            const date = '2022-01-01'
+            const calendar = 'gregory'
+            const actual = getPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('2021NovemberS2')
+        })
+
+        it('should return "SIXMONTHLYNOV" for period type "2022-11-01" on "2022NovemberS1"', () => {
+            const periodType = 'SIXMONTHLYNOV'
+            const date = '2022-11-01'
+            const calendar = 'gregory'
+            const actual = getPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('2022NovemberS1')
+        })
+
+        it('should return "SIXMONTHLYAPR" for period type "2022-01-01" on "2021AprilS2"', () => {
+            const periodType = 'SIXMONTHLYAPR'
+            const date = '2022-01-01'
+            const calendar = 'gregory'
+            const actual = getPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('2021AprilS2')
+        })
+
+        it('should return "SIXMONTHLYAPR" for period type "2022-04-01" on "2022AprilS1"', () => {
+            const periodType = 'SIXMONTHLYAPR'
+            const date = '2022-04-01'
+            const calendar = 'gregory'
+            const actual = getPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('2022AprilS1')
+        })
+    })
+})
 
 describe('Gregorian Calendar fixed period calculation', () => {
     describe('weekly periods', () => {

@@ -2,17 +2,45 @@ import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../types'
 import { getCustomCalendarIfExists } from '../utils/helpers'
 import { getDailyPeriods } from './getDailyPeriods'
-import { getMonthlyPeriods } from './getMonthlyPeriods'
 import { getWeeklyPeriods } from './getWeeklyPeriods'
 import { getYearlyPeriods } from './getYearlyPeriods'
+import {
+    getMonthlyPeriods,
+    getMonthlyPeriodByDate,
+} from './monthly-periods/index'
 import {
     MONTLY_PERIOD_TYPES,
     WEEKLY_PERIOD_TYPES,
     YEARLY_PERIOD_TYPES,
 } from './period-types'
-import { GeneratedPeriodsFunc } from './types'
+import { PeriodIdentifier, GeneratedPeriodsFunc } from './types'
 
-const generateFixedPeriods: GeneratedPeriodsFunc = ({
+export const getPeriodByDate = ({
+    periodType,
+    date,
+    calendar,
+    locale = 'en',
+}: {
+    periodType: PeriodIdentifier
+    date: string
+    calendar: SupportedCalendar
+    locale?: string
+}) => {
+    if (MONTLY_PERIOD_TYPES.includes(periodType)) {
+        return getMonthlyPeriodByDate({
+            periodType,
+            date,
+            calendar,
+            locale,
+        })
+    }
+
+    throw new Error(
+        `can not generate period for unrecognised period type "${periodType}"`
+    )
+}
+
+export const generateFixedPeriods: GeneratedPeriodsFunc = ({
     year: yearString,
     periodType,
     calendar: requestedCalendar,
@@ -60,5 +88,3 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
         `can not generate period for unrecognised period type "${periodType}"`
     )
 }
-
-export default generateFixedPeriods

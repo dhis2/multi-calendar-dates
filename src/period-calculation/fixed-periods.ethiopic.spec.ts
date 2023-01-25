@@ -1,5 +1,5 @@
 import { SupportedCalendar } from '../types'
-import generateFixedPeriods from './fixed-periods'
+import { generateFixedPeriods } from './fixed-periods'
 
 describe('Ethiopic Calendar fixed period calculation', () => {
     describe('weekly periods', () => {
