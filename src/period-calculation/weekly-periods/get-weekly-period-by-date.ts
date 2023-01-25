@@ -3,7 +3,7 @@ import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
 import { getCustomCalendarIfExists } from '../../utils/helpers'
 import { PeriodIdentifier } from '../types'
-import { getMonthlyPeriods } from './get-monthly-periods'
+import { getWeeklyPeriods } from './get-weekly-periods'
 
 type args = {
     periodType: PeriodIdentifier
@@ -12,38 +12,43 @@ type args = {
     calendar: SupportedCalendar
 }
 
-const getMonthlyPeriodByDate = ({
+const getWeeklyPeriodByDate = ({
     periodType,
     date,
     locale = 'en',
-    calendar,
+    calendar: requestedCalendar,
 }: args) => {
+    const calendar = getCustomCalendarIfExists(
+        dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
+    ) as SupportedCalendar
     const currentDate = Temporal.PlainDate.from(date)
-    const monthlyPeriods = getMonthlyPeriods({
+    const weeklyPeriods = getWeeklyPeriods({
         year: currentDate.year,
         calendar,
         periodType,
         locale,
+        startingDay: 1,
     })
 
     // if start date of first period of year is after current date get last
     // period of last year
     const startDateFirstPeriodInYear = Temporal.PlainDate.from(
-        monthlyPeriods[0].startDate
+        weeklyPeriods[0].startDate
     )
     if (
         Temporal.PlainDate.compare(startDateFirstPeriodInYear, currentDate) ===
         1
     ) {
-        return getMonthlyPeriods({
+        return getWeeklyPeriods({
             year: currentDate.year - 1,
             calendar,
             periodType,
             locale,
+            startingDay: 1,
         }).slice(-1)[0]
     }
 
-    return monthlyPeriods.find((currentPeriod) => {
+    return weeklyPeriods.find((currentPeriod) => {
         const curStartDate = Temporal.PlainDate.from(currentPeriod.startDate)
         const curEndDate = Temporal.PlainDate.from(currentPeriod.endDate)
 
@@ -56,4 +61,4 @@ const getMonthlyPeriodByDate = ({
     })
 }
 
-export default getMonthlyPeriodByDate
+export default getWeeklyPeriodByDate

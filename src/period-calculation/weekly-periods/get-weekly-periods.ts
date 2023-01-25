@@ -1,11 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill'
-import { SupportedCalendar } from '../types'
-import { formatYyyyMmDD, padWithZeroes } from '../utils/helpers'
-import {
-    FixedPeriod,
-    GeneratedPeriodsFunc,
-    PeriodIdentifier,
-} from './fixed-periods'
+import { SupportedCalendar } from '../../types'
+import { formatYyyyMmDD, padWithZeroes } from '../../utils/helpers'
+import { FixedPeriod, GeneratedPeriodsFunc, PeriodIdentifier } from '../types'
 
 const Days = {
     Monday: 1,
@@ -43,7 +39,6 @@ export const getWeeklyPeriods: GeneratedPeriodsFunc = ({
     calendar,
     periodType,
     startingDay,
-    locale = 'en-GB',
 }) => {
     const startingDayToUse = getStartingDay(periodType, startingDay)
     let date = getStartingDate({

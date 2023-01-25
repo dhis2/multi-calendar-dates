@@ -1,9 +1,7 @@
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../types'
 import { getCustomCalendarIfExists } from '../utils/helpers'
-import { getDailyPeriods } from './getDailyPeriods'
-import { getWeeklyPeriods } from './getWeeklyPeriods'
-import { getYearlyPeriods } from './getYearlyPeriods'
+import { getDailyPeriods, getDailyPeriodByDate } from './daily-periods/index'
 import {
     getMonthlyPeriods,
     getMonthlyPeriodByDate,
@@ -14,11 +12,13 @@ import {
     YEARLY_PERIOD_TYPES,
 } from './period-types'
 import { PeriodIdentifier, GeneratedPeriodsFunc } from './types'
+import { getWeeklyPeriods, getWeeklyPeriodByDate } from './weekly-periods/index'
+import { getYearlyPeriods, getYearlyPeriodByDate } from './yearly-periods/index'
 
 export const getPeriodByDate = ({
     periodType,
     date,
-    calendar,
+    calendar: requestedCalendar,
     locale = 'en',
 }: {
     periodType: PeriodIdentifier
@@ -26,13 +26,25 @@ export const getPeriodByDate = ({
     calendar: SupportedCalendar
     locale?: string
 }) => {
+    const calendar = getCustomCalendarIfExists(
+        dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
+    ) as SupportedCalendar
+    const payload = { periodType, date, calendar, locale }
+
+    if (periodType === 'DAILY') {
+        return getDailyPeriodByDate(payload)
+    }
+
     if (MONTLY_PERIOD_TYPES.includes(periodType)) {
-        return getMonthlyPeriodByDate({
-            periodType,
-            date,
-            calendar,
-            locale,
-        })
+        return getMonthlyPeriodByDate(payload)
+    }
+
+    if (WEEKLY_PERIOD_TYPES.includes(periodType)) {
+        return getWeeklyPeriodByDate(payload)
+    }
+
+    if (YEARLY_PERIOD_TYPES.includes(periodType)) {
+        return getYearlyPeriodByDate(payload)
     }
 
     throw new Error(
