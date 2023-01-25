@@ -39,7 +39,7 @@ export const getMonthlyPeriods: GeneratedPeriodsFunc = ({
     ) {
         const nextMonth = currentMonth.add({ months: monthToAdd })
         if (!ignoreMonth(calendar, currentMonth)) {
-            const id = buildValue({ periodType, currentMonth, year, index })
+            const id = buildId({ periodType, currentMonth, year, index })
 
             months.push({
                 id,
@@ -83,7 +83,7 @@ const ignoreMonth = (calendar: SupportedCalendar, date: Temporal.PlainDate) => {
     return false
 }
 
-const buildValue: (options: {
+const buildId: (options: {
     periodType: PeriodIdentifier
     currentMonth: Temporal.PlainDate
     year: number
