@@ -5,48 +5,12 @@ import { getDailyPeriods } from './getDailyPeriods'
 import { getMonthlyPeriods } from './getMonthlyPeriods'
 import { getWeeklyPeriods } from './getWeeklyPeriods'
 import { getYearlyPeriods } from './getYearlyPeriods'
-
-const periodIdentifiers = [
-    'DAILY',
-    'WEEKLY',
-    'WEEKLYWED',
-    'WEEKLYTHU',
-    'WEEKLYSAT',
-    'WEEKLYSUN',
-    'BIWEEKLY',
-    'MONTHLY',
-    'BIMONTHLY',
-    'QUARTERLY',
-    'QUARTERLYNOV', // used in Ethiopia
-    'SIXMONTHLY',
-    'SIXMONTHLYAPR',
-    'SIXMONTHLYNOV', // used in Ethiopia
-    'YEARLY',
-    'FYNOV',
-    'FYOCT',
-    'FYJUL',
-    'FYAPR',
-] as const
-
-export type PeriodIdentifier = typeof periodIdentifiers[number]
-export type FixedPeriod = {
-    id: string
-    iso?: string
-    name: string
-    startDate: string
-    endDate: string
-}
-type GeneratedPeriodParams = {
-    year: number
-    periodType: PeriodIdentifier
-    calendar: SupportedCalendar
-    locale?: string
-    startingDay?: number /** 1 is Monday */
-    yearsCount?: number
-}
-export type GeneratedPeriodsFunc = (
-    options: GeneratedPeriodParams
-) => Array<FixedPeriod>
+import {
+    MONTLY_PERIOD_TYPES,
+    WEEKLY_PERIOD_TYPES,
+    YEARLY_PERIOD_TYPES,
+} from './period-types'
+import { GeneratedPeriodsFunc } from './types'
 
 const generateFixedPeriods: GeneratedPeriodsFunc = ({
     year: yearString,
@@ -69,7 +33,7 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
         dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
     ) as SupportedCalendar
 
-    if (periodType?.match('WEEKLY')) {
+    if (WEEKLY_PERIOD_TYPES.includes(periodType)) {
         return getWeeklyPeriods({
             year,
             periodType,
@@ -78,27 +42,23 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
             startingDay,
         })
     }
-    if (periodType?.startsWith('FY') || periodType === 'YEARLY') {
+
+    if (YEARLY_PERIOD_TYPES.includes(periodType)) {
         // financial year
         return getYearlyPeriods({ year, periodType, locale, calendar })
     }
-    if (periodType.match(/SIXMONTHLY/) || periodType.match(/QUARTERLY/)) {
+
+    if (MONTLY_PERIOD_TYPES.includes(periodType)) {
         return getMonthlyPeriods({ year, periodType, locale, calendar })
     }
-    switch (periodType) {
-        case 'MONTHLY':
-        case 'BIMONTHLY':
-        case 'QUARTERLY':
-        case 'SIXMONTHLY':
-        case 'SIXMONTHLYAPR':
-            return getMonthlyPeriods({ year, periodType, locale, calendar })
-        case 'DAILY':
-            return getDailyPeriods({ year, periodType, locale, calendar })
-        default:
-            throw new Error(
-                `can not generate period for unrecognised period type "${periodType}"`
-            )
+
+    if (periodType === 'DAILY') {
+        return getDailyPeriods({ year, periodType, locale, calendar })
     }
+
+    throw new Error(
+        `can not generate period for unrecognised period type "${periodType}"`
+    )
 }
 
 export default generateFixedPeriods
