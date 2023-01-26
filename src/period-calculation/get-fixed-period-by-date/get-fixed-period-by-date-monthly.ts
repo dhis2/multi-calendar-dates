@@ -1,9 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill'
-import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
-import { getCustomCalendarIfExists } from '../../utils/helpers'
-import { PeriodIdentifier } from '../types'
-import { getMonthlyPeriods } from './get-monthly-periods'
+import { generateFixedPeriodsMonthly } from '../generate-fixed-periods/index'
+import { PeriodIdentifier, FixedPeriod } from '../types'
 
 type args = {
     periodType: PeriodIdentifier
@@ -12,14 +10,14 @@ type args = {
     calendar: SupportedCalendar
 }
 
-const getMonthlyPeriodByDate = ({
+const getFixedPeriodByDateMonthly = ({
     periodType,
     date,
     locale = 'en',
     calendar,
 }: args) => {
     const currentDate = Temporal.PlainDate.from(date)
-    const monthlyPeriods = getMonthlyPeriods({
+    const monthlyPeriods = generateFixedPeriodsMonthly({
         year: currentDate.year,
         calendar,
         periodType,
@@ -35,7 +33,7 @@ const getMonthlyPeriodByDate = ({
         Temporal.PlainDate.compare(startDateFirstPeriodInYear, currentDate) ===
         1
     ) {
-        return getMonthlyPeriods({
+        return generateFixedPeriodsMonthly({
             year: currentDate.year - 1,
             calendar,
             periodType,
@@ -43,7 +41,7 @@ const getMonthlyPeriodByDate = ({
         }).slice(-1)[0]
     }
 
-    return monthlyPeriods.find((currentPeriod) => {
+    return monthlyPeriods.find((currentPeriod: FixedPeriod) => {
         const curStartDate = Temporal.PlainDate.from(currentPeriod.startDate)
         const curEndDate = Temporal.PlainDate.from(currentPeriod.endDate)
 
@@ -56,4 +54,4 @@ const getMonthlyPeriodByDate = ({
     })
 }
 
-export default getMonthlyPeriodByDate
+export default getFixedPeriodByDateMonthly

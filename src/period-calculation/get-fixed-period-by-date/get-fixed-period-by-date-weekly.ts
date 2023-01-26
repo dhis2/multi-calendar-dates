@@ -2,8 +2,8 @@ import { Temporal } from '@js-temporal/polyfill'
 import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
 import { getCustomCalendarIfExists } from '../../utils/helpers'
+import { generateFixedPeriodsWeekly } from '../generate-fixed-periods/index'
 import { PeriodIdentifier } from '../types'
-import { getWeeklyPeriods } from './get-weekly-periods'
 
 type args = {
     periodType: PeriodIdentifier
@@ -12,7 +12,7 @@ type args = {
     calendar: SupportedCalendar
 }
 
-const getWeeklyPeriodByDate = ({
+const getFixedPeriodByDateWeekly = ({
     periodType,
     date,
     locale = 'en',
@@ -22,7 +22,7 @@ const getWeeklyPeriodByDate = ({
         dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
     ) as SupportedCalendar
     const currentDate = Temporal.PlainDate.from(date)
-    const weeklyPeriods = getWeeklyPeriods({
+    const weeklyPeriods = generateFixedPeriodsWeekly({
         year: currentDate.year,
         calendar,
         periodType,
@@ -39,7 +39,7 @@ const getWeeklyPeriodByDate = ({
         Temporal.PlainDate.compare(startDateFirstPeriodInYear, currentDate) ===
         1
     ) {
-        return getWeeklyPeriods({
+        return generateFixedPeriodsWeekly({
             year: currentDate.year - 1,
             calendar,
             periodType,
@@ -61,4 +61,4 @@ const getWeeklyPeriodByDate = ({
     })
 }
 
-export default getWeeklyPeriodByDate
+export default getFixedPeriodByDateWeekly

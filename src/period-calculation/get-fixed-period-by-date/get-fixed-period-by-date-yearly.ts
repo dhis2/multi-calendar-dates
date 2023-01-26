@@ -1,7 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
+import { generateFixedPeriodsYearly } from '../generate-fixed-periods/index'
 import { PeriodIdentifier } from '../types'
-import { getYearlyPeriods } from './get-yearly-periods'
 
 type args = {
     periodType: PeriodIdentifier
@@ -10,14 +10,14 @@ type args = {
     calendar: SupportedCalendar
 }
 
-const getYearlyPeriodByDate = ({
+const getFixedPeriodByDateYearly = ({
     date,
     calendar,
     locale,
     periodType,
 }: args) => {
     const currentDate = Temporal.PlainDate.from(date)
-    const yearlyPeriods = getYearlyPeriods({
+    const yearlyPeriods = generateFixedPeriodsYearly({
         year: currentDate.year,
         calendar,
         periodType,
@@ -31,7 +31,7 @@ const getYearlyPeriodByDate = ({
     )
 
     if (Temporal.PlainDate.compare(currentDate, yearlyPeriodStartDate) === -1) {
-        const yearlyPeriodsPrevYear = getYearlyPeriods({
+        const yearlyPeriodsPrevYear = generateFixedPeriodsYearly({
             year: currentDate.year - 1,
             calendar,
             periodType,
@@ -45,4 +45,4 @@ const getYearlyPeriodByDate = ({
 
     return yearlyPeriod
 }
-export default getYearlyPeriodByDate
+export default getFixedPeriodByDateYearly

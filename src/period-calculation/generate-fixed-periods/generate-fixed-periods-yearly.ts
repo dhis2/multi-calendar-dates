@@ -5,7 +5,7 @@ import localisationHelpers from '../../utils/localisationHelpers'
 import monthNumbers from '../month-numbers'
 import { FixedPeriod, GeneratedPeriodsFunc, PeriodIdentifier } from '../types'
 
-export const getYearlyPeriods: GeneratedPeriodsFunc = ({
+const generateFixedPeriodsYearly: GeneratedPeriodsFunc = ({
     year,
     calendar,
     periodType,
@@ -161,3 +161,5 @@ const buildValue = ({
 const isFinancialYear = (periodType: PeriodIdentifier) => {
     return periodType.startsWith('FY')
 }
+
+export default generateFixedPeriodsYearly

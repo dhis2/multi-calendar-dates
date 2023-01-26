@@ -34,7 +34,7 @@ const getStartingDay = (
     }
 }
 
-export const getWeeklyPeriods: GeneratedPeriodsFunc = ({
+const generateFixedPeriodsWeekly: GeneratedPeriodsFunc = ({
     year,
     calendar,
     periodType,
@@ -156,3 +156,5 @@ const buildLabel: BuildLabelFunc = ({
     )}-${padWithZeroes(nextDay)}`
     return label
 }
+
+export default generateFixedPeriodsWeekly

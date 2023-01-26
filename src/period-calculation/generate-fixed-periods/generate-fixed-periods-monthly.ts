@@ -17,7 +17,7 @@ import { FixedPeriod, GeneratedPeriodsFunc, PeriodIdentifier } from '../types'
 
 const NEPALI_FIRST_DAY_IN_MONTH = 14
 
-export const getMonthlyPeriods: GeneratedPeriodsFunc = ({
+const generateFixedPeriodsMonthly: GeneratedPeriodsFunc = ({
     year,
     calendar,
     periodType,
@@ -278,3 +278,5 @@ const buildId: (options: {
 
     return `${year}${padWithZeroes(currentMonth.month)}`
 }
+
+export default generateFixedPeriodsMonthly

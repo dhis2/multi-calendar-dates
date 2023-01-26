@@ -1,5 +1,5 @@
-import { SupportedCalendar } from '../types'
-import { generateFixedPeriods } from './fixed-periods'
+import { SupportedCalendar } from '../../types'
+import generateFixedPeriods from './generate-fixed-periods'
 
 describe('Nepali Calendar fixed period calculation', () => {
     describe('financial year', () => {
