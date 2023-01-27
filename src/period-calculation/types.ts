@@ -24,6 +24,7 @@ const periodIdentifiers = [
 
 export type PeriodIdentifier = typeof periodIdentifiers[number]
 export type FixedPeriod = {
+    periodType: PeriodIdentifier
     id: string
     iso?: string
     name: string
