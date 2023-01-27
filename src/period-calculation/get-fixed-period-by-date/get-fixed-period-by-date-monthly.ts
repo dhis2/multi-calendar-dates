@@ -3,19 +3,19 @@ import { SupportedCalendar } from '../../types'
 import { generateFixedPeriodsMonthly } from '../generate-fixed-periods/index'
 import { PeriodIdentifier, FixedPeriod } from '../types'
 
-type args = {
+type GetFixedPeriodByDateMonthly = (args: {
     periodType: PeriodIdentifier
     date: string
     locale?: string
     calendar: SupportedCalendar
-}
+}) => FixedPeriod
 
-const getFixedPeriodByDateMonthly = ({
+const getFixedPeriodByDateMonthly: GetFixedPeriodByDateMonthly = ({
     periodType,
     date,
     locale = 'en',
     calendar,
-}: args) => {
+}) => {
     const currentDate = Temporal.PlainDate.from(date)
     const monthlyPeriods = generateFixedPeriodsMonthly({
         year: currentDate.year,
@@ -33,15 +33,17 @@ const getFixedPeriodByDateMonthly = ({
         Temporal.PlainDate.compare(startDateFirstPeriodInYear, currentDate) ===
         1
     ) {
-        return generateFixedPeriodsMonthly({
+        const [lastFixedPeriodsLastYear] = generateFixedPeriodsMonthly({
             year: currentDate.year - 1,
             calendar,
             periodType,
             locale,
-        }).slice(-1)[0]
+        }).slice(-1)
+
+        return lastFixedPeriodsLastYear
     }
 
-    return monthlyPeriods.find((currentPeriod: FixedPeriod) => {
+    const fixedPeriod = monthlyPeriods.find((currentPeriod: FixedPeriod) => {
         const curStartDate = Temporal.PlainDate.from(currentPeriod.startDate)
         const curEndDate = Temporal.PlainDate.from(currentPeriod.endDate)
 
@@ -52,6 +54,14 @@ const getFixedPeriodByDateMonthly = ({
             Temporal.PlainDate.compare(currentDate, curEndDate) < 1
         )
     })
+
+    if (fixedPeriod) {
+        return fixedPeriod
+    }
+
+    throw new Error(
+        `Something went wrong retrieving the fixed period of type "${periodType}" for date "${date}"`
+    )
 }
 
 export default getFixedPeriodByDateMonthly

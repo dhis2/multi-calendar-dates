@@ -6,22 +6,24 @@ import {
     WEEKLY_PERIOD_TYPES,
     YEARLY_PERIOD_TYPES,
 } from '../period-types'
-import { PeriodIdentifier } from '../types'
+import { FixedPeriod, PeriodIdentifier } from '../types'
 import getFixedPeriodByDateDaily from './get-fixed-period-by-date-daily'
 import getFixedPeriodByDateMonthly from './get-fixed-period-by-date-monthly'
 import getFixedPeriodByDateWeekly from './get-fixed-period-by-date-weekly'
 import getFixedPeriodByDateYearly from './get-fixed-period-by-date-yearly'
 
-const getFixedPeriodByDate = ({
-    periodType,
-    date,
-    calendar: requestedCalendar,
-    locale = 'en',
-}: {
+type GetFixedPeriodByDate = (args: {
     periodType: PeriodIdentifier
     date: string
     calendar: SupportedCalendar
     locale?: string
+}) => FixedPeriod
+
+const getFixedPeriodByDate: GetFixedPeriodByDate = ({
+    periodType,
+    date,
+    calendar: requestedCalendar,
+    locale = 'en',
 }) => {
     const calendar = getCustomCalendarIfExists(
         dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar

@@ -3,21 +3,21 @@ import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
 import { getCustomCalendarIfExists } from '../../utils/helpers'
 import { generateFixedPeriodsWeekly } from '../generate-fixed-periods/index'
-import { PeriodIdentifier } from '../types'
+import { PeriodIdentifier, FixedPeriod } from '../types'
 
-type args = {
+type GetFixedPeriodByDateWeekly = (args: {
     periodType: PeriodIdentifier
     date: string
     locale?: string
     calendar: SupportedCalendar
-}
+}) => FixedPeriod
 
-const getFixedPeriodByDateWeekly = ({
+const getFixedPeriodByDateWeekly: GetFixedPeriodByDateWeekly = ({
     periodType,
     date,
     locale = 'en',
     calendar: requestedCalendar,
-}: args) => {
+}) => {
     const calendar = getCustomCalendarIfExists(
         dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
     ) as SupportedCalendar
@@ -48,7 +48,7 @@ const getFixedPeriodByDateWeekly = ({
         }).slice(-1)[0]
     }
 
-    return weeklyPeriods.find((currentPeriod) => {
+    const fixedPeriod = weeklyPeriods.find((currentPeriod) => {
         const curStartDate = Temporal.PlainDate.from(currentPeriod.startDate)
         const curEndDate = Temporal.PlainDate.from(currentPeriod.endDate)
 
@@ -59,6 +59,14 @@ const getFixedPeriodByDateWeekly = ({
             Temporal.PlainDate.compare(currentDate, curEndDate) < 1
         )
     })
+
+    if (fixedPeriod) {
+        return fixedPeriod
+    }
+
+    throw new Error(
+        `Something went wrong retrieving the fixed period of type "${periodType}" for date "${date}"`
+    )
 }
 
 export default getFixedPeriodByDateWeekly
