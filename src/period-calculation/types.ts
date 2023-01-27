@@ -38,6 +38,7 @@ type GeneratedPeriodParams = {
     locale?: string
     startingDay?: number /** 1 is Monday */
     yearsCount?: number
+    excludeDay?: string
 }
 export type GeneratedPeriodsFunc = (
     options: GeneratedPeriodParams
