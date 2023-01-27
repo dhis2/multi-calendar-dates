@@ -18,6 +18,7 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
     calendar: requestedCalendar,
     locale = 'en',
     startingDay = 1,
+    excludeDay,
 }) => {
     let year: number
     if (typeof yearString === 'number') {
@@ -40,6 +41,7 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
             locale,
             calendar,
             startingDay,
+            excludeDay,
         })
     }
 
@@ -50,6 +52,7 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
             periodType,
             locale,
             calendar,
+            excludeDay,
         })
     }
 
@@ -59,11 +62,18 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
             periodType,
             locale,
             calendar,
+            excludeDay,
         })
     }
 
     if (periodType === 'DAILY') {
-        return generateFixedPeriodsDaily({ year, periodType, locale, calendar })
+        return generateFixedPeriodsDaily({
+            year,
+            periodType,
+            locale,
+            calendar,
+            excludeDay,
+        })
     }
 
     throw new Error(

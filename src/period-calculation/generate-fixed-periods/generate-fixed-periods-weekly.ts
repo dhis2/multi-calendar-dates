@@ -2,6 +2,7 @@ import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
 import { formatYyyyMmDD, padWithZeroes } from '../../utils/helpers'
 import { FixedPeriod, GeneratedPeriodsFunc, PeriodIdentifier } from '../types'
+import isExcludedPeriod from './is-excluded-period'
 
 const Days = {
     Monday: 1,
@@ -39,7 +40,9 @@ const generateFixedPeriodsWeekly: GeneratedPeriodsFunc = ({
     calendar,
     periodType,
     startingDay,
+    excludeDay: _excludeDay,
 }) => {
+    const excludeDay = _excludeDay ? Temporal.PlainDate.from(_excludeDay) : null
     const startingDayToUse = getStartingDay(periodType, startingDay)
     let date = getStartingDate({
         year,
@@ -55,14 +58,30 @@ const generateFixedPeriodsWeekly: GeneratedPeriodsFunc = ({
 
     do {
         const endofWeek = date.add({ days: daysToAdd })
+
+        if (
+            excludeDay &&
+            isExcludedPeriod({
+                period: {
+                    startDate: date.toString(),
+                    endDate: endofWeek.toString(),
+                },
+                excludeDay,
+            })
+        ) {
+            break
+        }
+
         const value = buildValue({
             periodType,
             startingDay: startingDayToUse,
             year,
             weekIndex: i,
         })
+
         if (!(endofWeek.year === year + 1 && endofWeek.day >= 4)) {
             days.push({
+                periodType,
                 id: value,
                 iso: value,
                 name: buildLabel({
