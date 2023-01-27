@@ -45,6 +45,13 @@ export const SIXMONTHLY_PERIOD_TYPES: PeriodIdentifier[] = allPeriods.filter(
     (period) => period.match(/^SIXMONTHLY/)
 )
 
+export const MONTHLY_STANDARD_PERIOD_TYPES: PeriodIdentifier[] = [
+    'MONTHLY',
+    'BIMONTHLY',
+    'QUARTERLY',
+    'SIXMONTHLY',
+]
+
 export const MONTHLY_OFFSET_PERIOD_TYPES: PeriodIdentifier[] = [
     // All but first periodType, which starts in January
     ...QUARTERLY_PERIOD_TYPES.slice(1),
