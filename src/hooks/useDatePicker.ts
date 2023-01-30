@@ -37,6 +37,7 @@ export type UseDatePickerReturn = UseNavigationReturnType & {
     calendarWeekDays: {
         zdt: Temporal.ZonedDateTime
         label: string | number
+        calendarDate: string
         onClick: () => void
         isSelected: boolean | undefined
         isToday: boolean
@@ -47,6 +48,8 @@ export type UseDatePickerReturn = UseNavigationReturnType & {
 type UseDatePickerHookType = (options: DatePickerOptions) => UseDatePickerReturn
 
 const fromDateParts = (date: string, options: LocaleOptions) => {
+    let result: Temporal.PlainDateLike
+
     try {
         const dateParts = date?.split('-')
         if (dateParts.length !== 3) {
@@ -55,7 +58,7 @@ const fromDateParts = (date: string, options: LocaleOptions) => {
             )
         }
         const [year, month, day] = dateParts
-        return { year: Number(year), month: Number(month), day: Number(day) }
+        result = { year: Number(year), month: Number(month), day: Number(day) }
     } catch (err) {
         console.warn(err)
 
@@ -64,8 +67,18 @@ const fromDateParts = (date: string, options: LocaleOptions) => {
             options.timeZone
         )
 
-        return { year, month, day }
+        result = { year, month, day }
     }
+
+    // for ethiopic, we need to make sure it's the correct era
+    // there is a discussion in the Temporal proposal whether this
+    // should be made the default era, for now this is a workaround
+    if (options.calendar === 'ethiopic') {
+        result.era = 'era1'
+        result.eraYear = result.year
+        delete result.year
+    }
+    return result
 }
 export const useDatePicker: UseDatePickerHookType = ({
     onDateSelect,
@@ -79,7 +92,10 @@ export const useDatePicker: UseDatePickerHookType = ({
         [options]
     )
 
-    const date = dateParts ? fromDateParts(dateParts, options) : todayZdt
+    const date = dateParts
+        ? (fromDateParts(dateParts, options) as Temporal.YearOrEraAndEraYear &
+              Temporal.MonthOrMonthCode & { day: number })
+        : todayZdt
 
     const { calendar: calendarFromOptions = 'gregory', locale = 'en' } = options
 
@@ -191,6 +207,7 @@ export const useDatePicker: UseDatePickerHookType = ({
         calendarWeekDays: calendarWeekDaysZdts.map((week) =>
             week.map((weekDayZdt) => ({
                 zdt: weekDayZdt,
+                calendarDate: formatYyyyMmDD(weekDayZdt),
                 label: localisationHelpers.localiseWeekLabel(
                     weekDayZdt.withCalendar(localeOptions.calendar),
                     localeOptions

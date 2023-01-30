@@ -138,11 +138,12 @@ describe('useDatePicker hook', () => {
             expect(
                 result.calendarWeekDays.map((week) => week.map((d) => d.label))
             ).toEqual([
-                ['1', '2', '3', '4', '5', '1', '2'],
-                ['3', '4', '5', '6', '7', '8', '9'],
-                ['10', '11', '12', '13', '14', '15', '16'],
-                ['17', '18', '19', '20', '21', '22', '23'],
-                ['24', '25', '26', '27', '28', '29', '30'],
+                ['30', '1', '2', '3', '4', '5', '1'],
+                ['2', '3', '4', '5', '6', '7', '8'],
+                ['9', '10', '11', '12', '13', '14', '15'],
+                ['16', '17', '18', '19', '20', '21', '22'],
+                ['23', '24', '25', '26', '27', '28', '29'],
+                ['30', '1', '2', '3', '4', '5', '6'],
             ])
         })
     })
@@ -402,7 +403,15 @@ describe('clicking a day', () => {
         )
         const result = renderedHook.result?.current as UseDatePickerReturn
 
-        result.calendarWeekDays[0][0].onClick()
+        const days = result.calendarWeekDays.flat()
+
+        // find and click the day passed to the calendar
+        for (let i = 0; i < days.length; i++) {
+            if (days[i].calendarDate === date) {
+                days[i].onClick()
+                break
+            }
+        }
 
         const mockCallArgs = onDateSelect.mock.calls[0][0]
         return mockCallArgs
@@ -414,9 +423,9 @@ describe('clicking a day', () => {
             date,
         })
         expect(calendarDate.toString()).toEqual(
-            '2018-01-01T00:00:00+02:00[Africa/Khartoum][u-ca=gregory]'
+            '2018-01-22T00:00:00+02:00[Africa/Khartoum][u-ca=gregory]'
         )
-        expect(calendarDateString).toEqual('2018-01-01')
+        expect(calendarDateString).toEqual('2018-01-22')
     })
     it('should call the callback with correct info for Ethiopic calendar', () => {
         const date = '2015-13-02'
@@ -424,7 +433,11 @@ describe('clicking a day', () => {
             calendar: 'ethiopic',
             date,
         })
-        expect(calendarDateString).toEqual('2015-12-30')
+        expect(calendarDateString).toEqual('2015-13-02')
+        expect(
+            calendarDate.withCalendar('iso8601').toLocaleString('en-GB')
+        ).toMatch('07/09/2023')
+
         expect(
             calendarDate.toLocaleString('en-GB', {
                 month: 'long',
@@ -432,10 +445,10 @@ describe('clicking a day', () => {
                 day: 'numeric',
                 calendar: 'ethiopic',
             })
-        ).toEqual('30 Nehasse 2015 ERA0')
+        ).toEqual('2 Pagumen 2015 ERA1')
     })
     it('should call the callback with correct info for a custom (Nepali) calendar', () => {
-        const date = '2077-13-02'
+        const date = '2077-12-30'
         const { calendarDate, calendarDateString } = renderForClick({
             calendar: 'nepali',
             date,
