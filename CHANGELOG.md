@@ -1,3 +1,10 @@
+# [1.0.0-alpha.17](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.16...v1.0.0-alpha.17) (2023-01-30)
+
+
+### Bug Fixes
+
+* ensure ethiopic dates are in the correct era ([34061d9](https://github.com/dhis2/multi-calendar-dates/commit/34061d9c7d54f8343ede4f65c723b7ce03c57ef8))
+
 # [1.0.0-alpha.16](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.15...v1.0.0-alpha.16) (2023-01-24)
 
 
