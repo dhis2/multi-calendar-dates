@@ -214,9 +214,18 @@ describe('Gregorian Calendar period by date calculation', () => {
             expect(actual?.id).toBe('2022S2')
         })
 
-        it('should return "2021NovemberS2" for period type "SIXMONTHLYNOV" on "2022-01-01"', () => {
+        it('should return "2021NovemberS1" for period type "SIXMONTHLYNOV" on "2022-01-01"', () => {
             const periodType = FIXED_PERIOD_TYPES.SIXMONTHLYNOV
             const date = '2022-01-01'
+            const calendar = 'gregory'
+            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('2021NovemberS1')
+        })
+
+        it('should return "2021NovemberS2" for period type "SIXMONTHLYNOV" on "2022-05-01"', () => {
+            const periodType = FIXED_PERIOD_TYPES.SIXMONTHLYNOV
+            const date = '2022-05-01'
             const calendar = 'gregory'
             const actual = getFixedPeriodByDate({ periodType, date, calendar })
 

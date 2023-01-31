@@ -20,7 +20,7 @@ describe('Gregorian Calendar following periods calculation', () => {
                 })
             }).toThrow(
                 new Error(
-                    'can not generate period for unrecognised period type "DOES NOT EXIST"'
+                    'Can not generate following fixed period for unrecognised period type "DOES NOT EXIST"'
                 )
             )
         })
