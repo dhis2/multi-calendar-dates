@@ -6,7 +6,6 @@ import {
     padWithZeroes,
 } from '../../utils/helpers'
 import localisationHelpers from '../../utils/localisationHelpers'
-import monthNumbers from '../month-numbers'
 import { computeMonthlyIndex } from '../monthly-periods/index'
 import {
     MONTHLY_STANDARD_PERIOD_TYPES,
@@ -15,6 +14,7 @@ import {
     SIXMONTHLY_PERIOD_TYPES,
 } from '../period-types'
 import { FixedPeriod, PeriodIdentifier } from '../types'
+import getMonthInfoByPeriodType from './get-month-info-by-period-type'
 
 type BuildMonthlyFixedPeriod = (args: {
     periodType: PeriodIdentifier
@@ -93,12 +93,12 @@ const buildId: (options: {
     }
 
     if (QUARTERLY_PERIOD_TYPES.includes(periodType)) {
-        const month = getMonthInfo(periodType)?.name
+        const month = getMonthInfoByPeriodType(periodType)?.name
         return `${year}${month}Q${index}`
     }
 
     if (SIXMONTHLY_PERIOD_TYPES.includes(periodType)) {
-        const month = getMonthInfo(periodType)?.name
+        const month = getMonthInfoByPeriodType(periodType)?.name
         return `${year}${month}S${index}`
     }
 
@@ -120,11 +120,6 @@ const getMonthsToAdd = (periodType: PeriodIdentifier) => {
     }
 
     throw new Error(`unrecognised monthly period type ${periodType}`)
-}
-
-const getMonthInfo = (periodType: PeriodIdentifier) => {
-    const monthString = periodType.slice(-3)
-    return monthNumbers[monthString as keyof typeof monthNumbers]
 }
 
 type BuildLabelFunc = (options: {

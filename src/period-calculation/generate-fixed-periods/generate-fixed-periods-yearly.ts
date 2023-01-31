@@ -1,5 +1,4 @@
 import { Temporal } from '@js-temporal/polyfill'
-import monthNumbers from '../month-numbers'
 import { FixedPeriod, GeneratedPeriodsFunc } from '../types'
 import {
     buildYearlyFixedPeriod,

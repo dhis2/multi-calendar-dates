@@ -109,9 +109,4 @@ const getMonthsToAdd = (periodType: PeriodIdentifier) => {
     throw new Error(`unrecognised monthly period type ${periodType}`)
 }
 
-const getMonthInfo = (periodType: PeriodIdentifier) => {
-    const monthString = periodType.slice(-3)
-    return monthNumbers[monthString as keyof typeof monthNumbers]
-}
-
 export default generateFixedPeriodsMonthly
