@@ -30,8 +30,11 @@ const getFixedPeriodByDateYearly: GetFixedPeriodByDateYearly = ({
         yearlyPeriod.startDate
     )
 
+    const isCurrentDateBeforePeriodStartDate =
+        Temporal.PlainDate.compare(currentDate, yearlyPeriodStartDate) === -1
+
     // In case the yearly period does not start on January 1, like financial years
-    if (Temporal.PlainDate.compare(currentDate, yearlyPeriodStartDate) === -1) {
+    if (isCurrentDateBeforePeriodStartDate) {
         const yearlyPeriodsPrevYear = generateFixedPeriodsYearly({
             year: currentDate.year - 1,
             calendar,

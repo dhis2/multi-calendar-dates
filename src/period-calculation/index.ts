@@ -1,2 +1,6 @@
 export { generateFixedPeriods } from './generate-fixed-periods/index'
 export { getFixedPeriodByDate } from './get-fixed-period-by-date/index'
+export { parseFixedPeriodId } from './parse-fixed-period-id/index'
+export { getFollowingFixedPeriods } from './get-following-fixed-periods/index'
+export { getPreviousFixedPeriods } from './get-previous-fixed-periods/index'
+export * as periodTypes from './period-types'

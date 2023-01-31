@@ -33,14 +33,30 @@ const getFixedPeriodByDateMonthly: GetFixedPeriodByDateMonthly = ({
         Temporal.PlainDate.compare(startDateFirstPeriodInYear, currentDate) ===
         1
     ) {
-        const [lastFixedPeriodsLastYear] = generateFixedPeriodsMonthly({
+        const fixedPeriodsLastYear = generateFixedPeriodsMonthly({
             year: currentDate.year - 1,
             calendar,
             periodType,
             locale,
-        }).slice(-1)
+        })
 
-        return lastFixedPeriodsLastYear
+        const lastFixedPeriodLastYear = fixedPeriodsLastYear.find((curPeriod) => {
+            const startDate = Temporal.PlainDate.from(curPeriod.startDate)
+            const endDate = Temporal.PlainDate.from(curPeriod.endDate)
+
+            return (
+                // currentDate >= startDate
+                Temporal.PlainDate.compare(startDate, currentDate) < 1 &&
+                // endDate >= currentDate
+                Temporal.PlainDate.compare(currentDate, endDate) < 1
+            )
+        })
+
+        if (!lastFixedPeriodLastYear) {
+            throw new Error(`Could not find period for date "${date}"`)
+        }
+
+        return lastFixedPeriodLastYear
     }
 
     const fixedPeriod = monthlyPeriods.find((currentPeriod: FixedPeriod) => {

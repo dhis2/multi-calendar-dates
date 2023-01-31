@@ -14,10 +14,14 @@ const getFollowingFixedPeriodsMonthly: GetFollowingFixedPeriodsMonthly = ({
     count,
     calendar,
 }) => {
+    // We need to get the year this way, can't use period.startDate as that
+    // might be in the previous year (Week 1), can't use period.endDate as that
+    // might be in the next year (Week 52/53)
+    const startYear = parseInt(period.id.substring(0, 4), 10)
     const startDate = Temporal.PlainDate.from(period.startDate)
     const followingPeriods: FixedPeriod[] = []
 
-    let curYear = startDate.year
+    let curYear = startYear
     while (followingPeriods.length < count) {
         const periodsForYear = generateFixedPeriodsMonthly({
             year: curYear,
@@ -27,7 +31,7 @@ const getFollowingFixedPeriodsMonthly: GetFollowingFixedPeriodsMonthly = ({
         })
 
         const index =
-            curYear === startDate.year
+            curYear === startYear
                 ? periodsForYear.findIndex((curPeriod) => {
                       const curStartDate = Temporal.PlainDate.from(
                           curPeriod.startDate
