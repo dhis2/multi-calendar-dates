@@ -11,7 +11,7 @@ const generateFixedPeriodsYearly: GeneratedPeriodsFunc = ({
     calendar,
     periodType,
     excludeDay: _excludeDay,
-    yearsCount = 10,
+    yearsCount,
     locale,
 }) => {
     const excludeDay = _excludeDay ? Temporal.PlainDate.from(_excludeDay) : null
@@ -24,8 +24,10 @@ const generateFixedPeriodsYearly: GeneratedPeriodsFunc = ({
     })
 
     const years: FixedPeriod[] = []
+    // plus 1 -> so we include 1970
+    const count = yearsCount ?? year - 1970 + 1
 
-    for (let i = 0; i < yearsCount; i++) {
+    for (let i = 0; i < count; i++) {
         const curYear = currentYear.year - i
         const period = buildYearlyFixedPeriod({
             periodType,
@@ -35,7 +37,7 @@ const generateFixedPeriodsYearly: GeneratedPeriodsFunc = ({
         })
 
         if (excludeDay && isExcludedPeriod({ period, excludeDay })) {
-            break
+            continue
         }
 
         years.push(period)
