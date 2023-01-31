@@ -8,10 +8,11 @@ import {
 import localisationHelpers from '../../utils/localisationHelpers'
 import { computeMonthlyIndex } from '../monthly-periods/index'
 import {
-    MONTHLY_STANDARD_PERIOD_TYPES,
-    MULTI_MONTH_PERIOD_TYPES,
-    QUARTERLY_PERIOD_TYPES,
-    SIXMONTHLY_PERIOD_TYPES,
+    FIXED_PERIOD_TYPES,
+    MONTHLY_STANDARD_FIXED_PERIOD_TYPES,
+    MULTI_MONTH_FIXED_PERIOD_TYPES,
+    QUARTERLY_FIXED_PERIOD_TYPES,
+    SIXMONTHLY_FIXED_PERIOD_TYPES,
 } from '../period-types'
 import { FixedPeriod, PeriodIdentifier } from '../types'
 import getMonthInfoByPeriodType from './get-month-info-by-period-type'
@@ -56,19 +57,21 @@ const buildMonthlyFixedPeriod: BuildMonthlyFixedPeriod = ({
         day: 1,
         calendar: nextMonth.calendar,
     }).subtract({ days: 1 })
+    const name = buildLabel({
+        periodType,
+        month,
+        locale,
+        calendar,
+        nextMonth: nextMonth.subtract({ months: 1 }), // when we display, we want to show the range using previous month
+        index,
+    })
 
     return {
         periodType,
         id,
         iso: id,
-        name: buildLabel({
-            periodType,
-            month,
-            locale,
-            calendar,
-            nextMonth: nextMonth.subtract({ months: 1 }), // when we display, we want to show the range using previous month
-            index,
-        }),
+        name,
+        displayName: name,
         startDate: formatYyyyMmDD(month, 'startOfMonth'),
         endDate: formatYyyyMmDD(endDate, 'endOfMonth'),
     }
@@ -82,22 +85,22 @@ const buildId: (options: {
     year: number
     index: number
 }) => string = ({ periodType, currentMonth, year, index }) => {
-    if (periodType === 'BIMONTHLY') {
+    if (periodType === FIXED_PERIOD_TYPES.BIMONTHLY) {
         return `${year}${padWithZeroes(index)}B`
     }
-    if (periodType === 'QUARTERLY') {
+    if (periodType === FIXED_PERIOD_TYPES.QUARTERLY) {
         return `${year}Q${index}`
     }
-    if (periodType === 'SIXMONTHLY') {
+    if (periodType === FIXED_PERIOD_TYPES.SIXMONTHLY) {
         return `${year}S${index}`
     }
 
-    if (QUARTERLY_PERIOD_TYPES.includes(periodType)) {
+    if (QUARTERLY_FIXED_PERIOD_TYPES.includes(periodType)) {
         const month = getMonthInfoByPeriodType(periodType)?.name
         return `${year}${month}Q${index}`
     }
 
-    if (SIXMONTHLY_PERIOD_TYPES.includes(periodType)) {
+    if (SIXMONTHLY_FIXED_PERIOD_TYPES.includes(periodType)) {
         const month = getMonthInfoByPeriodType(periodType)?.name
         return `${year}${month}S${index}`
     }
@@ -106,16 +109,16 @@ const buildId: (options: {
 }
 
 const getMonthsToAdd = (periodType: PeriodIdentifier) => {
-    if (SIXMONTHLY_PERIOD_TYPES.includes(periodType)) {
+    if (SIXMONTHLY_FIXED_PERIOD_TYPES.includes(periodType)) {
         return 6
     }
-    if (QUARTERLY_PERIOD_TYPES.includes(periodType)) {
+    if (QUARTERLY_FIXED_PERIOD_TYPES.includes(periodType)) {
         return 3
     }
-    if (periodType === 'MONTHLY') {
+    if (periodType === FIXED_PERIOD_TYPES.MONTHLY) {
         return 1
     }
-    if (periodType === 'BIMONTHLY') {
+    if (periodType === FIXED_PERIOD_TYPES.BIMONTHLY) {
         return 2
     }
 
@@ -150,7 +153,7 @@ const buildLabel: BuildLabelFunc = (options) => {
 
     let result = ''
 
-    if (MULTI_MONTH_PERIOD_TYPES.includes(periodType)) {
+    if (MULTI_MONTH_FIXED_PERIOD_TYPES.includes(periodType)) {
         const format =
             month.year === nextMonth.year ? monthOnlyFormat : withYearFormat
         result = `${month.toLocaleString(
@@ -175,7 +178,7 @@ const buildLabelForCustomCalendar: BuildLabelFunc = ({
 }) => {
     let result = ''
 
-    if (MULTI_MONTH_PERIOD_TYPES.includes(periodType)) {
+    if (MULTI_MONTH_FIXED_PERIOD_TYPES.includes(periodType)) {
         const showYear = month.year !== nextMonth.year
         result = `${localisationHelpers.localiseMonth(
             month,
@@ -205,15 +208,15 @@ type ComputeStartYear = (args: {
 }) => number
 
 const computeStartYear: ComputeStartYear = ({ periodType, year, index }) => {
-    if (MONTHLY_STANDARD_PERIOD_TYPES.includes(periodType)) {
+    if (MONTHLY_STANDARD_FIXED_PERIOD_TYPES.includes(periodType)) {
         return year
     }
 
-    if (periodType === 'QUARTERLYNOV') {
+    if (periodType === FIXED_PERIOD_TYPES.QUARTERLYNOV) {
         return index === 1 ? year : year + 1
     }
 
-    if (periodType === 'SIXMONTHLYNOV') {
+    if (periodType === FIXED_PERIOD_TYPES.SIXMONTHLYNOV) {
         return index === 1 ? year : year + 1
     }
 

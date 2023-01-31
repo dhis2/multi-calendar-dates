@@ -1,3 +1,4 @@
+import { FIXED_PERIOD_TYPES } from '../period-types'
 import { PeriodIdentifier } from '../types'
 import novemberQuarters from './quarters'
 
@@ -6,11 +7,11 @@ type ComputeMonthlyIndex = (args: {
     month: number
 }) => number
 const computeMonthlyIndex: ComputeMonthlyIndex = ({ periodType, month }) => {
-    if (periodType === 'MONTHLY') {
+    if (periodType === FIXED_PERIOD_TYPES.MONTHLY) {
         return month
     }
 
-    if (periodType === 'BIMONTHLY') {
+    if (periodType === FIXED_PERIOD_TYPES.BIMONTHLY) {
         if (month % 2 === 0) {
             throw new Error(
                 `Even numbers can't be a month for BIMONTHLY period type, received "${month}"`
@@ -20,7 +21,7 @@ const computeMonthlyIndex: ComputeMonthlyIndex = ({ periodType, month }) => {
         return Math.ceil(month / 2)
     }
 
-    if (periodType === 'QUARTERLY') {
+    if (periodType === FIXED_PERIOD_TYPES.QUARTERLY) {
         if ((month - 1) % 3 !== 0) {
             throw new Error(
                 `Received an invalid number for period type QUARTERLY, received "${month}"`
@@ -33,11 +34,11 @@ const computeMonthlyIndex: ComputeMonthlyIndex = ({ periodType, month }) => {
         return (month - 1) / 3 + 1
     }
 
-    if (periodType === 'QUARTERLYNOV') {
+    if (periodType === FIXED_PERIOD_TYPES.QUARTERLYNOV) {
         return computeQuarterlyNovemberIndex(month)
     }
 
-    if (periodType === 'SIXMONTHLY') {
+    if (periodType === FIXED_PERIOD_TYPES.SIXMONTHLY) {
         if (![1, 7].includes(month)) {
             throw new Error(
                 `Received an invalid number for period type SIXMONTHLY, received "${month}"`
@@ -47,7 +48,7 @@ const computeMonthlyIndex: ComputeMonthlyIndex = ({ periodType, month }) => {
         return month === 1 ? 1 : 2
     }
 
-    if (periodType === 'SIXMONTHLYAPR') {
+    if (periodType === FIXED_PERIOD_TYPES.SIXMONTHLYAPR) {
         if (![4, 10].includes(month)) {
             throw new Error(
                 `Received an invalid number for period type SIXMONTHLY, received "${month}"`
@@ -57,7 +58,7 @@ const computeMonthlyIndex: ComputeMonthlyIndex = ({ periodType, month }) => {
         return month === 4 ? 1 : 2
     }
 
-    if (periodType === 'SIXMONTHLYNOV') {
+    if (periodType === FIXED_PERIOD_TYPES.SIXMONTHLYNOV) {
         if (![11, 5].includes(month)) {
             throw new Error(
                 `Received an invalid number for period type SIXMONTHLY, received "${month}"`

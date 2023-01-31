@@ -1,6 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
 import { formatYyyyMmDD, padWithZeroes } from '../../utils/helpers'
+import { FIXED_PERIOD_TYPES } from '../period-types'
 import { FixedPeriod, GeneratedPeriodsFunc, PeriodIdentifier } from '../types'
 import isExcludedPeriod from './is-excluded-period'
 
@@ -19,16 +20,16 @@ const getStartingDay = (
     startingDay: number | undefined
 ) => {
     switch (periodType) {
-        case 'WEEKLY':
-        case 'BIWEEKLY':
+        case FIXED_PERIOD_TYPES.WEEKLY:
+        case FIXED_PERIOD_TYPES.BIWEEKLY:
             return startingDay || Days.Monday
-        case 'WEEKLYSAT':
+        case FIXED_PERIOD_TYPES.WEEKLYSAT:
             return Days.Saturday
-        case 'WEEKLYSUN':
+        case FIXED_PERIOD_TYPES.WEEKLYSUN:
             return Days.Sunday
-        case 'WEEKLYTHU':
+        case FIXED_PERIOD_TYPES.WEEKLYTHU:
             return Days.Thursday
-        case 'WEEKLYWED':
+        case FIXED_PERIOD_TYPES.WEEKLYWED:
             return Days.Wednesday
         default:
             throw new Error(`unrecoginsed weekly period type: ${periodType}`)
@@ -54,7 +55,7 @@ const generateFixedPeriodsWeekly: GeneratedPeriodsFunc = ({
     const days: FixedPeriod[] = []
     let i = 1
 
-    const daysToAdd = periodType === 'BIWEEKLY' ? 13 : 6
+    const daysToAdd = periodType === FIXED_PERIOD_TYPES.BIWEEKLY ? 13 : 6
 
     do {
         const endofWeek = date.add({ days: daysToAdd })
@@ -80,16 +81,18 @@ const generateFixedPeriodsWeekly: GeneratedPeriodsFunc = ({
         })
 
         if (!(endofWeek.year === year + 1 && endofWeek.day >= 4)) {
+            const name = buildLabel({
+                periodType,
+                date,
+                nextWeek: endofWeek,
+                weekIndex: i,
+            })
             days.push({
                 periodType,
                 id: value,
                 iso: value,
-                name: buildLabel({
-                    periodType,
-                    date,
-                    nextWeek: endofWeek,
-                    weekIndex: i,
-                }),
+                name,
+                displayName: name,
                 startDate: formatYyyyMmDD(date),
                 endDate: formatYyyyMmDD(endofWeek),
             })
@@ -148,7 +151,7 @@ const buildValue = ({
     year: number
     weekIndex: number
 }) => {
-    const periodKey = periodType === 'BIWEEKLY' ? 'BiW' : 'W'
+    const periodKey = periodType === FIXED_PERIOD_TYPES.BIWEEKLY ? 'BiW' : 'W'
     return `${year}${DaysKeys[startingDay]}${periodKey}${weekIndex}`
 }
 
@@ -167,7 +170,8 @@ const buildLabel: BuildLabelFunc = ({
 }) => {
     const { year, month, day } = date
     const { year: nextYear, month: nextMonth, day: nextDay } = nextWeek
-    const prefix = periodType == 'BIWEEKLY' ? 'Bi-Week' : 'Week'
+    const prefix =
+        periodType === FIXED_PERIOD_TYPES.BIWEEKLY ? 'Bi-Week' : 'Week'
     const label = `${prefix} ${weekIndex} - ${year}-${padWithZeroes(
         month
     )}-${padWithZeroes(day)} - ${nextYear}-${padWithZeroes(

@@ -2,6 +2,10 @@ import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
 import { formatYyyyMmDD, isCustomCalendar } from '../../utils/helpers'
 import localisationHelpers from '../../utils/localisationHelpers'
+import {
+    FIXED_PERIOD_TYPES,
+    FINANCIAL_YEAR_FIXED_PERIOD_TYPES,
+} from '../period-types'
 import { FixedPeriod, PeriodIdentifier } from '../types'
 import getYearlyStartMonthByPeriodType from './get-yearly-start-month-by-period-type'
 import yearlyMonthValueKeys from './yearly-month-value-keys'
@@ -24,15 +28,17 @@ const buildYearlyFixedPeriod: BuildYearlyFixedPeriod = ({
     const monthDateNumber = month.toString().padStart(2, '0')
     const startDate = Temporal.PlainDate.from(`${year}-${monthDateNumber}-01`)
     const endDate = startDate.add({ years: 1 }).subtract({ days: 1 })
+    const name = buildLabel(periodType, startDate, {
+        locale,
+        calendar,
+    })
 
     return {
         periodType,
         id: value,
         iso: value,
-        name: buildLabel(periodType, startDate, {
-            locale,
-            calendar,
-        }),
+        name,
+        displayName: name,
         startDate: formatYyyyMmDD(startDate, 'startOfMonth'),
         endDate: formatYyyyMmDD(endDate, 'endOfMonth'),
     }
@@ -47,7 +53,7 @@ type BuildId = (args: {
 }) => string
 
 const buildId: BuildId = ({ periodType, year, month }) => {
-    if (periodType === 'YEARLY') {
+    if (periodType === FIXED_PERIOD_TYPES.YEARLY) {
         return year.toString()
     }
     // financial year
@@ -55,13 +61,14 @@ const buildId: BuildId = ({ periodType, year, month }) => {
         const yearType = yearlyMonthValueKeys[month]
         return `${year}${yearType}`
     }
+
     throw new Error(
         `can not build value for unrecognised yearly type "${periodType}"`
     )
 }
 
 const isFinancialYear = (periodType: PeriodIdentifier) => {
-    return periodType.startsWith('FY')
+    return FINANCIAL_YEAR_FIXED_PERIOD_TYPES.includes(periodType)
 }
 
 const buildLabel = (
@@ -69,7 +76,7 @@ const buildLabel = (
     currentYearDate: Temporal.PlainDate,
     options: { locale: string; calendar: SupportedCalendar }
 ) => {
-    if (periodType === 'YEARLY') {
+    if (periodType === FIXED_PERIOD_TYPES.YEARLY) {
         return currentYearDate.year.toString()
     }
 

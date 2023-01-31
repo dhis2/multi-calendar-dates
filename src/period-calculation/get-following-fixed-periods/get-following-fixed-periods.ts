@@ -1,8 +1,9 @@
 import { SupportedCalendar } from '../../types'
 import {
-    MONTLY_PERIOD_TYPES,
-    WEEKLY_PERIOD_TYPES,
-    YEARLY_PERIOD_TYPES,
+    FIXED_PERIOD_TYPES,
+    MONTLY_FIXED_PERIOD_TYPES,
+    WEEKLY_FIXED_PERIOD_TYPES,
+    YEARLY_FIXED_PERIOD_TYPES,
 } from '../period-types'
 import { FixedPeriod } from '../types'
 import getFollowingFixedPeriodsDaily from './get-following-fixed-periods-daily'
@@ -23,24 +24,30 @@ const getFollowingFixedPeriods: GetFollowingFixedPeriods = ({
 }) => {
     const { periodType } = period
 
-    if (periodType === 'DAILY') {
+    if (count < 0) {
+        throw new Error(
+            `Can not generate following fixed periods with a negative count, received "${count}"`
+        )
+    }
+
+    if (periodType === FIXED_PERIOD_TYPES.DAILY) {
         return getFollowingFixedPeriodsDaily({ period, count })
     }
 
-    if (WEEKLY_PERIOD_TYPES.includes(periodType)) {
+    if (WEEKLY_FIXED_PERIOD_TYPES.includes(periodType)) {
         return getFollowingFixedPeriodsWeekly({ period, calendar, count })
     }
 
-    if (MONTLY_PERIOD_TYPES.includes(periodType)) {
+    if (MONTLY_FIXED_PERIOD_TYPES.includes(periodType)) {
         return getFollowingFixedPeriodsMonthly({ period, calendar, count })
     }
 
-    if (YEARLY_PERIOD_TYPES.includes(periodType)) {
+    if (YEARLY_FIXED_PERIOD_TYPES.includes(periodType)) {
         return getFollowingFixedPeriodsYearly({ period, calendar, count })
     }
 
     throw new Error(
-        `can not generate period for unrecognised period type "${periodType}"`
+        `Can not generate following fixed period for unrecognised period type "${periodType}"`
     )
 }
 

@@ -1,3 +1,4 @@
+import { FIXED_PERIOD_TYPES } from '../period-types'
 import { PeriodIdentifier } from '../types'
 import novemberQuarters from './quarters'
 
@@ -10,31 +11,31 @@ const computeMonthFromMonthlyIndex: ComputeMonthFromMonthlyIndex = ({
     periodType,
     index,
 }) => {
-    if (periodType === 'MONTHLY') {
+    if (periodType === FIXED_PERIOD_TYPES.MONTHLY) {
         return index
     }
 
-    if (periodType === 'BIMONTHLY') {
+    if (periodType === FIXED_PERIOD_TYPES.BIMONTHLY) {
         return index * 2 - 1
     }
 
-    if (periodType === 'QUARTERLY') {
+    if (periodType === FIXED_PERIOD_TYPES.QUARTERLY) {
         return index * 3 - 2
     }
 
-    if (periodType === 'QUARTERLYNOV') {
+    if (periodType === FIXED_PERIOD_TYPES.QUARTERLYNOV) {
         return computeMonthFromQuarterlyNovemberIndex(index)
     }
 
-    if (periodType === 'SIXMONTHLY') {
+    if (periodType === FIXED_PERIOD_TYPES.SIXMONTHLY) {
         return index === 1 ? 1 : 7
     }
 
-    if (periodType === 'SIXMONTHLYAPR') {
+    if (periodType === FIXED_PERIOD_TYPES.SIXMONTHLYAPR) {
         return index === 1 ? 4 : 10
     }
 
-    if (periodType === 'SIXMONTHLYNOV') {
+    if (periodType === FIXED_PERIOD_TYPES.SIXMONTHLYNOV) {
         return index === 1 ? 11 : 5
     }
 

@@ -1,3 +1,4 @@
+import { FIXED_PERIOD_TYPES } from '../period-types'
 import { PeriodIdentifier } from '../types'
 import getFollowingFixedPeriods from './get-following-fixed-periods'
 
@@ -10,6 +11,7 @@ describe('Gregorian Calendar following periods calculation', () => {
                     period: {
                         periodType: 'DOES NOT EXIST' as PeriodIdentifier,
                         name: '2023-01-01',
+                        displayName: '2023-01-01',
                         id: '20230101',
                         iso: '20230101',
                         startDate: '2023-01-01',
@@ -25,12 +27,31 @@ describe('Gregorian Calendar following periods calculation', () => {
     })
 
     describe('period type: DAILY', () => {
+        it('should return an empty collection when count is 0', () => {
+            const actual = getFollowingFixedPeriods({
+                count: 0,
+                calendar: 'gregory',
+                period: {
+                    periodType: FIXED_PERIOD_TYPES.DAILY,
+                    name: '2023-01-01',
+                    displayName: '2023-01-01',
+                    id: '20230101',
+                    iso: '20230101',
+                    startDate: '2023-01-01',
+                    endDate: '2023-01-01',
+                },
+            })
+
+            expect(actual).toEqual([])
+        })
+
         it('should return one following period by default', () => {
             const actual = getFollowingFixedPeriods({
                 calendar: 'gregory',
                 period: {
-                    periodType: 'DAILY',
+                    periodType: FIXED_PERIOD_TYPES.DAILY,
                     name: '2023-01-01',
+                    displayName: '2023-01-01',
                     id: '20230101',
                     iso: '20230101',
                     startDate: '2023-01-01',
@@ -40,8 +61,9 @@ describe('Gregorian Calendar following periods calculation', () => {
 
             const expected = [
                 {
-                    periodType: 'DAILY',
+                    periodType: FIXED_PERIOD_TYPES.DAILY,
                     name: '2023-01-02',
+                    displayName: '2023-01-02',
                     id: '20230102',
                     iso: '20230102',
                     startDate: '2023-01-02',
@@ -56,8 +78,9 @@ describe('Gregorian Calendar following periods calculation', () => {
             const actual = getFollowingFixedPeriods({
                 calendar: 'gregory',
                 period: {
-                    periodType: 'DAILY',
+                    periodType: FIXED_PERIOD_TYPES.DAILY,
                     name: '2022-12-30',
+                    displayName: '2022-12-30',
                     id: '20221230',
                     iso: '20221230',
                     startDate: '2022-12-30',
@@ -68,16 +91,18 @@ describe('Gregorian Calendar following periods calculation', () => {
 
             const expected = [
                 {
-                    periodType: 'DAILY',
+                    periodType: FIXED_PERIOD_TYPES.DAILY,
                     name: '2022-12-31',
+                    displayName: '2022-12-31',
                     id: '20221231',
                     iso: '20221231',
                     startDate: '2022-12-31',
                     endDate: '2022-12-31',
                 },
                 {
-                    periodType: 'DAILY',
+                    periodType: FIXED_PERIOD_TYPES.DAILY,
                     name: '2023-01-01',
+                    displayName: '2023-01-01',
                     id: '20230101',
                     iso: '20230101',
                     startDate: '2023-01-01',
@@ -90,12 +115,31 @@ describe('Gregorian Calendar following periods calculation', () => {
     })
 
     describe('period type: WEEKLY', () => {
+        it('should return an empty collection when count is 0', () => {
+            const actual = getFollowingFixedPeriods({
+                count: 0,
+                calendar: 'gregory',
+                period: {
+                    periodType: FIXED_PERIOD_TYPES.WEEKLY,
+                    name: '2023-01-02',
+                    displayName: '2023-01-02',
+                    id: '2023W1',
+                    iso: '2023W1',
+                    startDate: '2023-01-02',
+                    endDate: '2023-01-08',
+                },
+            })
+
+            expect(actual).toEqual([])
+        })
+
         it('should return one following period by default', () => {
             const actual = getFollowingFixedPeriods({
                 calendar: 'gregory',
                 period: {
-                    periodType: 'WEEKLY',
+                    periodType: FIXED_PERIOD_TYPES.WEEKLY,
                     name: '2023-01-02',
+                    displayName: '2023-01-02',
                     id: '2023W1',
                     iso: '2023W1',
                     startDate: '2023-01-02',
@@ -105,8 +149,9 @@ describe('Gregorian Calendar following periods calculation', () => {
 
             const expected = [
                 {
-                    periodType: 'WEEKLY',
+                    periodType: FIXED_PERIOD_TYPES.WEEKLY,
                     name: 'Week 2 - 2023-01-09 - 2023-01-15',
+                    displayName: 'Week 2 - 2023-01-09 - 2023-01-15',
                     id: '2023W2',
                     iso: '2023W2',
                     startDate: '2023-01-09',
@@ -121,8 +166,9 @@ describe('Gregorian Calendar following periods calculation', () => {
             const actual = getFollowingFixedPeriods({
                 calendar: 'gregory',
                 period: {
-                    periodType: 'WEEKLY',
+                    periodType: FIXED_PERIOD_TYPES.WEEKLY,
                     name: '2022-12-26',
+                    displayName: '2022-12-26',
                     id: '2022W52',
                     iso: '2022W52',
                     startDate: '2022-12-26',
@@ -133,16 +179,18 @@ describe('Gregorian Calendar following periods calculation', () => {
 
             const expected = [
                 {
-                    periodType: 'WEEKLY',
+                    periodType: FIXED_PERIOD_TYPES.WEEKLY,
                     name: 'Week 1 - 2023-01-02 - 2023-01-08',
+                    displayName: 'Week 1 - 2023-01-02 - 2023-01-08',
                     id: '2023W1',
                     iso: '2023W1',
                     startDate: '2023-01-02',
                     endDate: '2023-01-08',
                 },
                 {
-                    periodType: 'WEEKLY',
+                    periodType: FIXED_PERIOD_TYPES.WEEKLY,
                     name: 'Week 2 - 2023-01-09 - 2023-01-15',
+                    displayName: 'Week 2 - 2023-01-09 - 2023-01-15',
                     id: '2023W2',
                     iso: '2023W2',
                     startDate: '2023-01-09',
@@ -155,12 +203,31 @@ describe('Gregorian Calendar following periods calculation', () => {
     })
 
     describe('period type: MONTHLY', () => {
+        it('should return an empty collection when count is 0', () => {
+            const actual = getFollowingFixedPeriods({
+                count: 0,
+                calendar: 'gregory',
+                period: {
+                    periodType: FIXED_PERIOD_TYPES.MONTHLY,
+                    name: 'January 2023',
+                    displayName: 'January 2023',
+                    id: '202301',
+                    iso: '202301',
+                    startDate: '2023-01-01',
+                    endDate: '2023-01-31',
+                },
+            })
+
+            expect(actual).toEqual([])
+        })
+
         it('should return one following period by default', () => {
             const actual = getFollowingFixedPeriods({
                 calendar: 'gregory',
                 period: {
-                    periodType: 'MONTHLY',
+                    periodType: FIXED_PERIOD_TYPES.MONTHLY,
                     name: 'January 2023',
+                    displayName: 'January 2023',
                     id: '202301',
                     iso: '202301',
                     startDate: '2023-01-01',
@@ -170,8 +237,9 @@ describe('Gregorian Calendar following periods calculation', () => {
 
             const expected = [
                 {
-                    periodType: 'MONTHLY',
+                    periodType: FIXED_PERIOD_TYPES.MONTHLY,
                     name: 'February 2023',
+                    displayName: 'February 2023',
                     id: '202302',
                     iso: '202302',
                     startDate: '2023-02-01',
@@ -186,8 +254,9 @@ describe('Gregorian Calendar following periods calculation', () => {
             const actual = getFollowingFixedPeriods({
                 calendar: 'gregory',
                 period: {
-                    periodType: 'MONTHLY',
+                    periodType: FIXED_PERIOD_TYPES.MONTHLY,
                     name: 'January 2023',
+                    displayName: 'January 2023',
                     id: '202301',
                     iso: '202301',
                     startDate: '2023-01-01',
@@ -198,16 +267,18 @@ describe('Gregorian Calendar following periods calculation', () => {
 
             expect(actual).toHaveLength(24)
             expect(actual[0]).toEqual({
-                periodType: 'MONTHLY',
+                periodType: FIXED_PERIOD_TYPES.MONTHLY,
                 name: 'February 2023',
+                displayName: 'February 2023',
                 id: '202302',
                 iso: '202302',
                 startDate: '2023-02-01',
                 endDate: '2023-02-28',
             })
             expect(actual[23]).toEqual({
-                periodType: 'MONTHLY',
+                periodType: FIXED_PERIOD_TYPES.MONTHLY,
                 name: 'January 2025',
+                displayName: 'January 2025',
                 id: '202501',
                 iso: '202501',
                 startDate: '2025-01-01',
@@ -217,12 +288,31 @@ describe('Gregorian Calendar following periods calculation', () => {
     })
 
     describe('period type: YEARLY', () => {
+        it('should return an empty collection when count is 0', () => {
+            const actual = getFollowingFixedPeriods({
+                count: 0,
+                calendar: 'gregory',
+                period: {
+                    periodType: FIXED_PERIOD_TYPES.YEARLY,
+                    name: '2023',
+                    displayName: '2023',
+                    id: '2023',
+                    iso: '2023',
+                    startDate: '2023-01-01',
+                    endDate: '2023-12-31',
+                },
+            })
+
+            expect(actual).toEqual([])
+        })
+
         it('should return one following period by default', () => {
             const actual = getFollowingFixedPeriods({
                 calendar: 'gregory',
                 period: {
-                    periodType: 'YEARLY',
+                    periodType: FIXED_PERIOD_TYPES.YEARLY,
                     name: '2023',
+                    displayName: '2023',
                     id: '2023',
                     iso: '2023',
                     startDate: '2023-01-01',
@@ -232,8 +322,9 @@ describe('Gregorian Calendar following periods calculation', () => {
 
             const expected = [
                 {
-                    periodType: 'YEARLY',
+                    periodType: FIXED_PERIOD_TYPES.YEARLY,
                     name: '2024',
+                    displayName: '2024',
                     id: '2024',
                     iso: '2024',
                     startDate: '2024-01-01',
@@ -248,8 +339,9 @@ describe('Gregorian Calendar following periods calculation', () => {
             const actual = getFollowingFixedPeriods({
                 calendar: 'gregory',
                 period: {
-                    periodType: 'YEARLY',
+                    periodType: FIXED_PERIOD_TYPES.YEARLY,
                     name: '2023',
+                    displayName: '2023',
                     id: '2023',
                     iso: '2023',
                     startDate: '2023-01-01',
@@ -260,16 +352,18 @@ describe('Gregorian Calendar following periods calculation', () => {
 
             expect(actual).toEqual([
                 {
-                    periodType: 'YEARLY',
+                    periodType: FIXED_PERIOD_TYPES.YEARLY,
                     name: '2024',
+                    displayName: '2024',
                     id: '2024',
                     iso: '2024',
                     startDate: '2024-01-01',
                     endDate: '2024-12-31',
                 },
                 {
-                    periodType: 'YEARLY',
+                    periodType: FIXED_PERIOD_TYPES.YEARLY,
                     name: '2025',
+                    displayName: '2025',
                     id: '2025',
                     iso: '2025',
                     startDate: '2025-01-01',

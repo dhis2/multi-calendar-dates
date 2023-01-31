@@ -2,9 +2,10 @@ import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
 import { getCustomCalendarIfExists } from '../../utils/helpers'
 import {
-    MONTLY_PERIOD_TYPES,
-    WEEKLY_PERIOD_TYPES,
-    YEARLY_PERIOD_TYPES,
+    FIXED_PERIOD_TYPES,
+    MONTLY_FIXED_PERIOD_TYPES,
+    WEEKLY_FIXED_PERIOD_TYPES,
+    YEARLY_FIXED_PERIOD_TYPES,
 } from '../period-types'
 import { GeneratedPeriodsFunc } from '../types'
 import generateFixedPeriodsDaily from './generate-fixed-periods-daily'
@@ -34,7 +35,7 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
         dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
     ) as SupportedCalendar
 
-    if (WEEKLY_PERIOD_TYPES.includes(periodType)) {
+    if (WEEKLY_FIXED_PERIOD_TYPES.includes(periodType)) {
         return generateFixedPeriodsWeekly({
             year,
             periodType,
@@ -45,7 +46,7 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
         })
     }
 
-    if (YEARLY_PERIOD_TYPES.includes(periodType)) {
+    if (YEARLY_FIXED_PERIOD_TYPES.includes(periodType)) {
         // financial year
         return generateFixedPeriodsYearly({
             year,
@@ -56,7 +57,7 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
         })
     }
 
-    if (MONTLY_PERIOD_TYPES.includes(periodType)) {
+    if (MONTLY_FIXED_PERIOD_TYPES.includes(periodType)) {
         return generateFixedPeriodsMonthly({
             year,
             periodType,
@@ -66,7 +67,7 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
         })
     }
 
-    if (periodType === 'DAILY') {
+    if (periodType === FIXED_PERIOD_TYPES.DAILY) {
         return generateFixedPeriodsDaily({
             year,
             periodType,

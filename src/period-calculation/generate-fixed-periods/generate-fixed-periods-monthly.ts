@@ -1,11 +1,14 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
-import monthNumbers from '../month-numbers'
-import { buildMonthlyFixedPeriod } from '../monthly-periods/index'
 import {
-    MONTHLY_OFFSET_PERIOD_TYPES,
-    QUARTERLY_PERIOD_TYPES,
-    SIXMONTHLY_PERIOD_TYPES,
+    buildMonthlyFixedPeriod,
+    getMonthInfoByPeriodType,
+} from '../monthly-periods/index'
+import {
+    FIXED_PERIOD_TYPES,
+    MONTHLY_OFFSET_FIXED_PERIOD_TYPES,
+    QUARTERLY_FIXED_PERIOD_TYPES,
+    SIXMONTHLY_FIXED_PERIOD_TYPES,
 } from '../period-types'
 import { FixedPeriod, GeneratedPeriodsFunc, PeriodIdentifier } from '../types'
 import isExcludedPeriod from './is-excluded-period'
@@ -75,17 +78,17 @@ const isEthiopic13thMonth = (
 }
 
 const getStartingMonth = (periodType: PeriodIdentifier): number => {
-    return MONTHLY_OFFSET_PERIOD_TYPES.includes(periodType)
-        ? getMonthInfo(periodType).value
+    return MONTHLY_OFFSET_FIXED_PERIOD_TYPES.includes(periodType)
+        ? getMonthInfoByPeriodType(periodType).value
         : 1
 }
 
 function needsExtraMonth(periodType: PeriodIdentifier, length: number) {
-    if (SIXMONTHLY_PERIOD_TYPES.includes(periodType)) {
+    if (SIXMONTHLY_FIXED_PERIOD_TYPES.includes(periodType)) {
         return length < 2
     }
 
-    if (QUARTERLY_PERIOD_TYPES.includes(periodType)) {
+    if (QUARTERLY_FIXED_PERIOD_TYPES.includes(periodType)) {
         return length < 4
     }
 
@@ -93,16 +96,16 @@ function needsExtraMonth(periodType: PeriodIdentifier, length: number) {
 }
 
 const getMonthsToAdd = (periodType: PeriodIdentifier) => {
-    if (SIXMONTHLY_PERIOD_TYPES.includes(periodType)) {
+    if (SIXMONTHLY_FIXED_PERIOD_TYPES.includes(periodType)) {
         return 6
     }
-    if (QUARTERLY_PERIOD_TYPES.includes(periodType)) {
+    if (QUARTERLY_FIXED_PERIOD_TYPES.includes(periodType)) {
         return 3
     }
-    if (periodType === 'MONTHLY') {
+    if (periodType === FIXED_PERIOD_TYPES.MONTHLY) {
         return 1
     }
-    if (periodType === 'BIMONTHLY') {
+    if (periodType === FIXED_PERIOD_TYPES.BIMONTHLY) {
         return 2
     }
 

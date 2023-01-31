@@ -1,25 +1,25 @@
 import { SupportedCalendar } from '../types'
 
 const periodIdentifiers = [
-    'DAILY',
-    'WEEKLY',
-    'WEEKLYWED',
-    'WEEKLYTHU',
-    'WEEKLYSAT',
-    'WEEKLYSUN',
-    'BIWEEKLY',
-    'MONTHLY',
-    'BIMONTHLY',
-    'QUARTERLY',
-    'QUARTERLYNOV', // used in Ethiopia
-    'SIXMONTHLY',
-    'SIXMONTHLYAPR',
-    'SIXMONTHLYNOV', // used in Ethiopia
-    'YEARLY',
-    'FYNOV',
-    'FYOCT',
-    'FYJUL',
-    'FYAPR',
+    'Daily',
+    'Weekly',
+    'WeeklyWednesday',
+    'WeeklyThursday',
+    'WeeklySaturday',
+    'WeeklySunday',
+    'BiWeekly',
+    'Monthly',
+    'BiMonthly',
+    'Quarterly',
+    'QuarterlyNov', // used in Ethiopia
+    'SixMonthly',
+    'SixMonthlyApril',
+    'SixMonthlyNov', // used in Ethiopia
+    'Yearly',
+    'FinancialApril',
+    'FinancialJuly',
+    'FinancialOct',
+    'FinancialNov',
 ] as const
 
 export type PeriodIdentifier = typeof periodIdentifiers[number]
@@ -28,6 +28,7 @@ export type FixedPeriod = {
     id: string
     iso?: string
     name: string
+    displayName: string
     startDate: string
     endDate: string
 }

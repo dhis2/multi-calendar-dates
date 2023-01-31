@@ -1,73 +1,90 @@
 import { PeriodIdentifier } from './types'
 
-const allPeriods: PeriodIdentifier[] = [
-    'DAILY',
-    'WEEKLY',
-    'WEEKLYWED',
-    'WEEKLYTHU',
-    'WEEKLYSAT',
-    'WEEKLYSUN',
-    'BIWEEKLY',
-    'MONTHLY',
-    'BIMONTHLY',
-    'QUARTERLY',
-    'QUARTERLYNOV', // used in Ethiopia
-    'SIXMONTHLY',
-    'SIXMONTHLYAPR',
-    'SIXMONTHLYNOV', // used in Ethiopia
-    'YEARLY',
-    'FYNOV',
-    'FYOCT',
-    'FYJUL',
-    'FYAPR',
+export const FIXED_PERIOD_TYPES: { [name: string]: PeriodIdentifier } = {
+    DAILY: 'Daily',
+    WEEKLY: 'Weekly',
+    WEEKLYWED: 'WeeklyWednesday',
+    WEEKLYTHU: 'WeeklyThursday',
+    WEEKLYSAT: 'WeeklySaturday',
+    WEEKLYSUN: 'WeeklySunday',
+    BIWEEKLY: 'BiWeekly',
+    MONTHLY: 'Monthly',
+    BIMONTHLY: 'BiMonthly',
+    QUARTERLY: 'Quarterly',
+    QUARTERLYNOV: 'QuarterlyNov', // used in Ethiopi: 'SixMonthly',
+    SIXMONTHLY: 'SixMonthly',
+    SIXMONTHLYAPR: 'SixMonthlyApril',
+    SIXMONTHLYNOV: 'SixMonthlyNov', // used in Ethiopia
+    YEARLY: 'Yearly',
+    FYAPR: 'FinancialApril',
+    FYJUL: 'FinancialJuly',
+    FYOCT: 'FinancialOct',
+    FYNOV: 'FinancialNov',
+}
+
+export const WEEKLY_FIXED_PERIOD_TYPES: PeriodIdentifier[] = [
+    FIXED_PERIOD_TYPES.WEEKLY,
+    FIXED_PERIOD_TYPES.WEEKLYWED,
+    FIXED_PERIOD_TYPES.WEEKLYTHU,
+    FIXED_PERIOD_TYPES.WEEKLYSAT,
+    FIXED_PERIOD_TYPES.WEEKLYSUN,
+    FIXED_PERIOD_TYPES.BIWEEKLY,
 ]
 
-export const WEEKLY_PERIOD_TYPES: PeriodIdentifier[] = [
-    ...allPeriods.filter((period) => period.match(/^WEEKLY/)),
-    'BIWEEKLY',
+export const MONTLY_FIXED_PERIOD_TYPES: PeriodIdentifier[] = [
+    FIXED_PERIOD_TYPES.MONTHLY,
+    FIXED_PERIOD_TYPES.BIMONTHLY,
+    FIXED_PERIOD_TYPES.QUARTERLY,
+    FIXED_PERIOD_TYPES.QUARTERLYNOV,
+    FIXED_PERIOD_TYPES.SIXMONTHLY,
+    FIXED_PERIOD_TYPES.SIXMONTHLYAPR,
+    FIXED_PERIOD_TYPES.SIXMONTHLYNOV,
 ]
 
-export const MONTLY_PERIOD_TYPES: PeriodIdentifier[] = [
-    'MONTHLY',
-    'BIMONTHLY',
-    'QUARTERLY',
-    'QUARTERLYNOV',
-    'SIXMONTHLY',
-    'SIXMONTHLYAPR',
-    'SIXMONTHLYNOV',
+export const QUARTERLY_FIXED_PERIOD_TYPES: PeriodIdentifier[] = [
+    FIXED_PERIOD_TYPES.QUARTERLY,
+    FIXED_PERIOD_TYPES.QUARTERLYNOV,
 ]
 
-export const QUARTERLY_PERIOD_TYPES: PeriodIdentifier[] = allPeriods.filter(
-    (period) => period.match(/^QUARTERLY/)
-)
-
-export const SIXMONTHLY_PERIOD_TYPES: PeriodIdentifier[] = allPeriods.filter(
-    (period) => period.match(/^SIXMONTHLY/)
-)
-
-export const MONTHLY_STANDARD_PERIOD_TYPES: PeriodIdentifier[] = [
-    'MONTHLY',
-    'BIMONTHLY',
-    'QUARTERLY',
-    'SIXMONTHLY',
+export const SIXMONTHLY_FIXED_PERIOD_TYPES: PeriodIdentifier[] = [
+    FIXED_PERIOD_TYPES.SIXMONTHLY,
+    FIXED_PERIOD_TYPES.SIXMONTHLYAPR,
+    FIXED_PERIOD_TYPES.SIXMONTHLYNOV,
 ]
 
-export const MONTHLY_OFFSET_PERIOD_TYPES: PeriodIdentifier[] = [
-    // All but first periodType, which starts in January
-    ...QUARTERLY_PERIOD_TYPES.slice(1),
-    ...SIXMONTHLY_PERIOD_TYPES.slice(1),
+export const MONTHLY_STANDARD_FIXED_PERIOD_TYPES: PeriodIdentifier[] = [
+    FIXED_PERIOD_TYPES.MONTHLY,
+    FIXED_PERIOD_TYPES.BIMONTHLY,
+    FIXED_PERIOD_TYPES.QUARTERLY,
+    FIXED_PERIOD_TYPES.SIXMONTHLY,
 ]
 
-export const MULTI_MONTH_PERIOD_TYPES: PeriodIdentifier[] = [
-    'BIMONTHLY',
-    ...QUARTERLY_PERIOD_TYPES,
-    ...SIXMONTHLY_PERIOD_TYPES,
+export const MONTHLY_OFFSET_FIXED_PERIOD_TYPES: PeriodIdentifier[] = [
+    FIXED_PERIOD_TYPES.QUARTERLYNOV,
+    FIXED_PERIOD_TYPES.SIXMONTHLYAPR,
+    FIXED_PERIOD_TYPES.SIXMONTHLYNOV,
 ]
 
-export const FINANCIAL_YEAR_PERIOD_TYPES: PeriodIdentifier[] =
-    allPeriods.filter((period) => period.match(/^FY/))
+export const MULTI_MONTH_FIXED_PERIOD_TYPES: PeriodIdentifier[] = [
+    FIXED_PERIOD_TYPES.BIMONTHLY,
+    FIXED_PERIOD_TYPES.QUARTERLY,
+    FIXED_PERIOD_TYPES.QUARTERLYNOV,
+    FIXED_PERIOD_TYPES.SIXMONTHLY,
+    FIXED_PERIOD_TYPES.SIXMONTHLYAPR,
+    FIXED_PERIOD_TYPES.SIXMONTHLYNOV,
+]
 
-export const YEARLY_PERIOD_TYPES: PeriodIdentifier[] = [
-    'YEARLY',
-    ...FINANCIAL_YEAR_PERIOD_TYPES,
+export const FINANCIAL_YEAR_FIXED_PERIOD_TYPES: PeriodIdentifier[] = [
+    FIXED_PERIOD_TYPES.FYAPR,
+    FIXED_PERIOD_TYPES.FYJUL,
+    FIXED_PERIOD_TYPES.FYOCT,
+    FIXED_PERIOD_TYPES.FYNOV,
+]
+
+export const YEARLY_FIXED_PERIOD_TYPES: PeriodIdentifier[] = [
+    FIXED_PERIOD_TYPES.YEARLY,
+    FIXED_PERIOD_TYPES.FYAPR,
+    FIXED_PERIOD_TYPES.FYJUL,
+    FIXED_PERIOD_TYPES.FYOCT,
+    FIXED_PERIOD_TYPES.FYNOV,
 ]
