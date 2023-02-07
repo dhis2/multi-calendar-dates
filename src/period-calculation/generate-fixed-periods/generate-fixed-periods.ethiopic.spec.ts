@@ -45,9 +45,9 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             })
 
             expect(result[result.length - 1]).toMatchObject({
-                id: '2006Nov',
-                name: 'Hamle 2006 - Sene 2007',
-                displayName: 'Hamle 2006 - Sene 2007',
+                id: '1970Nov',
+                name: 'Hamle 1970 - Sene 1971',
+                displayName: 'Hamle 1970 - Sene 1971',
             })
         })
 
@@ -64,9 +64,9 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             })
 
             expect(result[result.length - 1]).toMatchObject({
-                id: '2006April',
-                name: 'Tahsas 2006 - Hedar 2007',
-                displayName: 'Tahsas 2006 - Hedar 2007',
+                id: '1970April',
+                name: 'Tahsas 1970 - Hedar 1971',
+                displayName: 'Tahsas 1970 - Hedar 1971',
             })
         })
 
@@ -84,10 +84,10 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             })
 
             expect(result[result.length - 1]).toMatchObject({
-                id: '2006',
-                iso: '2006',
-                name: '2006',
-                displayName: '2006',
+                id: '1970',
+                iso: '1970',
+                name: '1970',
+                displayName: '1970',
             })
         })
     })
@@ -114,7 +114,7 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             }).map((p) => `${p.startDate}/${p.endDate}`)
             expect(periods[0]).toEqual('2015-01-01/2015-13-06')
             expect(periods[1]).toEqual('2014-01-01/2014-13-05')
-            expect(periods[periods.length - 1]).toEqual('2006-01-01/2006-13-05')
+            expect(periods[periods.length - 1]).toEqual('1970-01-01/1970-13-05')
         })
         it('should add start and end dates for FYNOV', () => {
             const periods = generateFixedPeriods({
@@ -123,7 +123,7 @@ describe('Ethiopic Calendar fixed period calculation', () => {
                 year: 2015,
             }).map((p) => `${p.startDate}/${p.endDate}`)
             expect(periods[0]).toEqual('2015-11-01/2016-10-30')
-            expect(periods[periods.length - 1]).toEqual('2006-11-01/2007-10-30')
+            expect(periods[periods.length - 1]).toEqual('1970-11-01/1971-10-30')
         })
         it('should add start and end dates for WEEKLY', () => {
             const periods = generateFixedPeriods({
@@ -194,6 +194,7 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             // todo: check with Abyot where the 13th month go in QUARTERLY
             expect(periods[periods.length - 1]).toEqual('2015-10-01/2015-12-30')
         })
+
         it('should add start and end dates for BIMONTHLY', () => {
             const periods = generateFixedPeriods({
                 ...date,

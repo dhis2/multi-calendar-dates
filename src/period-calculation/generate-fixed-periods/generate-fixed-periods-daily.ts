@@ -1,4 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill'
+import { fromAnyDate } from '../../utils/index'
 import { buildDailyFixedPeriod } from '../daily-periods/index'
 import { FixedPeriod, GeneratedPeriodsFunc } from '../types'
 
@@ -6,8 +7,11 @@ const generateFixedPeriodsDaily: GeneratedPeriodsFunc = ({
     year,
     calendar,
     excludeDay: _excludeDay,
+    locale,
 }) => {
-    const excludeDay = _excludeDay ? Temporal.PlainDate.from(_excludeDay) : null
+    const excludeDay = _excludeDay
+        ? fromAnyDate({ calendar, date: _excludeDay })
+        : null
     const day = Temporal.PlainDate.from({
         year,
         month: 1,
@@ -24,7 +28,11 @@ const generateFixedPeriodsDaily: GeneratedPeriodsFunc = ({
             break
         }
 
-        const period = buildDailyFixedPeriod({ date: nextDay })
+        const period = buildDailyFixedPeriod({
+            date: nextDay,
+            calendar,
+            locale,
+        })
         days.push(period)
     }
 

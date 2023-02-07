@@ -1,6 +1,7 @@
+import { Temporal } from '@js-temporal/polyfill'
 import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
-import { getCustomCalendarIfExists } from '../../utils/helpers'
+import { fromAnyDate, getCustomCalendarIfExists } from '../../utils/index'
 import {
     FIXED_PERIOD_TYPES,
     MONTLY_FIXED_PERIOD_TYPES,
@@ -15,20 +16,22 @@ import getFixedPeriodByDateYearly from './get-fixed-period-by-date-yearly'
 
 type GetFixedPeriodByDate = (args: {
     periodType: PeriodIdentifier
-    date: string
+    date: string | Date | Temporal.PlainDate
     calendar: SupportedCalendar
     locale?: string
 }) => FixedPeriod
 
 const getFixedPeriodByDate: GetFixedPeriodByDate = ({
     periodType,
-    date,
+    date: dateInput,
     calendar: requestedCalendar,
     locale = 'en',
 }) => {
     const calendar = getCustomCalendarIfExists(
         dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
     ) as SupportedCalendar
+
+    const date = fromAnyDate({ date: dateInput, calendar })
     const payload = { periodType, date, calendar, locale }
 
     if (periodType === FIXED_PERIOD_TYPES.DAILY) {

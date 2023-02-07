@@ -15,14 +15,17 @@ type GetFollowingFixedPeriods = (args: {
     period: FixedPeriod
     calendar: SupportedCalendar
     count?: number
+    locale?: string
 }) => FixedPeriod[]
 
 const getFollowingFixedPeriods: GetFollowingFixedPeriods = ({
     period,
     calendar,
     count = 1,
+    locale = 'en',
 }) => {
     const { periodType } = period
+    const payload = { period, calendar, count, locale }
 
     if (count < 0) {
         throw new Error(
@@ -31,19 +34,19 @@ const getFollowingFixedPeriods: GetFollowingFixedPeriods = ({
     }
 
     if (periodType === FIXED_PERIOD_TYPES.DAILY) {
-        return getFollowingFixedPeriodsDaily({ period, count })
+        return getFollowingFixedPeriodsDaily(payload)
     }
 
     if (WEEKLY_FIXED_PERIOD_TYPES.includes(periodType)) {
-        return getFollowingFixedPeriodsWeekly({ period, calendar, count })
+        return getFollowingFixedPeriodsWeekly(payload)
     }
 
     if (MONTLY_FIXED_PERIOD_TYPES.includes(periodType)) {
-        return getFollowingFixedPeriodsMonthly({ period, calendar, count })
+        return getFollowingFixedPeriodsMonthly(payload)
     }
 
     if (YEARLY_FIXED_PERIOD_TYPES.includes(periodType)) {
-        return getFollowingFixedPeriodsYearly({ period, calendar, count })
+        return getFollowingFixedPeriodsYearly(payload)
     }
 
     throw new Error(

@@ -1,5 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
+import { fromAnyDate } from '../../utils/index'
 import { generateFixedPeriodsMonthly } from '../generate-fixed-periods/index'
 import { FixedPeriod } from '../types'
 
@@ -7,14 +8,16 @@ type GetPreviousFixedPeriodsMonthly = (args: {
     period: FixedPeriod
     count: number
     calendar: SupportedCalendar
+    locale: string
 }) => FixedPeriod[]
 
 const getPreviousFixedPeriodsMonthly: GetPreviousFixedPeriodsMonthly = ({
     period,
     count,
     calendar,
+    locale,
 }) => {
-    const startDate = Temporal.PlainDate.from(period.startDate)
+    const startDate = fromAnyDate({ date: period.startDate, calendar })
     const previousPeriods: FixedPeriod[] = []
 
     let curYear = startDate.year
@@ -25,6 +28,7 @@ const getPreviousFixedPeriodsMonthly: GetPreviousFixedPeriodsMonthly = ({
             calendar: calendar,
             periodType: period.periodType,
             startingDay: 1,
+            locale,
         })
 
         if (curYear < startDate.year) {
@@ -37,9 +41,10 @@ const getPreviousFixedPeriodsMonthly: GetPreviousFixedPeriodsMonthly = ({
 
         const endIndex =
             periodsForYear.findIndex((curPeriod) => {
-                const curStartDate = Temporal.PlainDate.from(
-                    curPeriod.startDate
-                )
+                const curStartDate = fromAnyDate({
+                    date: curPeriod.startDate,
+                    calendar,
+                })
                 return (
                     Temporal.PlainDate.compare(startDate, curStartDate) === -1
                 )

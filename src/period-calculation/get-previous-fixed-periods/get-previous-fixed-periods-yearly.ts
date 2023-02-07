@@ -1,5 +1,5 @@
-import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
+import { fromAnyDate } from '../../utils/index'
 import { generateFixedPeriodsYearly } from '../generate-fixed-periods/index'
 import { FixedPeriod } from '../types'
 
@@ -7,7 +7,7 @@ type GetPreviousFixedPeriodsYearly = (args: {
     period: FixedPeriod
     calendar: SupportedCalendar
     count: number
-    locale?: string
+    locale: string
 }) => FixedPeriod[]
 
 const getPreviousFixedPeriodsYearly: GetPreviousFixedPeriodsYearly = ({
@@ -16,7 +16,7 @@ const getPreviousFixedPeriodsYearly: GetPreviousFixedPeriodsYearly = ({
     count,
     locale,
 }) => {
-    const endYear = Temporal.PlainDate.from(period.startDate).year - 1
+    const endYear = fromAnyDate({ date: period.startDate, calendar }).year - 1
     return generateFixedPeriodsYearly({
         year: endYear,
         calendar,

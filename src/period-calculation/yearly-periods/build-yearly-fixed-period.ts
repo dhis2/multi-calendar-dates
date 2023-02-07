@@ -1,6 +1,10 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
-import { formatYyyyMmDD, isCustomCalendar } from '../../utils/helpers'
+import {
+    fromAnyDate,
+    formatYyyyMmDD,
+    isCustomCalendar,
+} from '../../utils/index'
 import localisationHelpers from '../../utils/localisationHelpers'
 import {
     FIXED_PERIOD_TYPES,
@@ -13,20 +17,23 @@ import yearlyMonthValueKeys from './yearly-month-value-keys'
 type BuildYearlyFixedPeriod = (args: {
     periodType: PeriodIdentifier
     year: number
-    locale?: string
+    locale: string
     calendar: SupportedCalendar
 }) => FixedPeriod
 
 const buildYearlyFixedPeriod: BuildYearlyFixedPeriod = ({
     periodType,
     year,
-    locale = 'en',
+    locale,
     calendar,
 }) => {
     const month = getYearlyStartMonthByPeriodType(periodType)
     const value = buildId({ periodType, year, month })
     const monthDateNumber = month.toString().padStart(2, '0')
-    const startDate = Temporal.PlainDate.from(`${year}-${monthDateNumber}-01`)
+    const startDate = fromAnyDate({
+        date: `${year}-${monthDateNumber}-01`,
+        calendar,
+    })
     const endDate = startDate.add({ years: 1 }).subtract({ days: 1 })
     const name = buildLabel(periodType, startDate, {
         locale,

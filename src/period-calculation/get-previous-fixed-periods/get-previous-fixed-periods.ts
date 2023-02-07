@@ -15,29 +15,32 @@ type GetPreviousFixedPeriods = (args: {
     period: FixedPeriod
     calendar: SupportedCalendar
     count?: number
+    locale?: string
 }) => FixedPeriod[]
 
 const getPreviousFixedPeriods: GetPreviousFixedPeriods = ({
     period,
     calendar,
     count = 1,
+    locale = 'en',
 }) => {
     const { periodType } = period
+    const payload = { period, calendar, count, locale }
 
     if (periodType === FIXED_PERIOD_TYPES.DAILY) {
-        return getPreviousFixedPeriodsDaily({ period, count })
+        return getPreviousFixedPeriodsDaily(payload)
     }
 
     if (WEEKLY_FIXED_PERIOD_TYPES.includes(periodType)) {
-        return getPreviousFixedPeriodsWeekly({ period, calendar, count })
+        return getPreviousFixedPeriodsWeekly(payload)
     }
 
     if (MONTLY_FIXED_PERIOD_TYPES.includes(periodType)) {
-        return getPreviousFixedPeriodsMonthly({ period, calendar, count })
+        return getPreviousFixedPeriodsMonthly(payload)
     }
 
     if (YEARLY_FIXED_PERIOD_TYPES.includes(periodType)) {
-        return getPreviousFixedPeriodsYearly({ period, calendar, count })
+        return getPreviousFixedPeriodsYearly(payload)
     }
 
     throw new Error(

@@ -1,6 +1,10 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
 import {
+    fromAnyDate,
+    getFirstDayNumberOfMonthByCalendarType,
+} from '../../utils/index'
+import {
     buildMonthlyFixedPeriod,
     getMonthInfoByPeriodType,
 } from '../monthly-periods/index'
@@ -13,20 +17,23 @@ import {
 import { FixedPeriod, GeneratedPeriodsFunc, PeriodIdentifier } from '../types'
 import isExcludedPeriod from './is-excluded-period'
 
-const NEPALI_FIRST_DAY_IN_MONTH = 14
-
 const generateFixedPeriodsMonthly: GeneratedPeriodsFunc = ({
     year,
     calendar,
     periodType,
     excludeDay: _excludeDay,
-    locale = 'en',
+    locale,
 }) => {
-    const excludeDay = _excludeDay ? Temporal.PlainDate.from(_excludeDay) : null
+    const excludeDay = _excludeDay
+        ? fromAnyDate({ date: _excludeDay, calendar })
+        : null
+
     let currentMonth = Temporal.PlainDate.from({
         year,
         month: getStartingMonth(periodType),
-        day: calendar.toString() === 'nepali' ? NEPALI_FIRST_DAY_IN_MONTH : 1,
+        day: getFirstDayNumberOfMonthByCalendarType(
+            calendar.toString() as SupportedCalendar
+        ),
         calendar,
     })
 
@@ -42,7 +49,7 @@ const generateFixedPeriodsMonthly: GeneratedPeriodsFunc = ({
         if (!ignoreMonth) {
             const period = buildMonthlyFixedPeriod({
                 periodType,
-                month: currentMonth.month,
+                month: currentMonth,
                 year,
                 calendar,
                 locale,
@@ -56,7 +63,7 @@ const generateFixedPeriodsMonthly: GeneratedPeriodsFunc = ({
         }
 
         const nextMonth = currentMonth.add({ months: monthToAdd })
-        currentMonth = Temporal.PlainDate.from(nextMonth)
+        currentMonth = fromAnyDate({ date: nextMonth, calendar })
     }
 
     return months

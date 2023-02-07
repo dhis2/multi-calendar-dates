@@ -5,11 +5,10 @@ import {
     isCustomCalendar,
     padWithZeroes,
 } from '../../utils/helpers'
-import localisationHelpers from '../../utils/localisationHelpers'
+import { localisationHelpers } from '../../utils/index'
 import { computeMonthlyIndex } from '../monthly-periods/index'
 import {
     FIXED_PERIOD_TYPES,
-    MONTHLY_STANDARD_FIXED_PERIOD_TYPES,
     MULTI_MONTH_FIXED_PERIOD_TYPES,
     QUARTERLY_FIXED_PERIOD_TYPES,
     SIXMONTHLY_FIXED_PERIOD_TYPES,
@@ -19,24 +18,21 @@ import getMonthInfoByPeriodType from './get-month-info-by-period-type'
 
 type BuildMonthlyFixedPeriod = (args: {
     periodType: PeriodIdentifier
-    month: number
+    month: Temporal.PlainDate
     year: number
     calendar: SupportedCalendar
-    locale?: string
+    locale: string
 }) => FixedPeriod
 
 const buildMonthlyFixedPeriod: BuildMonthlyFixedPeriod = ({
     periodType,
-    month: monthNr,
+    month,
     year: yearArg,
     calendar,
-    locale = 'en',
+    locale,
 }) => {
-    const index = computeMonthlyIndex({ periodType, month: monthNr })
-    const year = computeStartYear({ periodType, year: yearArg, index })
+    const index = computeMonthlyIndex({ periodType, month: month.month })
     const monthToAdd = getMonthsToAdd(periodType)
-    const monthStr = monthNr.toString().padStart(2, '0')
-    const month = Temporal.PlainDate.from(`${year}-${monthStr}-01`)
     const nextMonth = month.add({ months: monthToAdd })
     const id = buildId({
         periodType,
@@ -46,6 +42,9 @@ const buildMonthlyFixedPeriod: BuildMonthlyFixedPeriod = ({
     })
 
     if (month.calendar === ('ethiopic' as Temporal.CalendarLike)) {
+        // @TODO(jira): Create issue
+        // @TODO: Confirm the special cases for the 13th month with Abyot, then
+        // update the start/end dates for Ethiopic calendar'
         console.warn(
             'todo: confirm the special cases for the 13th month with Abyot, then update the start/end dates for Ethiopic calendar'
         )
@@ -57,6 +56,7 @@ const buildMonthlyFixedPeriod: BuildMonthlyFixedPeriod = ({
         day: 1,
         calendar: nextMonth.calendar,
     }).subtract({ days: 1 })
+
     const name = buildLabel({
         periodType,
         month,
@@ -199,27 +199,4 @@ const buildLabelForCustomCalendar: BuildLabelFunc = ({
         )} ${nextMonth.year}`
     }
     return result
-}
-
-type ComputeStartYear = (args: {
-    periodType: PeriodIdentifier
-    year: number
-    index: number
-}) => number
-
-const computeStartYear: ComputeStartYear = ({ periodType, year, index }) => {
-    if (MONTHLY_STANDARD_FIXED_PERIOD_TYPES.includes(periodType)) {
-        return year
-    }
-
-    if (periodType === FIXED_PERIOD_TYPES.QUARTERLYNOV) {
-        return index === 1 ? year : year + 1
-    }
-
-    if (periodType === FIXED_PERIOD_TYPES.SIXMONTHLYNOV) {
-        return index === 1 ? year : year + 1
-    }
-
-    // SIXMONTHLYAPR is always starts in the same year
-    return year
 }

@@ -1,29 +1,28 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
-import { getCustomCalendarIfExists } from '../../utils/helpers'
+import { fromAnyDate, getCustomCalendarIfExists } from '../../utils/index'
 import { generateFixedPeriodsWeekly } from '../generate-fixed-periods/index'
 import { PeriodIdentifier, FixedPeriod } from '../types'
 
 type GetFixedPeriodByDateWeekly = (args: {
     periodType: PeriodIdentifier
-    date: string
-    locale?: string
+    date: Temporal.PlainDate
+    locale: string
     calendar: SupportedCalendar
 }) => FixedPeriod
 
 const getFixedPeriodByDateWeekly: GetFixedPeriodByDateWeekly = ({
     periodType,
     date,
-    locale = 'en',
+    locale,
     calendar: requestedCalendar,
 }) => {
     const calendar = getCustomCalendarIfExists(
         dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
     ) as SupportedCalendar
-    const currentDate = Temporal.PlainDate.from(date)
     const weeklyPeriods = generateFixedPeriodsWeekly({
-        year: currentDate.year,
+        year: date.year,
         calendar,
         periodType,
         locale,
@@ -32,15 +31,13 @@ const getFixedPeriodByDateWeekly: GetFixedPeriodByDateWeekly = ({
 
     // if start date of first period of year is after current date get last
     // period of last year
-    const startDateFirstPeriodInYear = Temporal.PlainDate.from(
-        weeklyPeriods[0].startDate
-    )
-    if (
-        Temporal.PlainDate.compare(startDateFirstPeriodInYear, currentDate) ===
-        1
-    ) {
+    const startDateFirstPeriodInYear = fromAnyDate({
+        calendar,
+        date: weeklyPeriods[0].startDate,
+    })
+    if (Temporal.PlainDate.compare(startDateFirstPeriodInYear, date) === 1) {
         return generateFixedPeriodsWeekly({
-            year: currentDate.year - 1,
+            year: date.year - 1,
             calendar,
             periodType,
             locale,
@@ -49,14 +46,20 @@ const getFixedPeriodByDateWeekly: GetFixedPeriodByDateWeekly = ({
     }
 
     const fixedPeriod = weeklyPeriods.find((currentPeriod) => {
-        const curStartDate = Temporal.PlainDate.from(currentPeriod.startDate)
-        const curEndDate = Temporal.PlainDate.from(currentPeriod.endDate)
+        const curStartDate = fromAnyDate({
+            calendar,
+            date: currentPeriod.startDate,
+        })
+        const curEndDate = fromAnyDate({
+            calendar,
+            date: currentPeriod.endDate,
+        })
 
         return (
             // On or after start date of current period
-            Temporal.PlainDate.compare(currentDate, curStartDate) > -1 &&
+            Temporal.PlainDate.compare(date, curStartDate) > -1 &&
             // On or before end date of current period
-            Temporal.PlainDate.compare(currentDate, curEndDate) < 1
+            Temporal.PlainDate.compare(date, curEndDate) < 1
         )
     })
 

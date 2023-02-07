@@ -1,6 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
-import { formatYyyyMmDD, padWithZeroes } from '../../utils/helpers'
+import { fromAnyDate, formatYyyyMmDD, padWithZeroes } from '../../utils/index'
 import { FIXED_PERIOD_TYPES } from '../period-types'
 import { FixedPeriod, GeneratedPeriodsFunc, PeriodIdentifier } from '../types'
 import isExcludedPeriod from './is-excluded-period'
@@ -36,6 +36,8 @@ const getStartingDay = (
     }
 }
 
+// Does not need a `locale` as we're displaying the month as number in the
+// displayName/name
 const generateFixedPeriodsWeekly: GeneratedPeriodsFunc = ({
     year,
     calendar,
@@ -43,7 +45,9 @@ const generateFixedPeriodsWeekly: GeneratedPeriodsFunc = ({
     startingDay,
     excludeDay: _excludeDay,
 }) => {
-    const excludeDay = _excludeDay ? Temporal.PlainDate.from(_excludeDay) : null
+    const excludeDay = _excludeDay
+        ? fromAnyDate({ date: _excludeDay, calendar })
+        : null
     const startingDayToUse = getStartingDay(periodType, startingDay)
     let date = getStartingDate({
         year,
@@ -97,7 +101,7 @@ const generateFixedPeriodsWeekly: GeneratedPeriodsFunc = ({
                 endDate: formatYyyyMmDD(endofWeek),
             })
         }
-        date = Temporal.PlainDate.from(endofWeek).add({ days: 1 })
+        date = fromAnyDate({ date: endofWeek, calendar }).add({ days: 1 })
         i++
     } while (date.year === year) // important to have the condition after since the very first day can be in the previous year
     return days

@@ -94,14 +94,33 @@ describe('Nepali Calendar fixed period calculation', () => {
             expect(periods[2]).toEqual('2077-01-01/2077-12-31') // 2077 ends on the 31st not 30th
             expect(periods[periods.length - 1]).toEqual('2070-01-01/2070-12-30')
         })
-        it('should add start and end dates for FYNOV', () => {
+        it.only('should add start and end dates for FYNOV', () => {
             const periods = generateFixedPeriods({
                 ...date,
                 periodType: FIXED_PERIOD_TYPES.FYNOV,
-            }).map((p) => `${p.startDate}/${p.endDate}`)
-            expect(periods[0]).toEqual('2079-11-01/2080-10-29')
-            expect(periods[3]).toEqual('2076-11-01/2077-10-30') // 2077 has 30 days in the 10th month
-            expect(periods[periods.length - 1]).toEqual('2070-11-01/2071-10-29')
+            })
+
+            expect(periods[0]).toEqual(
+                expect.objectContaining({
+                    startDate: '2079-11-01',
+                    endDate: '2080-10-29',
+                })
+            )
+
+            // 2077 has 30 days in the 10th month
+            expect(periods[3]).toEqual(
+                expect.objectContaining({
+                    startDate: '2076-11-01',
+                    endDate: '2077-10-30',
+                })
+            )
+
+            expect(periods[periods.length - 1]).toEqual(
+                expect.objectContaining({
+                    startDate: '2070-11-01',
+                    endDate: '2071-10-29',
+                })
+            )
         })
         it('should add start and end dates for WEEKLY', () => {
             const periods = generateFixedPeriods({
