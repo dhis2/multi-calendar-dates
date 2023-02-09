@@ -28,8 +28,13 @@ const generateFixedPeriodsYearly: GeneratedPeriodsFunc = ({
 
     // We can't use 1970 as calendars with different year numbers have a
     // different year at timestamp 0
-    const startYear =
-        Temporal.PlainDate.from('1970-01-01').withCalendar(calendar).year
+    const startYearDate = Temporal.PlainDate.from({
+        day: 1,
+        month: 1,
+        year: 1970,
+        calendar: 'gregory',
+    }).withCalendar(calendar)
+    const startYear = startYearDate.eraYear || startYearDate.year
 
     const years: FixedPeriod[] = []
     // plus 1 -> so we include 1970
@@ -40,7 +45,15 @@ const generateFixedPeriodsYearly: GeneratedPeriodsFunc = ({
         const period = buildYearlyFixedPeriod({
             periodType,
             year: curYear,
-            locale,
+
+            // GeneratedPeriodsFunc is used for both the exposed api function
+            // as well as for the internal functions
+            //
+            // @TODO: As the exposed function and internal functions differ
+            // slightly (`locale` is optional on the exposed one but required
+            // by all internal functions), the functions signatures should be
+            // different
+            locale: locale as string,
             calendar,
         })
 

@@ -52,7 +52,7 @@ const generateFixedPeriodsMonthly: GeneratedPeriodsFunc = ({
                 month: currentMonth,
                 year,
                 calendar,
-                locale,
+                locale: locale as string,
             })
 
             if (excludeDay && isExcludedPeriod({ period, excludeDay })) {

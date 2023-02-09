@@ -397,8 +397,8 @@ describe('Gregorian parse period id', () => {
 
             const expected = {
                 periodType: FIXED_PERIOD_TYPES.DAILY,
-                name: '2023-01-01',
-                displayName: '2023-01-01',
+                name: 'January 1, 2023',
+                displayName: 'January 1, 2023',
                 id: '20230101',
                 iso: '20230101',
                 startDate: '2023-01-01',

@@ -1,13 +1,20 @@
 import { FIXED_PERIOD_TYPES } from '../period-types'
 import getFixedPeriodByDate from './get-fixed-period-by-date'
 
-describe('Gregorian Calendar period by date calculation', () => {
+describe('Nepali Calendar period by date calculation', () => {
+    const locale = 'ne'
+
     describe('daily periods', () => {
         it.only('should return "202201" for period type "DAILY" on "2022-01-01"', () => {
             const periodType = FIXED_PERIOD_TYPES.DAILY
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('20220101')
         })
@@ -18,7 +25,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.WEEKLY
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2021W52')
         })
@@ -27,7 +39,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.WEEKLY
             const date = '2022-01-03'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022W1')
         })
@@ -36,7 +53,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.WEEKLYWED
             const date = '2019-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2018WedW52')
         })
@@ -45,7 +67,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.WEEKLYWED
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022WedW1')
         })
@@ -54,7 +81,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.WEEKLYTHU
             const date = '2019-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2018ThuW52')
         })
@@ -63,7 +95,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.WEEKLYTHU
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022ThuW1')
         })
@@ -72,7 +109,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.WEEKLYSAT
             const date = '2021-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2020SatW52')
         })
@@ -81,7 +123,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.WEEKLYSAT
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022SatW1')
         })
@@ -90,7 +137,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.WEEKLYSUN
             const date = '2021-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2020SunW53')
         })
@@ -99,7 +151,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.WEEKLYSUN
             const date = '2023-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2023SunW1')
         })
@@ -108,7 +165,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.BIWEEKLY
             const date = '2021-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2020BiW26')
         })
@@ -117,7 +179,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.BIWEEKLY
             const date = '2020-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2020BiW1')
         })
@@ -128,7 +195,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.MONTHLY
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('202201')
         })
@@ -137,7 +209,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.MONTHLY
             const date = '2022-02-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('202202')
         })
@@ -146,7 +223,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.BIMONTHLY
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('202201B')
         })
@@ -155,7 +237,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.BIMONTHLY
             const date = '2022-03-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('202202B')
         })
@@ -164,7 +251,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.QUARTERLY
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022Q1')
         })
@@ -173,7 +265,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.QUARTERLY
             const date = '2022-04-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022Q2')
         })
@@ -182,7 +279,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.QUARTERLYNOV
             const date = '2022-10-31'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2021NovemberQ4')
         })
@@ -191,7 +293,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.QUARTERLYNOV
             const date = '2022-11-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022NovemberQ1')
         })
@@ -200,7 +307,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.SIXMONTHLY
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022S1')
         })
@@ -209,7 +321,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.SIXMONTHLY
             const date = '2022-07-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022S2')
         })
@@ -218,7 +335,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.SIXMONTHLYNOV
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2021NovemberS2')
         })
@@ -227,7 +349,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.SIXMONTHLYNOV
             const date = '2022-11-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022NovemberS1')
         })
@@ -236,7 +363,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.SIXMONTHLYAPR
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2021AprilS2')
         })
@@ -245,7 +377,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.SIXMONTHLYAPR
             const date = '2022-04-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022AprilS1')
         })
@@ -256,7 +393,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.YEARLY
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022')
         })
@@ -265,7 +407,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.FYNOV
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2021Nov')
         })
@@ -274,7 +421,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.FYNOV
             const date = '2022-11-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022Nov')
         })
@@ -283,7 +435,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.FYOCT
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2021Oct')
         })
@@ -292,7 +449,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.FYOCT
             const date = '2022-10-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022Oct')
         })
@@ -301,7 +463,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.FYJUL
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2021July')
         })
@@ -310,7 +477,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.FYJUL
             const date = '2022-07-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022July')
         })
@@ -319,7 +491,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.FYAPR
             const date = '2022-01-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2021April')
         })
@@ -328,7 +505,12 @@ describe('Gregorian Calendar period by date calculation', () => {
             const periodType = FIXED_PERIOD_TYPES.FYAPR
             const date = '2022-04-01'
             const calendar = 'nepali'
-            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+            const actual = getFixedPeriodByDate({
+                periodType,
+                date,
+                calendar,
+                locale,
+            })
 
             expect(actual?.id).toBe('2022April')
         })

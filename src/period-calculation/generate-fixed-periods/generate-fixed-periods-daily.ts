@@ -31,7 +31,7 @@ const generateFixedPeriodsDaily: GeneratedPeriodsFunc = ({
         const period = buildDailyFixedPeriod({
             date: nextDay,
             calendar,
-            locale,
+            locale: locale as string,
         })
         days.push(period)
     }

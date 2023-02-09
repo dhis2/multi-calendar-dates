@@ -30,30 +30,45 @@ const getCustomCalendarLocale = (
     return result
 }
 
-const localiseDateLabel = (
-    selectedDateZdt: Temporal.ZonedDateTime | null,
-    localeOptions: LocaleOptions
+type LocaliseDateLabel = (
+    selectedDateZdt: Temporal.ZonedDateTime | Temporal.PlainDate,
+    localeOptions: LocaleOptions,
+    // @TODO: Is there a way to get this type from @js-temporal/polyfill?
+    options?: { dateStyle: 'full' | 'long' | 'medium' | 'short' | undefined }
+) => string
+
+const localiseDateLabel: LocaliseDateLabel = (
+    selectedDateZdt,
+    localeOptions,
+    options = { dateStyle: 'full' }
 ) => {
     if (!localeOptions.calendar) {
         throw new Error('no calendar provided to localise function')
     }
+
     if (!selectedDateZdt) {
         throw new Error('a date must be provided to localiseDateLabel')
     }
 
-    if (!localeOptions.timeZone) {
-        throw ''
-    }
+    // @TODO: Figure out why this is in here, it's not being used
+    // if (!localeOptions.timeZone) {
+    //     throw ''
+    // }
 
     const isCustom = isCustomCalendar(localeOptions.calendar)
 
+    const nonCustomDate =
+        selectedDateZdt instanceof Temporal.ZonedDateTime
+            ? selectedDateZdt?.toPlainDate()
+            : selectedDateZdt
+
     return isCustom
         ? `${selectedDateZdt?.day}-${selectedDateZdt?.month}-${selectedDateZdt?.year}`
-        : selectedDateZdt
-              ?.toPlainDate()
+        : nonCustomDate
               .toLocaleString(localeOptions.locale, {
                   calendar: localeOptions.calendar,
-                  dateStyle: 'full',
+                  // dateStyle: 'full',
+                  dateStyle: options.dateStyle,
               })
               .toString()
 }

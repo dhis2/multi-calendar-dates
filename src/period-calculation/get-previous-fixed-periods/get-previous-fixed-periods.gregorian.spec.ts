@@ -33,8 +33,8 @@ describe('Gregorian Calendar previous periods calculation', () => {
                 calendar: 'gregory',
                 period: {
                     periodType: FIXED_PERIOD_TYPES.DAILY,
-                    name: '2023-01-01',
-                    displayName: '2023-01-01',
+                    name: 'January 1, 2023',
+                    displayName: 'January 1, 2023',
                     id: '20230101',
                     iso: '20230101',
                     startDate: '2023-01-01',
@@ -50,8 +50,8 @@ describe('Gregorian Calendar previous periods calculation', () => {
                 calendar: 'gregory',
                 period: {
                     periodType: FIXED_PERIOD_TYPES.DAILY,
-                    name: '2023-01-01',
-                    displayName: '2023-01-01',
+                    name: 'January 1, 2023',
+                    displayName: 'January 1, 2023',
                     id: '20230101',
                     iso: '20230101',
                     startDate: '2023-01-01',
@@ -62,8 +62,8 @@ describe('Gregorian Calendar previous periods calculation', () => {
             const expected = [
                 {
                     periodType: FIXED_PERIOD_TYPES.DAILY,
-                    name: '2022-12-31',
-                    displayName: '2022-12-31',
+                    name: 'December 31, 2022',
+                    displayName: 'December 31, 2022',
                     id: '20221231',
                     iso: '20221231',
                     startDate: '2022-12-31',
@@ -79,8 +79,8 @@ describe('Gregorian Calendar previous periods calculation', () => {
                 calendar: 'gregory',
                 period: {
                     periodType: FIXED_PERIOD_TYPES.DAILY,
-                    name: '2023-01-02',
-                    displayName: '2023-01-02',
+                    name: 'January 2, 2023',
+                    displayName: 'January 2, 2023',
                     id: '20230102',
                     iso: '20230102',
                     startDate: '2023-01-02',
@@ -92,8 +92,8 @@ describe('Gregorian Calendar previous periods calculation', () => {
             const expected = [
                 {
                     periodType: FIXED_PERIOD_TYPES.DAILY,
-                    name: '2022-12-30',
-                    displayName: '2022-12-30',
+                    name: 'December 30, 2022',
+                    displayName: 'December 30, 2022',
                     id: '20221230',
                     iso: '20221230',
                     startDate: '2022-12-30',
@@ -101,8 +101,8 @@ describe('Gregorian Calendar previous periods calculation', () => {
                 },
                 {
                     periodType: FIXED_PERIOD_TYPES.DAILY,
-                    name: '2022-12-31',
-                    displayName: '2022-12-31',
+                    name: 'December 31, 2022',
+                    displayName: 'December 31, 2022',
                     id: '20221231',
                     iso: '20221231',
                     startDate: '2022-12-31',
@@ -110,8 +110,8 @@ describe('Gregorian Calendar previous periods calculation', () => {
                 },
                 {
                     periodType: FIXED_PERIOD_TYPES.DAILY,
-                    name: '2023-01-01',
-                    displayName: '2023-01-01',
+                    name: 'January 1, 2023',
+                    displayName: 'January 1, 2023',
                     id: '20230101',
                     iso: '20230101',
                     startDate: '2023-01-01',

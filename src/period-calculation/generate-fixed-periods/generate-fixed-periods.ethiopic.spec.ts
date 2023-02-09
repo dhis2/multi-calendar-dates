@@ -45,9 +45,9 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             })
 
             expect(result[result.length - 1]).toMatchObject({
-                id: '1970Nov',
-                name: 'Hamle 1970 - Sene 1971',
-                displayName: 'Hamle 1970 - Sene 1971',
+                id: '1963Nov',
+                name: 'Hamle 1963 - Sene 1964',
+                displayName: 'Hamle 1963 - Sene 1964',
             })
         })
 
