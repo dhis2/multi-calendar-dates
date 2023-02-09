@@ -1,16 +1,8 @@
-import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
-import {
-    fromAnyDate,
-    getFirstDayNumberOfMonthByCalendarType,
-} from '../../utils/index'
+import { fromAnyDate } from '../../utils/index'
 import { buildDailyFixedPeriod } from '../daily-periods/index'
 import { generateFixedPeriods } from '../generate-fixed-periods/index'
 import monthNumbers from '../month-numbers'
-import {
-    buildMonthlyFixedPeriod,
-    computeMonthFromMonthlyIndex,
-} from '../monthly-periods/index'
 import { FixedPeriod } from '../types'
 import {
     buildYearlyFixedPeriod,
@@ -40,24 +32,42 @@ const parseFixedPeriodId: ParseFixedPeriodId = ({
     if (isMonthly(periodId)) {
         const periodType = getMonthlyFixedPeriodTypeForPeriodId(periodId)
         const year = parseInt(periodId.substring(0, 4), 10)
-        const index = extractMonthlyIndexFromPeriodId(periodId)
-        const monthNr = computeMonthFromMonthlyIndex({ periodType, index })
-        const month = Temporal.PlainDate.from({
-            year,
-            month: monthNr,
-            day: getFirstDayNumberOfMonthByCalendarType(
-                calendar.toString() as SupportedCalendar
-            ),
-            calendar,
-        })
 
-        return buildMonthlyFixedPeriod({
+        const monthlyPeriodsForYear = generateFixedPeriods({
             periodType,
-            month,
             year,
             calendar,
             locale,
         })
+
+        const foundThisYear = monthlyPeriodsForYear.find(
+            ({ id }) => id === periodId
+        )
+
+        if (foundThisYear) {
+            return foundThisYear
+        }
+
+        // If we can't find the period in "this" year, it is in the next year.
+        // E.g. 2023NovemberQ4 is actually in 2024
+        const monthlyPeriodsForNextYear = generateFixedPeriods({
+            year: year + 1,
+            periodType,
+            calendar,
+            locale,
+        }).slice(-1)
+
+        const foundNextYear = monthlyPeriodsForNextYear.find(
+            ({ id }) => id === periodId
+        )
+
+        if (!foundNextYear) {
+            throw new Error(
+                `Couldn't find a monthly period for weekly period id "${periodId}"`
+            )
+        }
+
+        return foundNextYear
     }
 
     if (isWeekly(periodId)) {
@@ -130,10 +140,6 @@ const monthlyRegExps = [
 ].join('|')
 const isMonthly = (periodId: string) =>
     new RegExp(monthlyRegExps).test(periodId)
-
-const extractMonthlyIndexFromPeriodId = (periodId: string) => {
-    return parseInt(periodId.replace(/^[0-9]{4}|[a-zA-Z]/g, ''), 10)
-}
 
 const isWeekly = (periodId: string) =>
     /^[0-9]{4}([A-Z][a-z]{2}|Bi)?W[0-9]+$/.test(periodId)
