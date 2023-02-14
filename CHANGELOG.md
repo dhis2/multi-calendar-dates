@@ -1,3 +1,10 @@
+# [1.0.0-alpha.18](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.17...v1.0.0-alpha.18) (2023-02-14)
+
+
+### Bug Fixes
+
+* change build process to emit cjs and es modules ([#10](https://github.com/dhis2/multi-calendar-dates/issues/10)) ([1102de8](https://github.com/dhis2/multi-calendar-dates/commit/1102de87fd99006e1d1e1bad29af3790f7b3bdc2))
+
 # [1.0.0-alpha.17](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.16...v1.0.0-alpha.17) (2023-01-30)
 
 
