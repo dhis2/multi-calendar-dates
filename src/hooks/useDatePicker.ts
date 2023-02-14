@@ -1,7 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
-import { getNowInCalendar } from '../main'
+import { getNowInCalendar } from '../index'
 import { SupportedCalendar } from '../types'
 import { formatYyyyMmDD, getCustomCalendarIfExists } from '../utils/helpers'
 import localisationHelpers from '../utils/localisationHelpers'
