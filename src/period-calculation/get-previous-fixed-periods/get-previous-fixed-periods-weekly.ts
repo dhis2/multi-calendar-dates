@@ -39,17 +39,25 @@ const getPreviousFixedPeriodsWeekly: GetPreviousFixedPeriodsWeekly = ({
             continue
         }
 
-        const endIndex =
-            periodsForYear.findIndex((curPeriod) => {
-                const curStartDate = fromAnyDate({
-                    calendar,
-                    date: curPeriod.startDate,
-                })
-                return (
-                    Temporal.PlainDate.compare(startDate, curStartDate) === -1
-                )
-            }) - 1 // have to remove 1 to exclude the current one
+        const foundIndex = periodsForYear.findIndex((curPeriod) => {
+            const curStartDate = fromAnyDate({
+                calendar,
+                date: curPeriod.startDate,
+            })
 
+            const startDateIsLowerThanCurStartDate =
+                Temporal.PlainDate.compare(startDate, curStartDate) === -1
+
+            return startDateIsLowerThanCurStartDate
+        })
+
+        const endIndex =
+            foundIndex !== -1
+                ? // have to remove 1 to exclude the current one
+                  foundIndex - 1
+                : // This is the case when the "startDate" is the first day of the
+                  // first period of the next year
+                  periodsForYear.length
         const startIndex = Math.max(0, endIndex - nextCount)
         const prevPeriods = periodsForYear.slice(startIndex, endIndex)
         previousPeriods.push(...prevPeriods)
