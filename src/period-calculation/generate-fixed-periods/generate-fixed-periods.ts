@@ -20,6 +20,7 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
     locale = 'en',
     startingDay = 1,
     excludeDay,
+    yearsCount,
 }) => {
     let year: number
     if (typeof yearString === 'number') {
@@ -54,6 +55,7 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
             locale,
             calendar,
             excludeDay,
+            yearsCount,
         })
     }
 
