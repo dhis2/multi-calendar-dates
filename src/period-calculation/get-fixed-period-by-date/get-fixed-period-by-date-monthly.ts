@@ -31,7 +31,10 @@ const getFixedPeriodByDateMonthly: GetFixedPeriodByDateMonthly = ({
         date: monthlyPeriods[0].startDate,
     })
 
-    if (Temporal.PlainDate.compare(startDateFirstPeriodInYear, date) === 1) {
+    const isDateBeforeFirstDayOfFirstPeriod =
+        Temporal.PlainDate.compare(startDateFirstPeriodInYear, date) === 1
+
+    if (isDateBeforeFirstDayOfFirstPeriod) {
         const fixedPeriodsLastYear = generateFixedPeriodsMonthly({
             year: date.year - 1,
             calendar,
