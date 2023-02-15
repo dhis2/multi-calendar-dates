@@ -10,7 +10,7 @@ import { isCustomCalendar } from './helpers'
 
 const getCustomCalendarLocale = (
     calendar: Temporal.CalendarLike,
-    locale: string
+    locale: string | undefined
 ): CalendarCustomLocale | undefined => {
     const customCalendar = customCalendars[calendar as CustomCalendarTypes]
 
@@ -19,7 +19,7 @@ const getCustomCalendarLocale = (
     }
     const customLocalisations = customCalendar.locales || {}
     const result =
-        customLocalisations?.[locale] ??
+        (locale && customLocalisations?.[locale]) ??
         customLocalisations?.[customCalendar.defaultLocale]
 
     if (!result) {

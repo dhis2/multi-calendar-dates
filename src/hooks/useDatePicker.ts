@@ -10,6 +10,7 @@ import {
     useNavigation,
     UseNavigationReturnType,
 } from './internal/useNavigation'
+import { useResolvedLocaleOptions } from './internal/useResolvedLocaleOptions'
 import { useWeekDayLabels } from './internal/useWeekDayLabels'
 
 type DatePickerOptions = {
@@ -25,8 +26,8 @@ type DatePickerOptions = {
 }
 
 export type LocaleOptions = {
-    locale: string
-    calendar?: SupportedCalendar
+    calendar: SupportedCalendar
+    locale?: string
     timeZone?: Temporal.TimeZoneLike
     numberingSystem?: string
     weekDayFormat?: 'narrow' | 'short' | 'long'
@@ -85,22 +86,28 @@ export const useDatePicker: UseDatePickerHookType = ({
     date: dateParts,
     options,
 }) => {
+    const resolvedOptions = useResolvedLocaleOptions(options)
     const prevDateStringRef = useRef(dateParts)
 
     const todayZdt = useMemo(
-        () => getNowInCalendar(options.calendar, options.timeZone).startOfDay(),
-        [options]
+        () =>
+            getNowInCalendar(
+                resolvedOptions.calendar,
+                resolvedOptions.timeZone
+            ).startOfDay(),
+        [resolvedOptions]
     )
 
     const date = dateParts
-        ? (fromDateParts(dateParts, options) as Temporal.YearOrEraAndEraYear &
+        ? (fromDateParts(
+              dateParts,
+              resolvedOptions
+          ) as Temporal.YearOrEraAndEraYear &
               Temporal.MonthOrMonthCode & { day: number })
         : todayZdt
 
-    const { calendar: calendarFromOptions = 'gregory', locale = 'en' } = options
-
     const calendar: Temporal.CalendarLike = getCustomCalendarIfExists(
-        dhis2CalendarsMap[calendarFromOptions] ?? calendarFromOptions
+        dhis2CalendarsMap[resolvedOptions.calendar] ?? resolvedOptions.calendar
     )
 
     const temporalCalendar = useMemo(
@@ -108,13 +115,8 @@ export const useDatePicker: UseDatePickerHookType = ({
         [calendar]
     )
     const temporalTimeZone = useMemo(
-        () =>
-            Temporal.TimeZone.from(
-                options.timeZone ||
-                    Intl?.DateTimeFormat?.().resolvedOptions?.()?.timeZone ||
-                    'UTC'
-            ),
-        [options]
+        () => Temporal.TimeZone.from(resolvedOptions.timeZone!),
+        [resolvedOptions]
     )
 
     const selectedDateZdt = useMemo(
@@ -136,19 +138,13 @@ export const useDatePicker: UseDatePickerHookType = ({
 
     const localeOptions = useMemo(
         () => ({
-            locale,
+            locale: resolvedOptions.locale,
             calendar: temporalCalendar as unknown as SupportedCalendar,
             timeZone: temporalTimeZone,
-            weekDayFormat: options.weekDayFormat || 'narrow',
-            numberingSystem: options.numberingSystem,
+            weekDayFormat: resolvedOptions.weekDayFormat,
+            numberingSystem: resolvedOptions.numberingSystem,
         }),
-        [
-            locale,
-            temporalCalendar,
-            temporalTimeZone,
-            options.weekDayFormat,
-            options.numberingSystem,
-        ]
+        [resolvedOptions, temporalCalendar, temporalTimeZone]
     )
 
     const weekDayLabels = useWeekDayLabels(localeOptions)

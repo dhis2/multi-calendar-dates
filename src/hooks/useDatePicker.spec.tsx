@@ -1,9 +1,17 @@
+import { Intl } from '@js-temporal/polyfill'
 import { render } from '@testing-library/react'
 import { renderHook } from '@testing-library/react-hooks'
 import React from 'react'
 import { SupportedCalendar } from '../types'
 import localisationHelpers from '../utils/localisationHelpers'
 import { useDatePicker, UseDatePickerReturn } from './useDatePicker'
+
+jest.mock('@js-temporal/polyfill', () => ({
+    ...jest.requireActual('@js-temporal/polyfill'),
+    Intl: {
+        ...jest.requireActual('@js-temporal/polyfill').Intl,
+    }, // this is needed, otherwise jest spying fails with " Cannot assign to read only property 'DateTimeFormat'"
+}))
 
 const renderCalendar = (
     weekDayFormat: 'long' | 'narrow' | 'short',
@@ -32,7 +40,7 @@ describe('useDatePicker hook', () => {
             const options = {
                 locale: 'en-GB',
                 timeZone: 'Africa/Khartoum',
-                // no calendar means it should default to gregory
+                calendar: 'gregory' as const,
             }
             const renderedHook = renderHook(() =>
                 useDatePicker({ onDateSelect, date, options })
@@ -489,5 +497,59 @@ describe('changing the calendar on the fly', () => {
         expect(getByText('Tahsas')).toBeDefined()
         rerender(<Component calendar="nepali" />)
         expect(getByText('Paush')).toBeDefined()
+    })
+})
+
+describe('default options for hook', () => {
+    const originalDateTimeFormat = Intl.DateTimeFormat
+    afterEach(() => {
+        // eslint-disable-next-line @typescript-eslint/no-extra-semi
+        ;(Intl.DateTimeFormat as any) = originalDateTimeFormat
+    })
+
+    it('should infer default options from system if none passed', () => {
+        jest.spyOn(Intl, 'DateTimeFormat').mockReturnValue({
+            resolvedOptions: () => {
+                return {
+                    locale: 'ar-SD',
+                    numberingSystem: 'arab',
+                }
+            },
+        } as Intl.DateTimeFormat)
+        const onDateSelect = jest.fn()
+        const date = '2018-01-22'
+        const options = {
+            calendar: 'gregory' as const,
+            weekDayFormat: 'long' as const,
+        }
+        const renderedHook = renderHook(() =>
+            useDatePicker({ onDateSelect, date, options })
+        )
+
+        const result = renderedHook?.result?.current as UseDatePickerReturn
+        expect(result.weekDayLabels).toContain('الاثنين')
+        expect(result.weekDayLabels).not.toContain('Monday')
+        expect(
+            result.calendarWeekDays.flatMap((week) =>
+                week.map((day) => day.label)
+            )
+        ).toContain('١٥')
+    })
+    it('should infer from system if part of the options are passed', () => {
+        jest.resetModules()
+        jest.resetAllMocks()
+        const onDateSelect = jest.fn()
+        const date = '2018-01-22'
+        const options = {
+            calendar: 'gregory' as const,
+            weekDayFormat: 'long' as const,
+            locale: 'es-ES',
+        }
+        const renderedHook = renderHook(() =>
+            useDatePicker({ onDateSelect, date, options })
+        )
+
+        const result = renderedHook?.result?.current as UseDatePickerReturn
+        expect(result.weekDayLabels).toContain('lunes')
     })
 })
