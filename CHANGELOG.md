@@ -1,3 +1,13 @@
+# [1.0.0-beta.22](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.21...v1.0.0-beta.22) (2023-02-15)
+
+
+### Bug Fixes
+
+* change build process to emit cjs and es modules ([#10](https://github.com/dhis2/multi-calendar-dates/issues/10)) ([1102de8](https://github.com/dhis2/multi-calendar-dates/commit/1102de87fd99006e1d1e1bad29af3790f7b3bdc2))
+* ensure ethiopic dates are in the correct era ([34061d9](https://github.com/dhis2/multi-calendar-dates/commit/34061d9c7d54f8343ede4f65c723b7ce03c57ef8))
+* handle on-the-fly changes to selected calendar ([89f0427](https://github.com/dhis2/multi-calendar-dates/commit/89f04278aba25b131cbf57fe21809abd1a3fec9e))
+* update useDatePicker to accept the calendar date rather than the iso one ([a65fc3d](https://github.com/dhis2/multi-calendar-dates/commit/a65fc3db33321c737c873bb5ef972f1e4a698da3))
+
 # [1.0.0-alpha.18](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.17...v1.0.0-alpha.18) (2023-02-14)
 
 
