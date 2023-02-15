@@ -10,6 +10,7 @@ describe('the interface of the library', () => {
                 'useResolvedDirection',
                 'createFixedPeriodFromPeriodId',
                 'generateFixedPeriods',
+                'getFixedPeriodByDate',
                 'periodTypes',
             ])
         )
