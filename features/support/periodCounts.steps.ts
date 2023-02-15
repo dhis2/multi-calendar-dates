@@ -1,14 +1,12 @@
 import assert from 'assert'
 import { Given, When, Then } from '@cucumber/cucumber'
-import generateFixedPeriods, {
-    FixedPeriod,
-    PeriodIdentifier,
-} from '../../src/period-calculation/fixed-periods'
+import { generateFixedPeriods } from '../../src/index'
+import { FixedPeriod, PeriodType } from '../../src/period-calculation/types'
 import { SupportedCalendar } from '../../src/types'
 
 type DataTable = {
     year: string
-    periodType: PeriodIdentifier
+    periodType: PeriodType
     periodCount: number
 }
 
@@ -17,7 +15,7 @@ type MyWorld = {
     year: number
     locale: string
     results: Array<DataTable & { generatedPeriods: FixedPeriod[] }>
-    periodType: PeriodIdentifier
+    periodType: PeriodType
 }
 
 Given(

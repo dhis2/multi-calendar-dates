@@ -24,7 +24,7 @@
         "lint:staged": "yarn lint --staged",
         "format": "yarn d2-style apply",
         "format:staged": "yarn format --staged",
-        "cucumber": "NODE_OPTIONS=\"--loader ts-node/esm --no-warnings --experimental-specifier-resolution=node\" cucumber-js --require-module ts-node/register --require **/features/**/*.ts"
+        "cucumber": "NODE_OPTIONS=\"--loader ts-node/esm --no-warnings --experimental-specifier-resolution=node\" cucumber-js --require-module ts-node/register --require **/features/**/*.ts --tags=\"not @skip\""
     },
     "eslintConfig": {
         "extends": [

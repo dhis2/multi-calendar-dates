@@ -1,1 +1,2 @@
-export { default as generateFixedPeriods } from './fixed-periods'
+export { generateFixedPeriods } from './generate-fixed-periods/index'
+export { periodTypes } from './period-types'

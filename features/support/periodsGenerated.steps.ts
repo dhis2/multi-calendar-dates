@@ -1,8 +1,7 @@
 import assert from 'assert'
 import { When, Then } from '@cucumber/cucumber'
-import generateFixedPeriods, {
-    PeriodIdentifier,
-} from '../../src/period-calculation/fixed-periods'
+import { generateFixedPeriods } from '../../src/index'
+import { PeriodType } from '../../src/period-calculation/types'
 import { SupportedCalendar } from '../../src/types'
 
 type DataTable = {
@@ -15,13 +14,13 @@ interface MyWorld {
     calendar: SupportedCalendar
     locale: string
     year: number
-    periodType: PeriodIdentifier
+    periodType: PeriodType
 }
 
 When(
     'the user requests {string} periods for {string}',
     function (this: MyWorld, periodType: string, year: string) {
-        this.periodType = periodType?.toUpperCase() as PeriodIdentifier
+        this.periodType = periodType?.toUpperCase() as PeriodType
         this.year = Number(year)
     }
 )

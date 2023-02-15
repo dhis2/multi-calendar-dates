@@ -1,4 +1,5 @@
 import * as lib from './index'
+
 describe('the interface of the library', () => {
     it('should have at least these members otherwise it is definitely a breaking change', () => {
         expect(Object.keys(lib)).toEqual(
@@ -8,6 +9,7 @@ describe('the interface of the library', () => {
                 'useDatePicker',
                 'useResolvedDirection',
                 'generateFixedPeriods',
+                'periodTypes',
             ])
         )
 
