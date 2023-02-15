@@ -215,6 +215,36 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             // @TODO(13th month): ignore the 13th month here ¬
             // expect(periods[periods.length - 1]).toEqual("2015-10-01/2016-03-30");
         })
+
+        // @TODO(13th month): ignore the 13th month here ¬
+        it.skip('should add start and end dates for SIXMONTHLYJUL', () => {
+            const periods = generateFixedPeriods({
+                ...date,
+                periodType: 'SIXMONTHLYJUL',
+            })
+
+            expect(periods).toEqual([
+                {
+                    periodType: 'SIXMONTHLYJUL',
+                    name: 'Megabit - Nehasse 2015',
+                    displayName: 'Megabit - Nehasse 2015',
+                    id: '2015JulyS1',
+                    iso: '2015JulyS1',
+                    startDate: '2015-07-01',
+                    endDate: '2015-12-30',
+                },
+                {
+                    periodType: 'SIXMONTHLYJUL',
+                    name: 'Yekatit - Hamle 2016',
+                    displayName: 'Yekatit - Hamle 2016',
+                    id: '2015JulyS2',
+                    iso: '2015JulyS2',
+                    startDate: '2016-13-01',
+                    endDate: '2016-05-30',
+                },
+            ])
+        })
+
         it('should add start and end dates for SIXMONTHLYNOV', () => {
             const periods = generateFixedPeriods({
                 ...date,
