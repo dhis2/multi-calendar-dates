@@ -1,4 +1,4 @@
-import { CustomCalendarTypes } from '.'
+import { CustomCalendarTypes } from './index'
 
 const calendarLocalisations: {
     [key in CustomCalendarTypes]: Record<

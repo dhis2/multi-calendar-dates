@@ -10,12 +10,13 @@ import { getCustomCalendarIfExists, isCustomCalendar } from '../utils/helpers'
  * @returns Temporal.ZoneDateTime which can be destructured to .year, .month, .day, .hour etc... (returning the values in the specified calendar) or can .getISOFields() to return the underlying iso8601 date
  */
 const getNowInCalendar = (
-    calendarToUse = 'gregory',
-    timeZone = Intl?.DateTimeFormat?.().resolvedOptions?.()?.timeZone || 'UTC'
+    calendarToUse: Temporal.CalendarLike = 'gregory',
+    timeZone: Temporal.TimeZoneLike = Intl?.DateTimeFormat?.().resolvedOptions?.()
+        ?.timeZone || 'UTC'
 ): Temporal.ZonedDateTime => {
     const gregorianDate = Temporal.Now.zonedDateTime('gregory', timeZone)
     let calendar: Temporal.CalendarLike =
-        dhis2CalendarsMap[calendarToUse] ?? calendarToUse
+        dhis2CalendarsMap[calendarToUse as string] ?? calendarToUse
 
     if (isCustomCalendar(calendar)) {
         calendar = getCustomCalendarIfExists(calendar)

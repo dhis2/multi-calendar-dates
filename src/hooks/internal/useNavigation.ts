@@ -46,8 +46,19 @@ export const useNavigation: UseNavigationHook = (
     return useMemo(() => {
         const prevYear = firstZdtOfVisibleMonth.subtract({ years: 1 })
         const nextYear = firstZdtOfVisibleMonth.add({ years: 1 })
-        const prevMonth = firstZdtOfVisibleMonth.subtract({ months: 1 })
-        const nextMonth = firstZdtOfVisibleMonth.add({ months: 1 })
+
+        // Setting the day to the 14th is guaranteed to get the next month correctly
+        // according to our defintion, which considers adding one month to be the equivalent
+        // of adding 1 to the current month, while Temporal does the arithmetic in iso8601
+        // then converts to the custom calendar, which could end up in the same month.
+        // (for example in Nepali where current date + 30 can end up in the same month for a month that has 32 days)
+        // todo: clarify the expected behaviour with the Temporal team
+        const prevMonth = firstZdtOfVisibleMonth
+            .with({ day: 14 })
+            .subtract({ months: 1 })
+        const nextMonth = firstZdtOfVisibleMonth
+            .with({ day: 14 })
+            .add({ months: 1 })
 
         const options = {
             locale: localeOptions.locale,
