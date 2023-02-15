@@ -34,7 +34,14 @@ const buildYearlyFixedPeriod: BuildYearlyFixedPeriod = ({
         date: `${year}-${monthDateNumber}-01`,
         calendar,
     })
-    const endDate = startDate.add({ years: 1 }).subtract({ days: 1 })
+
+    // @TODO: startDate.add({ years: 1 }).subtract({ days: 1 }) produces
+    // wrong values when using nepali calendar
+    const endDate = fromAnyDate({
+        date: `${year + 1}-${monthDateNumber}-01`,
+        calendar,
+    }).subtract({ days: 1 })
+
     const name = buildLabel(periodType, startDate, {
         locale,
         calendar,
