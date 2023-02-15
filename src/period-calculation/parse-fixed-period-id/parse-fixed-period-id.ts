@@ -1,5 +1,6 @@
+import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
-import { fromAnyDate } from '../../utils/index'
+import { fromAnyDate, getCustomCalendarIfExists } from '../../utils/index'
 import { buildDailyFixedPeriod } from '../daily-periods/index'
 import { generateFixedPeriods } from '../generate-fixed-periods/index'
 import monthNumbers from '../month-numbers'
@@ -20,9 +21,13 @@ type ParseFixedPeriodId = (args: {
 
 const parseFixedPeriodId: ParseFixedPeriodId = ({
     periodId,
-    calendar,
+    calendar: requestedCalendar,
     locale = 'en',
 }) => {
+    const calendar = getCustomCalendarIfExists(
+        dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
+    ) as SupportedCalendar
+
     if (isYearly(periodId)) {
         const year = parseInt(periodId.substring(0, 4), 10)
         const periodType = getYearlyFixedPeriodTypeForPeriodId(periodId)
