@@ -2,6 +2,7 @@ import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
 import { fromAnyDate, formatYyyyMmDD, padWithZeroes } from '../../utils/index'
 import { FixedPeriod, PeriodType } from '../types'
+import doesPeriodEndBefore from './does-period-end-before'
 
 const Days = {
     Monday: 1,
@@ -18,6 +19,7 @@ type GenerateFixedPeriodsWeekly = (options: {
     periodType: PeriodType
     calendar: SupportedCalendar
     startingDay: number /** 1 is Monday */
+    endsBefore?: Temporal.PlainDate
 }) => Array<FixedPeriod>
 
 // Does not need a `locale` as we're displaying the month as number in the
@@ -27,6 +29,7 @@ const generateFixedPeriodsWeekly: GenerateFixedPeriodsWeekly = ({
     calendar,
     periodType,
     startingDay,
+    endsBefore,
 }) => {
     const startingDayToUse = getStartingDay(periodType, startingDay)
     let date = getStartingDate({
@@ -43,6 +46,19 @@ const generateFixedPeriodsWeekly: GenerateFixedPeriodsWeekly = ({
 
     do {
         const endofWeek = date.add({ days: daysToAdd })
+
+        if (
+            endsBefore &&
+            doesPeriodEndBefore({
+                period: {
+                    startDate: date.toString(),
+                    endDate: endofWeek.toString(),
+                },
+                date: endsBefore,
+            })
+        ) {
+            break
+        }
 
         const value = buildValue({
             periodType,

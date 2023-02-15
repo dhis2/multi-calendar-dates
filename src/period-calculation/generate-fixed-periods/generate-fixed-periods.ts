@@ -1,6 +1,6 @@
 import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
-import { getCustomCalendarIfExists } from '../../utils/index'
+import { fromAnyDate, getCustomCalendarIfExists } from '../../utils/index'
 import {
     monthlyFixedPeriodTypes,
     weeklyFixedPeriodTypes,
@@ -19,11 +19,20 @@ type GenerateFixedPeriods = (options: {
     locale?: string
     startingDay?: number /** 1 is Monday */
     yearsCount?: number | null
+    endsBefore?: string
 }) => Array<FixedPeriod>
 
+/**
+ * @param {Object} options
+ * @param {string} [options.endsBefore] - Excludes all periods that end on or
+ * after the provided date. This will help generating periods up to a certain
+ * point (e.g. "now" or "in two weeks" when two open future periods are
+ * allowed, like in the aggregate data entry app)
+ */
 const generateFixedPeriods: GenerateFixedPeriods = ({
     periodType,
     year: yearString,
+    endsBefore: _endsBefore,
     calendar: requestedCalendar,
     locale = 'en',
     yearsCount = 10,
@@ -44,12 +53,17 @@ const generateFixedPeriods: GenerateFixedPeriods = ({
         dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
     ) as SupportedCalendar
 
+    const endsBefore = _endsBefore
+        ? fromAnyDate({ calendar, date: _endsBefore })
+        : undefined
+
     if (weeklyFixedPeriodTypes.includes(periodType)) {
         return generateFixedPeriodsWeekly({
             year,
             periodType,
             calendar,
             startingDay,
+            endsBefore,
         })
     }
 
@@ -59,6 +73,7 @@ const generateFixedPeriods: GenerateFixedPeriods = ({
             periodType,
             locale,
             calendar,
+            endsBefore,
             yearsCount,
         })
     }
@@ -69,6 +84,7 @@ const generateFixedPeriods: GenerateFixedPeriods = ({
             periodType,
             locale,
             calendar,
+            endsBefore,
         })
     }
 
@@ -77,6 +93,7 @@ const generateFixedPeriods: GenerateFixedPeriods = ({
             year,
             locale,
             calendar,
+            endsBefore,
         })
     }
 

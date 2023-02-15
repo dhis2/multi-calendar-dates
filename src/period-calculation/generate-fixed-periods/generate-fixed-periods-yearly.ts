@@ -5,11 +5,13 @@ import {
     buildYearlyFixedPeriod,
     getYearlyStartMonthByPeriodType,
 } from '../yearly-periods/index'
+import doesPeriodEndBefore from './does-period-end-before'
 
 type GenerateFixedPeriodsYearly = (options: {
     year: number
     periodType: PeriodType
     calendar: SupportedCalendar
+    endsBefore?: Temporal.PlainDate
     yearsCount: number | null
     locale: string
 }) => Array<FixedPeriod>
@@ -18,6 +20,7 @@ const generateFixedPeriodsYearly: GenerateFixedPeriodsYearly = ({
     year,
     calendar,
     periodType,
+    endsBefore,
     yearsCount,
     locale,
 }) => {
@@ -61,6 +64,10 @@ const generateFixedPeriodsYearly: GenerateFixedPeriodsYearly = ({
             locale: locale as string,
             calendar,
         })
+
+        if (endsBefore && doesPeriodEndBefore({ period, date: endsBefore })) {
+            continue
+        }
 
         years.push(period)
     }
