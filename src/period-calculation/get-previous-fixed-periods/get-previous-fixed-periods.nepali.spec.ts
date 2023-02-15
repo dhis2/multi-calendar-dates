@@ -3,20 +3,20 @@ import { FIXED_PERIOD_TYPES } from '../period-types'
 import { PeriodIdentifier } from '../types'
 import getPreviousFixedPeriods from './get-previous-fixed-periods'
 
-describe('Gregorian Calendar previous periods calculation', () => {
+describe('Nepali Calendar previous periods calculation', () => {
     describe('unknown period type', () => {
         it('should throw an error when the period type is unknown', () => {
             expect(() => {
                 getPreviousFixedPeriods({
-                    calendar: 'gregory',
+                    calendar: 'nepali',
                     period: {
                         periodType: 'DOES NOT EXIST' as PeriodIdentifier,
-                        name: '2023-01-01',
-                        displayName: '2023-01-01',
-                        id: '20230101',
-                        iso: '20230101',
-                        startDate: '2023-01-01',
-                        endDate: '2023-01-01',
+                        name: '2079-01-01',
+                        displayName: '2079-01-01',
+                        id: '20790101',
+                        iso: '20790101',
+                        startDate: '2079-01-01',
+                        endDate: '2079-01-01',
                     },
                 })
             }).toThrow(
@@ -31,10 +31,10 @@ describe('Gregorian Calendar previous periods calculation', () => {
         it('should return an empty collection when count is 0', () => {
             const actual = getPreviousFixedPeriods({
                 count: 0,
-                calendar: 'gregory',
+                calendar: 'nepali',
                 period: parseFixedPeriodId({
-                    periodId: '20230101',
-                    calendar: 'gregory',
+                    periodId: '20790101',
+                    calendar: 'nepali',
                 }),
             })
 
@@ -43,22 +43,22 @@ describe('Gregorian Calendar previous periods calculation', () => {
 
         it('should return one previous period by default', () => {
             const actual = getPreviousFixedPeriods({
-                calendar: 'gregory',
+                calendar: 'nepali',
                 period: parseFixedPeriodId({
-                    periodId: '20230101',
-                    calendar: 'gregory',
+                    periodId: '20790101',
+                    calendar: 'nepali',
                 }),
             })
 
             const expected = [
                 {
                     periodType: FIXED_PERIOD_TYPES.DAILY,
-                    name: 'December 31, 2022',
-                    displayName: 'December 31, 2022',
-                    id: '20221231',
-                    iso: '20221231',
-                    startDate: '2022-12-31',
-                    endDate: '2022-12-31',
+                    name: '30-12-2078',
+                    displayName: '30-12-2078',
+                    id: '20781230',
+                    iso: '20781230',
+                    startDate: '2078-12-30',
+                    endDate: '2078-12-30',
                 },
             ]
 
@@ -67,10 +67,10 @@ describe('Gregorian Calendar previous periods calculation', () => {
 
         it('should return some periods of the current and the next year', () => {
             const actual = getPreviousFixedPeriods({
-                calendar: 'gregory',
+                calendar: 'nepali',
                 period: parseFixedPeriodId({
-                    periodId: '20230102',
-                    calendar: 'gregory',
+                    periodId: '20790102',
+                    calendar: 'nepali',
                 }),
                 count: 3,
             })
@@ -78,30 +78,30 @@ describe('Gregorian Calendar previous periods calculation', () => {
             const expected = [
                 {
                     periodType: FIXED_PERIOD_TYPES.DAILY,
-                    name: 'December 30, 2022',
-                    displayName: 'December 30, 2022',
-                    id: '20221230',
-                    iso: '20221230',
-                    startDate: '2022-12-30',
-                    endDate: '2022-12-30',
+                    name: '29-12-2078',
+                    displayName: '29-12-2078',
+                    id: '20781229',
+                    iso: '20781229',
+                    startDate: '2078-12-29',
+                    endDate: '2078-12-29',
                 },
                 {
                     periodType: FIXED_PERIOD_TYPES.DAILY,
-                    name: 'December 31, 2022',
-                    displayName: 'December 31, 2022',
-                    id: '20221231',
-                    iso: '20221231',
-                    startDate: '2022-12-31',
-                    endDate: '2022-12-31',
+                    name: '30-12-2078',
+                    displayName: '30-12-2078',
+                    id: '20781230',
+                    iso: '20781230',
+                    startDate: '2078-12-30',
+                    endDate: '2078-12-30',
                 },
                 {
                     periodType: FIXED_PERIOD_TYPES.DAILY,
-                    name: 'January 1, 2023',
-                    displayName: 'January 1, 2023',
-                    id: '20230101',
-                    iso: '20230101',
-                    startDate: '2023-01-01',
-                    endDate: '2023-01-01',
+                    name: '1-1-2079',
+                    displayName: '1-1-2079',
+                    id: '20790101',
+                    iso: '20790101',
+                    startDate: '2079-01-01',
+                    endDate: '2079-01-01',
                 },
             ]
 
@@ -113,10 +113,10 @@ describe('Gregorian Calendar previous periods calculation', () => {
         it('should return an empty collection when count is 0', () => {
             const actual = getPreviousFixedPeriods({
                 count: 0,
-                calendar: 'gregory',
+                calendar: 'nepali',
                 period: parseFixedPeriodId({
-                    periodId: '2023W1',
-                    calendar: 'gregory',
+                    periodId: '2079W1',
+                    calendar: 'nepali',
                 }),
             })
 
@@ -125,34 +125,35 @@ describe('Gregorian Calendar previous periods calculation', () => {
 
         it('should return one previous period by default', () => {
             const actual = getPreviousFixedPeriods({
-                calendar: 'gregory',
+                calendar: 'nepali',
                 period: parseFixedPeriodId({
-                    periodId: '2023W1',
-                    calendar: 'gregory',
+                    periodId: '2079W1',
+                    calendar: 'nepali',
                 }),
             })
 
             const expected = [
                 {
                     periodType: FIXED_PERIOD_TYPES.WEEKLY,
-                    name: 'Week 52 - 2022-12-26 - 2023-01-01',
-                    displayName: 'Week 52 - 2022-12-26 - 2023-01-01',
-                    id: '2022W52',
-                    iso: '2022W52',
-                    startDate: '2022-12-26',
-                    endDate: '2023-01-01',
+                    name: 'Week 52 - 2078-12-21 - 2078-12-27',
+                    displayName: 'Week 52 - 2078-12-21 - 2078-12-27',
+                    id: '2078W52',
+                    iso: '2078W52',
+                    startDate: '2078-12-21',
+                    endDate: '2078-12-27',
                 },
             ]
 
+            expect(actual.length).toBe(1)
             expect(actual).toEqual(expected)
         })
 
         it('should return some periods of the current and the next year', () => {
             const actual = getPreviousFixedPeriods({
-                calendar: 'gregory',
+                calendar: 'nepali',
                 period: parseFixedPeriodId({
-                    periodId: '2023W2',
-                    calendar: 'gregory',
+                    periodId: '2079W2',
+                    calendar: 'nepali',
                 }),
                 count: 54,
             })
@@ -160,21 +161,21 @@ describe('Gregorian Calendar previous periods calculation', () => {
             expect(actual).toHaveLength(54)
             expect(actual[0]).toEqual({
                 periodType: FIXED_PERIOD_TYPES.WEEKLY,
-                name: 'Week 52 - 2021-12-27 - 2022-01-02',
-                displayName: 'Week 52 - 2021-12-27 - 2022-01-02',
-                id: '2021W52',
-                iso: '2021W52',
-                startDate: '2021-12-27',
-                endDate: '2022-01-02',
+                name: 'Week 52 - 2077-12-23 - 2077-12-29',
+                displayName: 'Week 52 - 2077-12-23 - 2077-12-29',
+                id: '2077W52',
+                iso: '2077W52',
+                startDate: '2077-12-23',
+                endDate: '2077-12-29',
             })
             expect(actual[53]).toEqual({
                 periodType: FIXED_PERIOD_TYPES.WEEKLY,
-                name: 'Week 1 - 2023-01-02 - 2023-01-08',
-                displayName: 'Week 1 - 2023-01-02 - 2023-01-08',
-                id: '2023W1',
-                iso: '2023W1',
-                startDate: '2023-01-02',
-                endDate: '2023-01-08',
+                name: 'Week 1 - 2078-12-28 - 2079-01-04',
+                displayName: 'Week 1 - 2078-12-28 - 2079-01-04',
+                id: '2079W1',
+                iso: '2079W1',
+                startDate: '2078-12-28',
+                endDate: '2079-01-04',
             })
         })
     })
@@ -183,10 +184,10 @@ describe('Gregorian Calendar previous periods calculation', () => {
         it('should return an empty collection when count is 0', () => {
             const actual = getPreviousFixedPeriods({
                 count: 0,
-                calendar: 'gregory',
+                calendar: 'nepali',
                 period: parseFixedPeriodId({
-                    periodId: '202301',
-                    calendar: 'gregory',
+                    periodId: '207901',
+                    calendar: 'nepali',
                 }),
             })
 
@@ -195,22 +196,22 @@ describe('Gregorian Calendar previous periods calculation', () => {
 
         it('should return one previous period by default', () => {
             const actual = getPreviousFixedPeriods({
-                calendar: 'gregory',
+                calendar: 'nepali',
                 period: parseFixedPeriodId({
-                    periodId: '202301',
-                    calendar: 'gregory',
+                    periodId: '207901',
+                    calendar: 'nepali',
                 }),
             })
 
             const expected = [
                 {
                     periodType: FIXED_PERIOD_TYPES.MONTHLY,
-                    name: 'December 2022',
-                    displayName: 'December 2022',
-                    id: '202212',
-                    iso: '202212',
-                    startDate: '2022-12-01',
-                    endDate: '2022-12-31',
+                    name: 'Chaitra 2078',
+                    displayName: 'Chaitra 2078',
+                    id: '207812',
+                    iso: '207812',
+                    startDate: '2078-12-01',
+                    endDate: '2078-12-30',
                 },
             ]
 
@@ -219,10 +220,10 @@ describe('Gregorian Calendar previous periods calculation', () => {
 
         it('should return some periods of the current and the next year', () => {
             const actual = getPreviousFixedPeriods({
-                calendar: 'gregory',
+                calendar: 'nepali',
                 period: parseFixedPeriodId({
-                    periodId: '202302',
-                    calendar: 'gregory',
+                    periodId: '207902',
+                    calendar: 'nepali',
                 }),
                 count: 14,
             })
@@ -230,21 +231,21 @@ describe('Gregorian Calendar previous periods calculation', () => {
             expect(actual).toHaveLength(14)
             expect(actual[0]).toEqual({
                 periodType: FIXED_PERIOD_TYPES.MONTHLY,
-                name: 'December 2021',
-                displayName: 'December 2021',
-                id: '202112',
-                iso: '202112',
-                startDate: '2021-12-01',
-                endDate: '2021-12-31',
+                name: 'Chaitra 2077',
+                displayName: 'Chaitra 2077',
+                id: '207712',
+                iso: '207712',
+                startDate: '2077-12-01',
+                endDate: '2077-12-31',
             })
             expect(actual[13]).toEqual({
                 periodType: FIXED_PERIOD_TYPES.MONTHLY,
-                name: 'January 2023',
-                displayName: 'January 2023',
-                id: '202301',
-                iso: '202301',
-                startDate: '2023-01-01',
-                endDate: '2023-01-31',
+                name: 'Baisakh 2079',
+                displayName: 'Baisakh 2079',
+                id: '207901',
+                iso: '207901',
+                startDate: '2079-01-01',
+                endDate: '2079-01-31',
             })
         })
     })
@@ -253,10 +254,10 @@ describe('Gregorian Calendar previous periods calculation', () => {
         it('should return an empty collection when count is 0', () => {
             const actual = getPreviousFixedPeriods({
                 count: 0,
-                calendar: 'gregory',
+                calendar: 'nepali',
                 period: parseFixedPeriodId({
-                    periodId: '2023',
-                    calendar: 'gregory',
+                    periodId: '2079',
+                    calendar: 'nepali',
                 }),
             })
 
@@ -265,22 +266,22 @@ describe('Gregorian Calendar previous periods calculation', () => {
 
         it('should return one previous period by default', () => {
             const actual = getPreviousFixedPeriods({
-                calendar: 'gregory',
+                calendar: 'nepali',
                 period: parseFixedPeriodId({
-                    periodId: '2023',
-                    calendar: 'gregory',
+                    periodId: '2079',
+                    calendar: 'nepali',
                 }),
             })
 
             const expected = [
                 {
                     periodType: FIXED_PERIOD_TYPES.YEARLY,
-                    name: '2022',
-                    displayName: '2022',
-                    id: '2022',
-                    iso: '2022',
-                    startDate: '2022-01-01',
-                    endDate: '2022-12-31',
+                    name: '2078',
+                    displayName: '2078',
+                    id: '2078',
+                    iso: '2078',
+                    startDate: '2078-01-01',
+                    endDate: '2078-12-30',
                 },
             ]
 
@@ -289,10 +290,10 @@ describe('Gregorian Calendar previous periods calculation', () => {
 
         it('should return some periods of the current and the next year', () => {
             const actual = getPreviousFixedPeriods({
-                calendar: 'gregory',
+                calendar: 'nepali',
                 period: parseFixedPeriodId({
-                    periodId: '2023',
-                    calendar: 'gregory',
+                    periodId: '2079',
+                    calendar: 'nepali',
                 }),
                 count: 2,
             })
@@ -300,21 +301,21 @@ describe('Gregorian Calendar previous periods calculation', () => {
             expect(actual).toEqual([
                 {
                     periodType: FIXED_PERIOD_TYPES.YEARLY,
-                    name: '2022',
-                    displayName: '2022',
-                    id: '2022',
-                    iso: '2022',
-                    startDate: '2022-01-01',
-                    endDate: '2022-12-31',
+                    name: '2078',
+                    displayName: '2078',
+                    id: '2078',
+                    iso: '2078',
+                    startDate: '2078-01-01',
+                    endDate: '2078-12-30',
                 },
                 {
                     periodType: FIXED_PERIOD_TYPES.YEARLY,
-                    name: '2021',
-                    displayName: '2021',
-                    id: '2021',
-                    iso: '2021',
-                    startDate: '2021-01-01',
-                    endDate: '2021-12-31',
+                    name: '2077',
+                    displayName: '2077',
+                    id: '2077',
+                    iso: '2077',
+                    startDate: '2077-01-01',
+                    endDate: '2077-12-31',
                 },
             ])
         })

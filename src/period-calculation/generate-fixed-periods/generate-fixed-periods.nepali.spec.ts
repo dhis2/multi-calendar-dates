@@ -9,6 +9,7 @@ describe('Nepali Calendar fixed period calculation', () => {
             calendar: 'nepali' as SupportedCalendar,
             locale: 'en',
         }
+
         it('should build the label for Financial Year November properly', () => {
             const result = generateFixedPeriods({
                 periodType: FIXED_PERIOD_TYPES.FYNOV,
@@ -22,9 +23,9 @@ describe('Nepali Calendar fixed period calculation', () => {
             })
 
             expect(result[result.length - 1]).toMatchObject({
-                id: '2069Nov',
-                name: 'Falgun 2069 - Mangh 2070',
-                displayName: 'Falgun 2069 - Mangh 2070',
+                id: '2026Nov',
+                name: 'Falgun 2026 - Mangh 2027',
+                displayName: 'Falgun 2026 - Mangh 2027',
             })
         })
 
@@ -41,9 +42,9 @@ describe('Nepali Calendar fixed period calculation', () => {
             })
 
             expect(result[result.length - 1]).toMatchObject({
-                id: '2069April',
-                name: 'Shrawan 2069 - Ashadh 2070',
-                displayName: 'Shrawan 2069 - Ashadh 2070',
+                id: '2026April',
+                name: 'Shrawan 2026 - Ashadh 2027',
+                displayName: 'Shrawan 2026 - Ashadh 2027',
             })
         })
 
@@ -61,10 +62,10 @@ describe('Nepali Calendar fixed period calculation', () => {
             })
 
             expect(result[result.length - 1]).toMatchObject({
-                id: '2069',
-                iso: '2069',
-                name: '2069',
-                displayName: '2069',
+                id: '2026',
+                iso: '2026',
+                name: '2026',
+                displayName: '2026',
             })
         })
     })
@@ -84,6 +85,7 @@ describe('Nepali Calendar fixed period calculation', () => {
             expect(firstPeriod.startDate).toEqual(firstPeriod.endDate)
             expect(firstPeriod.startDate).toEqual('2079-01-01')
         })
+
         it('should add start and end dates for YEARLY', () => {
             const periods = generateFixedPeriods({
                 periodType: FIXED_PERIOD_TYPES.YEARLY,
@@ -91,10 +93,13 @@ describe('Nepali Calendar fixed period calculation', () => {
             }).map((p) => `${p.startDate}/${p.endDate}`)
             expect(periods[0]).toEqual('2079-01-01/2079-12-30')
             expect(periods[1]).toEqual('2078-01-01/2078-12-30')
-            expect(periods[2]).toEqual('2077-01-01/2077-12-31') // 2077 ends on the 31st not 30th
-            expect(periods[periods.length - 1]).toEqual('2070-01-01/2070-12-30')
+
+            // 2077 and 2026 end on the 31st not 30th
+            expect(periods[2]).toEqual('2077-01-01/2077-12-31')
+            expect(periods[periods.length - 1]).toEqual('2026-01-01/2026-12-31')
         })
-        it.only('should add start and end dates for FYNOV', () => {
+
+        it('should add start and end dates for FYNOV', () => {
             const periods = generateFixedPeriods({
                 ...date,
                 periodType: FIXED_PERIOD_TYPES.FYNOV,
@@ -117,11 +122,12 @@ describe('Nepali Calendar fixed period calculation', () => {
 
             expect(periods[periods.length - 1]).toEqual(
                 expect.objectContaining({
-                    startDate: '2070-11-01',
-                    endDate: '2071-10-29',
+                    startDate: '2026-11-01',
+                    endDate: '2027-10-30',
                 })
             )
         })
+
         it('should add start and end dates for WEEKLY', () => {
             const periods = generateFixedPeriods({
                 ...date,
@@ -130,6 +136,7 @@ describe('Nepali Calendar fixed period calculation', () => {
             expect(periods[0]).toEqual('2078-12-28/2079-01-04')
             expect(periods[periods.length - 1]).toEqual('2079-12-27/2080-01-03')
         })
+
         it('should add start and end dates for WEEKLYSUN', () => {
             const periods = generateFixedPeriods({
                 ...date,
@@ -139,6 +146,7 @@ describe('Nepali Calendar fixed period calculation', () => {
             expect(periods[0]).toEqual('2078-12-30/2079-01-06')
             expect(periods[periods.length - 1]).toEqual('2079-12-22/2079-12-28')
         })
+
         it('should add start and end dates for BIWEEKLY', () => {
             const periods = generateFixedPeriods({
                 ...date,
@@ -183,6 +191,16 @@ describe('Nepali Calendar fixed period calculation', () => {
             }).map((p) => `${p.startDate}/${p.endDate}`)
             expect(periods[0]).toEqual('2079-01-01/2079-03-32')
             expect(periods[periods.length - 1]).toEqual('2079-10-01/2079-12-30')
+        })
+        it('should add start and end dates for QUARTERLYNOV', () => {
+            const periods = generateFixedPeriods({
+                year: 2078,
+                calendar: 'nepali' as SupportedCalendar,
+                locale: 'en',
+                periodType: FIXED_PERIOD_TYPES.QUARTERLYNOV,
+            }).map((p) => `${p.startDate}/${p.endDate}`)
+            expect(periods[0]).toEqual('2078-11-01/2079-01-31')
+            expect(periods[periods.length - 1]).toEqual('2079-08-01/2079-10-29')
         })
         it('should add start and end dates for BIMONTHLY', () => {
             const periods = generateFixedPeriods({

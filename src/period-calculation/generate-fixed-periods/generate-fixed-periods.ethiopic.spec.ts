@@ -26,12 +26,18 @@ describe('Ethiopic Calendar fixed period calculation', () => {
         })
     })
 
+    /**
+     * As the ethiopic calendar years don't start on January 1,
+     * when going back to 1962 in gregorian time, we'll end up somewhen in
+     * 1962, not on 01-01-1963. To simplify things, we include 1962.
+     */
     describe('financial year', () => {
         const date = {
             year: 2015,
             calendar: 'ethiopic' as SupportedCalendar,
             locale: 'en',
         }
+
         it('should build the label for Financial Year November properly', () => {
             const result = generateFixedPeriods({
                 periodType: FIXED_PERIOD_TYPES.FYNOV,
@@ -45,9 +51,9 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             })
 
             expect(result[result.length - 1]).toMatchObject({
-                id: '1963Nov',
-                name: 'Hamle 1963 - Sene 1964',
-                displayName: 'Hamle 1963 - Sene 1964',
+                id: '1962Nov',
+                name: 'Hamle 1962 - Sene 1963',
+                displayName: 'Hamle 1962 - Sene 1963',
             })
         })
 
@@ -64,9 +70,9 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             })
 
             expect(result[result.length - 1]).toMatchObject({
-                id: '1970April',
-                name: 'Tahsas 1970 - Hedar 1971',
-                displayName: 'Tahsas 1970 - Hedar 1971',
+                id: '1962April',
+                name: 'Tahsas 1962 - Hedar 1963',
+                displayName: 'Tahsas 1962 - Hedar 1963',
             })
         })
 
@@ -84,10 +90,10 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             })
 
             expect(result[result.length - 1]).toMatchObject({
-                id: '1970',
-                iso: '1970',
-                name: '1970',
-                displayName: '1970',
+                id: '1962',
+                iso: '1962',
+                name: '1962',
+                displayName: '1962',
             })
         })
     })
@@ -99,6 +105,7 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             locale: 'en',
             startingDay: 1,
         }
+
         it('should add start and end dates for DAILY', () => {
             const [firstPeriod] = generateFixedPeriods({
                 periodType: FIXED_PERIOD_TYPES.DAILY,
@@ -107,6 +114,7 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             expect(firstPeriod.startDate).toEqual(firstPeriod.endDate)
             expect(firstPeriod.startDate).toEqual('2015-01-01')
         })
+
         it('should add start and end dates for YEARLY', () => {
             const periods = generateFixedPeriods({
                 periodType: FIXED_PERIOD_TYPES.YEARLY,
@@ -114,8 +122,9 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             }).map((p) => `${p.startDate}/${p.endDate}`)
             expect(periods[0]).toEqual('2015-01-01/2015-13-06')
             expect(periods[1]).toEqual('2014-01-01/2014-13-05')
-            expect(periods[periods.length - 1]).toEqual('1970-01-01/1970-13-05')
+            expect(periods[periods.length - 1]).toEqual('1962-01-01/1962-13-05')
         })
+
         it('should add start and end dates for FYNOV', () => {
             const periods = generateFixedPeriods({
                 ...date,
@@ -123,7 +132,7 @@ describe('Ethiopic Calendar fixed period calculation', () => {
                 year: 2015,
             }).map((p) => `${p.startDate}/${p.endDate}`)
             expect(periods[0]).toEqual('2015-11-01/2016-10-30')
-            expect(periods[periods.length - 1]).toEqual('1970-11-01/1971-10-30')
+            expect(periods[periods.length - 1]).toEqual('1962-11-01/1963-10-30')
         })
         it('should add start and end dates for WEEKLY', () => {
             const periods = generateFixedPeriods({
@@ -182,7 +191,7 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             }).map((p) => `${p.startDate}/${p.endDate}`)
             expect(periods.length).toEqual(2)
             expect(periods[0]).toEqual('2015-04-01/2015-09-30')
-            // todo: ignore the 13th month here ¬
+            // @TODO(13th month): ignore the 13th month here ¬
             // expect(periods[periods.length - 1]).toEqual("2015-10-01/2016-03-30");
         })
         it('should add start and end dates for QUARTERLY', () => {
@@ -191,7 +200,8 @@ describe('Ethiopic Calendar fixed period calculation', () => {
                 periodType: FIXED_PERIOD_TYPES.QUARTERLY,
             }).map((p) => `${p.startDate}/${p.endDate}`)
             expect(periods[0]).toEqual('2015-01-01/2015-03-30')
-            // todo: check with Abyot where the 13th month go in QUARTERLY
+
+            // @TODO(13th month): check with Abyot where the 13th month go in QUARTERLY
             expect(periods[periods.length - 1]).toEqual('2015-10-01/2015-12-30')
         })
 
