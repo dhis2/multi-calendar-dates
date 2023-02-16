@@ -1,7 +1,7 @@
 import { Intl } from '@js-temporal/polyfill'
 import { useMemo } from 'react'
 import getValidLocale from '../../utils/getValidLocale'
-import { LocaleOptions } from '../useDatePicker'
+import { LocaleOptions, WeekDayFormat } from '../useDatePicker'
 
 type UseResolvedLocaleOptionsHook = (
     options: LocaleOptions
@@ -30,10 +30,11 @@ export const useResolvedLocaleOptions: UseResolvedLocaleOptionsHook = (
 
     const defaultUserOptions = useMemo(
         () => ({
-            timeZone: defaultDateTimeOptions.timeZone || 'UTC',
-            numberingSystem: defaultDateTimeOptions.numberingSystem || 'latn',
-            locale: defaultDateTimeOptions.locale || 'en',
-            weekDayFormat: 'narrow' as const, // resolvedOptions seems to not return a value in all major browsers
+            timeZone: defaultDateTimeOptions?.timeZone ?? 'UTC',
+            numberingSystem: defaultDateTimeOptions?.numberingSystem ?? 'latn',
+            locale: defaultDateTimeOptions?.locale ?? 'en',
+            weekDayFormat: (defaultDateTimeOptions?.weekday ??
+                'narrow') as WeekDayFormat,
         }),
         [defaultDateTimeOptions]
     )

@@ -25,12 +25,14 @@ type DatePickerOptions = {
     }) => void
 }
 
+export type WeekDayFormat = 'narrow' | 'short' | 'long'
+
 export type LocaleOptions = {
     calendar: SupportedCalendar
     locale?: string
     timeZone?: Temporal.TimeZoneLike
     numberingSystem?: string
-    weekDayFormat?: 'narrow' | 'short' | 'long'
+    weekDayFormat?: WeekDayFormat
 }
 
 export type UseDatePickerReturn = UseNavigationReturnType & {
