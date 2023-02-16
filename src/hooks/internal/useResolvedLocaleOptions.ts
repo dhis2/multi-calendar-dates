@@ -1,11 +1,15 @@
 import { Intl } from '@js-temporal/polyfill'
 import { useMemo } from 'react'
+import {
+    PickerOptions,
+    ResolvedLocaleOptions,
+    WeekDayFormat,
+} from '../../types'
 import getValidLocale from '../../utils/getValidLocale'
-import { LocaleOptions, WeekDayFormat } from '../useDatePicker'
 
 type UseResolvedLocaleOptionsHook = (
-    options: LocaleOptions
-) => LocaleOptions & { locale: string }
+    options: PickerOptions
+) => ResolvedLocaleOptions
 
 /**
  * A hook that returns the locale and locale options to be used by the calendar.
@@ -30,6 +34,7 @@ export const useResolvedLocaleOptions: UseResolvedLocaleOptionsHook = (
 
     const defaultUserOptions = useMemo(
         () => ({
+            calendar: 'gregory' as const,
             timeZone: defaultDateTimeOptions?.timeZone ?? 'UTC',
             numberingSystem: defaultDateTimeOptions?.numberingSystem ?? 'latn',
             locale: defaultDateTimeOptions?.locale ?? 'en',
@@ -55,7 +60,7 @@ export const useResolvedLocaleOptions: UseResolvedLocaleOptionsHook = (
             }).resolvedOptions()
 
         return {
-            calendar: userOptions.calendar,
+            calendar: userOptions.calendar || defaultUserOptions.calendar,
             locale: resolvedLocale || defaultUserOptions.locale,
             timeZone: resolvedOptions.timeZone || defaultUserOptions.timeZone,
             numberingSystem:

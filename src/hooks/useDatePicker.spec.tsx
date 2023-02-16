@@ -6,6 +6,13 @@ import { SupportedCalendar } from '../types'
 import localisationHelpers from '../utils/localisationHelpers'
 import { useDatePicker, UseDatePickerReturn } from './useDatePicker'
 
+beforeEach(() => {
+    // 13 October 2021 UTC
+    jest.spyOn(Date, 'now').mockReturnValue(1634089600000)
+})
+
+afterEach(jest.clearAllMocks)
+
 jest.mock('@js-temporal/polyfill', () => ({
     ...jest.requireActual('@js-temporal/polyfill'),
     Intl: {
@@ -40,7 +47,7 @@ describe('useDatePicker hook', () => {
             const options = {
                 locale: 'en-GB',
                 timeZone: 'Africa/Khartoum',
-                calendar: 'gregory' as const,
+                // no calendar should default to iso8601
             }
             const renderedHook = renderHook(() =>
                 useDatePicker({ onDateSelect, date, options })
@@ -260,6 +267,46 @@ describe('useDatePicker hook', () => {
             expect(result.currYear.label).toEqual('٢٠١٨')
             expect(result.nextYear.label).toEqual('٢٠١٩')
             expect(result.prevYear.label).toEqual('٢٠١٧')
+        })
+    })
+    describe('highlighting today', () => {
+        const getDayByDate: (
+            calendarWeekDays: { calendarDate: string; isToday: boolean }[][],
+            dayToFind: string
+        ) => { calendarDate: string; isToday: boolean }[] = (
+            calendarWeekDays,
+            dayToFind
+        ) => {
+            const days = calendarWeekDays.flatMap((week) => week)
+
+            return days.filter((day) => day.calendarDate === dayToFind)
+        }
+
+        it('should highlight today date in a an ethiopic calendar', () => {
+            const date = `2014-02-03` // today mock date in ethiopic
+            const options = {
+                calendar: 'ethiopic' as const,
+            }
+            const { result } = renderHook(() =>
+                useDatePicker({ onDateSelect: jest.fn(), date, options })
+            )
+            const matches = getDayByDate(result.current.calendarWeekDays, date)
+            expect(matches[0]?.isToday).toEqual(true)
+            expect(matches.length).toEqual(1)
+        })
+
+        it('should highlight today date in a a nepali calendar', () => {
+            const date = `2078-06-27` // today mock date in nepali
+            const options = {
+                calendar: 'nepali' as const,
+                timeZone: 'UTC',
+            }
+            const { result } = renderHook(() =>
+                useDatePicker({ onDateSelect: jest.fn(), date, options })
+            )
+            const matches = getDayByDate(result.current.calendarWeekDays, date)
+            expect(matches[0]?.isToday).toEqual(true)
+            expect(matches.length).toEqual(1)
         })
     })
 })
@@ -536,8 +583,6 @@ describe('default options for hook', () => {
         ).toContain('١٥')
     })
     it('should infer from system if part of the options are passed', () => {
-        jest.resetModules()
-        jest.resetAllMocks()
         const onDateSelect = jest.fn()
         const date = '2018-01-22'
         const options = {

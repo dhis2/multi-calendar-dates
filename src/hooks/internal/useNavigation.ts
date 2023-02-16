@@ -1,7 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { Dispatch, SetStateAction, useMemo } from 'react'
+import { PickerOptions } from '../../types'
 import localisationHelpers from '../../utils/localisationHelpers'
-import { LocaleOptions } from '../useDatePicker'
 
 export type UseNavigationReturnType = {
     prevYear: {
@@ -30,7 +30,7 @@ export type UseNavigationReturnType = {
 type UseNavigationHook = (
     firstZdtOfVisibleMonth: Temporal.ZonedDateTime,
     setFirstZdtOfVisibleMonth: Dispatch<SetStateAction<Temporal.ZonedDateTime>>,
-    localeOptions: LocaleOptions
+    localeOptions: PickerOptions
 ) => UseNavigationReturnType
 /**
  * internal hook used by useDatePicker to build the navigation of the calendar

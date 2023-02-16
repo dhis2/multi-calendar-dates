@@ -2,7 +2,7 @@ import { Temporal } from '@js-temporal/polyfill'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
 import { getNowInCalendar } from '../index'
-import { SupportedCalendar } from '../types'
+import { PickerOptions, SupportedCalendar } from '../types'
 import { formatYyyyMmDD, getCustomCalendarIfExists } from '../utils/helpers'
 import localisationHelpers from '../utils/localisationHelpers'
 import { useCalendarWeekDays } from './internal/useCalendarWeekDays'
@@ -15,7 +15,7 @@ import { useWeekDayLabels } from './internal/useWeekDayLabels'
 
 type DatePickerOptions = {
     date: string
-    options: LocaleOptions
+    options: PickerOptions
     onDateSelect: ({
         calendarDate,
         calendarDateString,
@@ -23,16 +23,6 @@ type DatePickerOptions = {
         calendarDate: Temporal.ZonedDateTime
         calendarDateString: string
     }) => void
-}
-
-export type WeekDayFormat = 'narrow' | 'short' | 'long'
-
-export type LocaleOptions = {
-    calendar: SupportedCalendar
-    locale?: string
-    timeZone?: Temporal.TimeZoneLike
-    numberingSystem?: string
-    weekDayFormat?: WeekDayFormat
 }
 
 export type UseDatePickerReturn = UseNavigationReturnType & {
@@ -50,7 +40,7 @@ export type UseDatePickerReturn = UseNavigationReturnType & {
 
 type UseDatePickerHookType = (options: DatePickerOptions) => UseDatePickerReturn
 
-const fromDateParts = (date: string, options: LocaleOptions) => {
+const fromDateParts = (date: string, options: PickerOptions) => {
     let result: Temporal.PlainDateLike
 
     try {

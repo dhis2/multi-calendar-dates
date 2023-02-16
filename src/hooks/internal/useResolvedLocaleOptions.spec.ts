@@ -1,7 +1,7 @@
 import { Intl } from '@js-temporal/polyfill'
 import { renderHook } from '@testing-library/react-hooks'
+import { PickerOptions } from '../../types'
 import getValidLocale from '../../utils/getValidLocale'
-import { LocaleOptions } from '../useDatePicker'
 import { useResolvedLocaleOptions } from './useResolvedLocaleOptions'
 
 jest.mock('@js-temporal/polyfill')
@@ -13,7 +13,7 @@ const renderResolvedLocaleHook = ({
     timeZone,
     numberingSystem,
     weekDayFormat,
-}: LocaleOptions) => {
+}: PickerOptions) => {
     const options = {
         locale,
         calendar,
@@ -31,7 +31,7 @@ describe('useResolvedLocaleOptions', () => {
         calendar,
         numberingSystem,
         timeZone,
-    }: Omit<LocaleOptions, 'calendar'> & {
+    }: Omit<PickerOptions, 'calendar'> & {
         calendar?: string
     }) => {
         jest.spyOn(Intl, 'DateTimeFormat').mockImplementation(
