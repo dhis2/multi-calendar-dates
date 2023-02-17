@@ -1,3 +1,10 @@
+# [1.0.0-beta.23](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.22...v1.0.0-beta.23) (2023-02-17)
+
+
+### Bug Fixes
+
+* update useDatePicker hook to resolve options with hook ([ffa509a](https://github.com/dhis2/multi-calendar-dates/commit/ffa509ac462d0be44ca58cb2958592d26b19c416))
+
 # [1.0.0-beta.22](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.21...v1.0.0-beta.22) (2023-02-15)
 
 
