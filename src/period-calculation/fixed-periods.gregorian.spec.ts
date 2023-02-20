@@ -209,4 +209,130 @@ describe('Gregorian Calendar fixed period calculation', () => {
             expect(periods[periods.length - 1]).toEqual('2015-11-01/2015-12-31')
         })
     })
+
+    describe('localising the periods', () => {
+        const date = {
+            year: 2015,
+            calendar: 'gregory' as const,
+            startingDay: 1,
+            periodType: 'MONTHLY' as const,
+        }
+        it('should accept a locale without a region specifier', () => {
+            const periods = generateFixedPeriods({
+                ...date,
+                locale: 'fr',
+            })
+            expect(periods[0].name).toEqual('Janvier 2015')
+        })
+
+        it('should accept a locale with a region specifier', () => {
+            const colombianSpanishperiods = generateFixedPeriods({
+                ...date,
+                locale: 'es-CO',
+            })
+            const genericSpanishPeriods = generateFixedPeriods({
+                ...date,
+                locale: 'es',
+            })
+            expect(colombianSpanishperiods[0].name).toEqual('Enero de 2015')
+            expect(genericSpanishPeriods[0].name).toEqual('Enero de 2015')
+        })
+        it('should accept a locale if it uses underscore instead of dash as DHIS does', () => {
+            const periods = generateFixedPeriods({
+                ...date,
+                locale: 'ar_TN', // DHIS sends underscore instead of hyphen
+            })
+
+            expect(periods[0].name).toEqual('جانفي 2015')
+        })
+        it('should fallback to english if a wrong locale is passed', () => {
+            const periods = generateFixedPeriods({
+                ...date,
+                locale: 'xx_YY',
+            })
+
+            expect(periods[0].name).toEqual('January 2015')
+        })
+        it('should fallback to english if a no locale is passed', () => {
+            const periods = generateFixedPeriods({
+                ...date,
+                locale: undefined,
+            })
+
+            expect(periods[0].name).toEqual('January 2015')
+        })
+    })
+
+    describe('capitalising first letter (when the language allows it)', () => {
+        const date = {
+            year: 2015,
+            calendar: 'gregory' as const,
+            startingDay: 1,
+            periodType: 'MONTHLY' as const,
+        }
+        it('should capitalise the first letter of a month', () => {
+            const frenchPeriods = generateFixedPeriods({
+                ...date,
+                locale: 'fr',
+            })
+            const englishPeriods = generateFixedPeriods({
+                ...date,
+                locale: 'en',
+            })
+            const arabicPeriods = generateFixedPeriods({
+                ...date,
+                locale: 'ar-SD', // no capitals in Arabic
+            })
+            expect(englishPeriods[0].name).toEqual('January 2015')
+            expect(frenchPeriods[0].name).toEqual('Janvier 2015')
+            expect(arabicPeriods[0].name).toEqual('يناير ٢٠١٥')
+        })
+
+        it('should capitalise the first letter of a SIXMONTHLY periods', () => {
+            const date = {
+                year: 2015,
+                calendar: 'gregory' as const,
+                startingDay: 1,
+                periodType: 'SIXMONTHLY' as const,
+            }
+            const frenchPeriods = generateFixedPeriods({
+                ...date,
+                locale: 'fr',
+            })
+            const englishPeriods = generateFixedPeriods({
+                ...date,
+                locale: 'en',
+            })
+            const arabicPeriods = generateFixedPeriods({
+                ...date,
+                locale: 'ar-SD', // no capitals in Arabic
+            })
+            expect(englishPeriods[0].name).toEqual('January - June 2015')
+            expect(frenchPeriods[0].name).toEqual('Janvier - Juin 2015')
+            expect(arabicPeriods[0].name).toEqual('يناير - يونيو ٢٠١٥')
+        })
+        it('should capitalise the first letter of a QUARTERLY periods', () => {
+            const date = {
+                year: 2015,
+                calendar: 'gregory' as const,
+                startingDay: 1,
+                periodType: 'QUARTERLY' as const,
+            }
+            const frenchPeriods = generateFixedPeriods({
+                ...date,
+                locale: 'fr',
+            })
+            const englishPeriods = generateFixedPeriods({
+                ...date,
+                locale: 'en',
+            })
+            const arabicPeriods = generateFixedPeriods({
+                ...date,
+                locale: 'ar-SD', // no capitals in Arabic
+            })
+            expect(englishPeriods[0].name).toEqual('January - March 2015')
+            expect(frenchPeriods[0].name).toEqual('Janvier - Mars 2015')
+            expect(arabicPeriods[0].name).toEqual('يناير - مارس ٢٠١٥')
+        })
+    })
 })

@@ -1,6 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../types'
 import {
+    capitalize,
     formatYyyyMmDD,
     isCustomCalendar,
     padWithZeroes,
@@ -134,12 +135,18 @@ const buildLabel: BuildLabelFunc = (options) => {
     ) {
         const format =
             month.year === nextMonth.year ? monthOnlyFormat : withYearFormat
-        result = `${month.toLocaleString(
-            locale,
-            format
-        )} - ${nextMonth.toLocaleString(locale, withYearFormat)}`
+        result = `${capitalize(
+            month.toLocaleString(locale, format),
+            locale
+        )} - ${capitalize(
+            nextMonth.toLocaleString(locale, withYearFormat),
+            locale
+        )}`
     } else {
-        result = `${month.toLocaleString(locale, withYearFormat)}`
+        result = `${capitalize(
+            month.toLocaleString(locale, withYearFormat),
+            locale
+        )}`
     }
 
     // needed for ethiopic calendar - the default formatter adds the era, which is not what we want in DHIS2
