@@ -1,5 +1,6 @@
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../types'
+import getValidLocale from '../utils/getValidLocale'
 import { getCustomCalendarIfExists } from '../utils/helpers'
 import { getDailyPeriods } from './getDailyPeriods'
 import { getMonthlyPeriods } from './getMonthlyPeriods'
@@ -52,7 +53,7 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
     year: yearString,
     periodType,
     calendar: requestedCalendar,
-    locale = 'en',
+    locale: requestedLocale = 'en',
     startingDay = 1,
 }) => {
     let year: number
@@ -68,6 +69,8 @@ const generateFixedPeriods: GeneratedPeriodsFunc = ({
     const calendar = getCustomCalendarIfExists(
         dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
     ) as SupportedCalendar
+
+    const locale = getValidLocale(requestedLocale)
 
     if (periodType?.match('WEEKLY')) {
         return getWeeklyPeriods({
