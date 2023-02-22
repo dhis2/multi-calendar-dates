@@ -1,3 +1,10 @@
+# [1.0.0-beta.24](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.23...v1.0.0-beta.24) (2023-02-22)
+
+
+### Bug Fixes
+
+* update localisation logic for fixed period generation ([668f6d8](https://github.com/dhis2/multi-calendar-dates/commit/668f6d8a3e881926a192c6065aa82cea473150e1))
+
 # [1.0.0-beta.23](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-beta.22...v1.0.0-beta.23) (2023-02-17)
 
 
