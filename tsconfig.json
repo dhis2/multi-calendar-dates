@@ -1,26 +1,35 @@
 {
-  "compilerOptions": {
-    "target": "es5",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx"
-  },
-  "include": [
-    "src"
-  ]
+    "compilerOptions": {
+        "skipLibCheck": true,
+        "allowJs": true,
+        // Target latest version of ECMAScript.
+        "target": "esnext",
+        "declaration": true,
+        "module": "esnext",
+        // Search under node_modules for non-relative imports.
+        "moduleResolution": "node",
+        // Process & infer types from .js files.
+        // "allowJs": true,
+        // "checkJs": true,
+        // Enable strictest settings like strictNullChecks & noImplicitAny.
+        "strict": true,
+        // Disallow features that require cross-file information for emit.
+        // "isolatedModules": true,
+        // Import non-ES modules as default imports.
+        "esModuleInterop": true,
+        "jsx": "react"
+    },
+    "files": ["src/index.ts"],
+    "include": ["src/**/*"],
+    "exclude": [],
+    // this ts-node config is needed for cucumberjs to work with TypeScript
+    "ts-node": {
+        "esm": true,
+        // It is faster to skip typechecking.
+        // Remove if you want ts-node to do typechecking.
+        "transpileOnly": true,
+        "compilerOptions": {
+            "module": "commonjs"
+        }
+    }
 }
