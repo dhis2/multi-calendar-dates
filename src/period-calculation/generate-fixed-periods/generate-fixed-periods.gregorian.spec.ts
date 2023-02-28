@@ -1,5 +1,5 @@
-import { SupportedCalendar } from '../types'
-import generateFixedPeriods from './fixed-periods'
+import { SupportedCalendar } from '../../types'
+import generateFixedPeriods from './generate-fixed-periods'
 
 describe('Gregorian Calendar fixed period calculation', () => {
     describe('weekly periods', () => {
@@ -15,6 +15,7 @@ describe('Gregorian Calendar fixed period calculation', () => {
                 id: '2014W52',
                 iso: '2014W52',
                 name: 'Week 52 - 2014-12-22 - 2014-12-28',
+                displayName: 'Week 52 - 2014-12-22 - 2014-12-28',
             })
         })
         it('should start the year before if necessary', () => {
@@ -29,21 +30,46 @@ describe('Gregorian Calendar fixed period calculation', () => {
                 id: '2014SunW1',
                 iso: '2014SunW1',
                 name: 'Week 1 - 2013-12-29 - 2014-01-04',
+                displayName: 'Week 1 - 2013-12-29 - 2014-01-04',
             })
             expect(results[52]).toMatchObject({
                 id: '2014SunW53',
                 iso: '2014SunW53',
                 name: 'Week 53 - 2014-12-28 - 2015-01-03',
+                displayName: 'Week 53 - 2014-12-28 - 2015-01-03',
             })
         })
     })
 
-    describe('financial year', () => {
+    describe('year period types', () => {
         const gregorianDate = {
             year: 2015,
             calendar: 'gregory' as SupportedCalendar,
             locale: 'en',
         }
+
+        it('should return all years until 1970 when passing "undefined" as yearsCount', () => {
+            const result = generateFixedPeriods({
+                periodType: 'YEARLY',
+                ...gregorianDate,
+                yearsCount: null,
+            })
+
+            expect(result[0]).toMatchObject({
+                id: '2015',
+                iso: '2015',
+                name: '2015',
+                displayName: '2015',
+            })
+
+            expect(result[result.length - 1]).toMatchObject({
+                id: '1970',
+                iso: '1970',
+                name: '1970',
+                displayName: '1970',
+            })
+        })
+
         it('should build the label for Financial Year November properly', () => {
             const result = generateFixedPeriods({
                 ...gregorianDate,
@@ -53,11 +79,13 @@ describe('Gregorian Calendar fixed period calculation', () => {
             expect(result[0]).toMatchObject({
                 id: '2015Nov',
                 name: 'November 2015 - October 2016',
+                displayName: 'November 2015 - October 2016',
             })
 
             expect(result[result.length - 1]).toMatchObject({
                 id: '2006Nov',
                 name: 'November 2006 - October 2007',
+                displayName: 'November 2006 - October 2007',
             })
         })
 
@@ -70,11 +98,13 @@ describe('Gregorian Calendar fixed period calculation', () => {
             expect(result[0]).toMatchObject({
                 id: '2015April',
                 name: 'April 2015 - March 2016',
+                displayName: 'April 2015 - March 2016',
             })
 
             expect(result[result.length - 1]).toMatchObject({
                 id: '2006April',
                 name: 'April 2006 - March 2007',
+                displayName: 'April 2006 - March 2007',
             })
         })
 
@@ -88,12 +118,14 @@ describe('Gregorian Calendar fixed period calculation', () => {
                 id: '2015',
                 iso: '2015',
                 name: '2015',
+                displayName: '2015',
             })
 
             expect(result[result.length - 1]).toMatchObject({
                 id: '2006',
                 iso: '2006',
                 name: '2006',
+                displayName: '2006',
             })
         })
     })
@@ -131,15 +163,19 @@ describe('Gregorian Calendar fixed period calculation', () => {
             expect(periods[0]).toEqual('2005-11-01/2006-10-31')
             expect(periods[periods.length - 1]).toEqual('1996-11-01/1997-10-31')
         })
+
         it('should add start and end dates for FYOCT', () => {
             const periods = generateFixedPeriods({
-                ...date,
+                calendar: 'gregory' as const,
+                locale: 'en',
+                startingDay: 1,
                 periodType: 'FYOCT',
                 year: 2005,
             }).map((p) => `${p.startDate}/${p.endDate}`)
             expect(periods[0]).toEqual('2005-10-01/2006-09-30')
             expect(periods[periods.length - 1]).toEqual('1996-10-01/1997-09-30')
         })
+
         it('should add start and end dates for WEEKLY', () => {
             const periods = generateFixedPeriods({
                 ...date,
