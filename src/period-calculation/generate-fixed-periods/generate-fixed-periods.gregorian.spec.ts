@@ -3,6 +3,24 @@ import generateFixedPeriods from './generate-fixed-periods'
 
 describe('Gregorian Calendar fixed period calculation', () => {
     describe('weekly periods', () => {
+        it('should omit every period on/after the exclude date', () => {
+            const results = generateFixedPeriods({
+                periodType: 'WEEKLY',
+                year: 2014,
+                calendar: 'gregory',
+                locale: 'en',
+                endsBefore: '2014-07-12',
+                startingDay: 1,
+            })
+
+            expect(results[results.length - 1]).toMatchObject({
+                id: '2014W27',
+                iso: '2014W27',
+                name: 'Week 27 - 2014-06-30 - 2014-07-06',
+                displayName: 'Week 27 - 2014-06-30 - 2014-07-06',
+            })
+        })
+
         it('should omit last week if most of it is in next year', () => {
             const results = generateFixedPeriods({
                 periodType: 'WEEKLY',

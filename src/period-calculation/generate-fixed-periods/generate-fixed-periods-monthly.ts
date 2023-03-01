@@ -10,18 +10,21 @@ import {
     sixmonthlyFixedPeriodTypes,
 } from '../period-type-groups'
 import { FixedPeriod, PeriodType } from '../types'
+import doesPeriodEndBefore from './does-period-end-before'
 
 type GenerateFixedPeriodsMonthly = (options: {
     year: number
     periodType: PeriodType
     calendar: SupportedCalendar
     locale: string
+    endsBefore?: Temporal.PlainDate
 }) => Array<FixedPeriod>
 
 const generateFixedPeriodsMonthly: GenerateFixedPeriodsMonthly = ({
     year,
     calendar,
     periodType,
+    endsBefore,
     locale,
 }) => {
     let currentMonth = Temporal.PlainDate.from({
@@ -56,6 +59,13 @@ const generateFixedPeriodsMonthly: GenerateFixedPeriodsMonthly = ({
                 calendar,
                 locale: locale as string,
             })
+
+            if (
+                endsBefore &&
+                doesPeriodEndBefore({ period, date: endsBefore })
+            ) {
+                break
+            }
 
             months.push(period)
         }
