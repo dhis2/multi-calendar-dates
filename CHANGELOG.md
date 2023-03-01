@@ -1,3 +1,11 @@
+# [1.0.0-alpha.19](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.18...v1.0.0-alpha.19) (2023-03-01)
+
+
+### Features
+
+* **generate fixed periods:** add "endsBefore" option ([#20](https://github.com/dhis2/multi-calendar-dates/issues/20)) ([6667c97](https://github.com/dhis2/multi-calendar-dates/commit/6667c9760df86f592f6c094eb77f4e5c02cfc8c9))
+* add createFixedPeriodFromPeriodId method ([#13](https://github.com/dhis2/multi-calendar-dates/issues/13)) ([ef1132e](https://github.com/dhis2/multi-calendar-dates/commit/ef1132e9a7abc2112d5ae94a365d0ed8ae21e9b8))
+
 # [1.0.0-alpha.18](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.17...v1.0.0-alpha.18) (2023-02-14)
 
 
