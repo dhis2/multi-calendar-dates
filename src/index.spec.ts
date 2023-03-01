@@ -8,6 +8,7 @@ describe('the interface of the library', () => {
                 'getNowInCalendar',
                 'useDatePicker',
                 'useResolvedDirection',
+                'createFixedPeriodFromPeriodId',
                 'generateFixedPeriods',
                 'periodTypes',
             ])
