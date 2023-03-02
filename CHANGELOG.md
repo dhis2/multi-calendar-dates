@@ -1,3 +1,10 @@
+# [1.0.0-alpha.21](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.20...v1.0.0-alpha.21) (2023-03-02)
+
+
+### Features
+
+* add getSiblingFixedPeriods ([#15](https://github.com/dhis2/multi-calendar-dates/issues/15)) ([59cb406](https://github.com/dhis2/multi-calendar-dates/commit/59cb40642f23b70717430a3a9bce95bcb2e3e584))
+
 # [1.0.0-alpha.20](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.19...v1.0.0-alpha.20) (2023-03-02)
 
 
