@@ -1,3 +1,10 @@
+# [1.0.0-alpha.20](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.19...v1.0.0-alpha.20) (2023-03-02)
+
+
+### Features
+
+* add getFixedPeriodByDate ([#14](https://github.com/dhis2/multi-calendar-dates/issues/14)) ([9de82e0](https://github.com/dhis2/multi-calendar-dates/commit/9de82e027a00766f41413b37bb07767fed049c53))
+
 # [1.0.0-alpha.19](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.18...v1.0.0-alpha.19) (2023-03-01)
 
 
