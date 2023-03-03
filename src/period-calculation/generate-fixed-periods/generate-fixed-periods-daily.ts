@@ -32,7 +32,10 @@ const generateFixedPeriodsDaily: GenerateFixedPeriodsDaily = ({
     for (let i = 0; i < day.daysInYear; i++) {
         const nextDay = day.add({ days: i })
 
-        if (endsBefore && Temporal.PlainDate.compare(nextDay, endsBefore) < 1) {
+        if (
+            endsBefore &&
+            Temporal.PlainDate.compare(nextDay, endsBefore) > -1
+        ) {
             break
         }
 
