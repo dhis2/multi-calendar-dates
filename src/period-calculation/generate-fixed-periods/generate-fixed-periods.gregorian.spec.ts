@@ -2,6 +2,67 @@ import { SupportedCalendar } from '../../types'
 import generateFixedPeriods from './generate-fixed-periods'
 
 describe('Gregorian Calendar fixed period calculation', () => {
+    describe('daily periods', () => {
+        it('should omit every period on/after the exclude date', () => {
+            const results = generateFixedPeriods({
+                periodType: 'DAILY',
+                year: 2023,
+                calendar: 'gregory',
+                locale: 'en',
+                endsBefore: '2023-03-03',
+            })
+
+            expect(results.length).toBe(61)
+            expect(results[0]).toMatchObject({
+                periodType: 'DAILY',
+                name: '2023-01-01',
+                displayName: 'January 1, 2023',
+                id: '20230101',
+                iso: '20230101',
+                startDate: '2023-01-01',
+                endDate: '2023-01-01',
+            })
+            expect(results[results.length - 1]).toMatchObject({
+                periodType: 'DAILY',
+                name: '2023-03-02',
+                displayName: 'March 2, 2023',
+                id: '20230302',
+                iso: '20230302',
+                startDate: '2023-03-02',
+                endDate: '2023-03-02',
+            })
+        })
+
+        it('should generate all daily periods for a year', () => {
+            const results = generateFixedPeriods({
+                periodType: 'DAILY',
+                year: 2023,
+                calendar: 'gregory',
+                locale: 'en',
+            })
+
+            expect(results.length).toBe(365)
+            expect(results[0]).toMatchObject({
+                periodType: 'DAILY',
+                name: '2023-01-01',
+                displayName: 'January 1, 2023',
+                id: '20230101',
+                iso: '20230101',
+                startDate: '2023-01-01',
+                endDate: '2023-01-01',
+            })
+            expect(results[results.length - 1]).toMatchObject({
+                periodType: 'DAILY',
+                name: '2023-12-31',
+                displayName: 'December 31, 2023',
+                id: '20231231',
+                iso: '20231231',
+                startDate: '2023-12-31',
+                endDate: '2023-12-31',
+            })
+        })
+    })
+
     describe('weekly periods', () => {
         it('should omit every period on/after the exclude date', () => {
             const results = generateFixedPeriods({
@@ -55,6 +116,121 @@ describe('Gregorian Calendar fixed period calculation', () => {
                 iso: '2014SunW53',
                 name: 'Week 53 - 2014-12-28 - 2015-01-03',
                 displayName: 'Week 53 - 2014-12-28 - 2015-01-03',
+            })
+        })
+    })
+
+    describe('all monthly periods', () => {
+        describe('periodType: MONTHLY', () => {
+            it('should omit every period on/after the exclude date', () => {
+                const results = generateFixedPeriods({
+                    periodType: 'MONTHLY',
+                    year: 2014,
+                    calendar: 'gregory',
+                    locale: 'en',
+                    endsBefore: '2014-07-12',
+                })
+
+                expect(results.length).toBe(6)
+                expect(results[0]).toMatchObject({
+                    periodType: 'MONTHLY',
+                    id: '201401',
+                    iso: '201401',
+                    name: 'January 2014',
+                    displayName: 'January 2014',
+                    startDate: '2014-01-01',
+                    endDate: '2014-01-31',
+                })
+                expect(results[results.length - 1]).toMatchObject({
+                    periodType: 'MONTHLY',
+                    id: '201406',
+                    iso: '201406',
+                    name: 'June 2014',
+                    displayName: 'June 2014',
+                    startDate: '2014-06-01',
+                    endDate: '2014-06-30',
+                })
+            })
+
+            it('should omit every period on/after the exclude date', () => {
+                const results = generateFixedPeriods({
+                    periodType: 'MONTHLY',
+                    year: 2014,
+                    calendar: 'gregory',
+                    locale: 'en',
+                })
+
+                expect(results.length).toBe(12)
+                expect(results[0]).toMatchObject({
+                    periodType: 'MONTHLY',
+                    id: '201401',
+                    iso: '201401',
+                    name: 'January 2014',
+                    displayName: 'January 2014',
+                    startDate: '2014-01-01',
+                    endDate: '2014-01-31',
+                })
+                expect(results[results.length - 1]).toMatchObject({
+                    periodType: 'MONTHLY',
+                    id: '201412',
+                    iso: '201412',
+                    name: 'December 2014',
+                    displayName: 'December 2014',
+                    startDate: '2014-12-01',
+                    endDate: '2014-12-31',
+                })
+            })
+        })
+
+        describe('periodType: SIXMONTHLYAPR', () => {
+            it('should return only one period due to "endsBefore"', () => {
+                const results = generateFixedPeriods({
+                    periodType: 'SIXMONTHLYAPR',
+                    year: 2014,
+                    calendar: 'gregory',
+                    locale: 'en',
+                    endsBefore: '2014-11-12',
+                })
+
+                expect(results.length).toBe(1)
+                expect(results[0]).toMatchObject({
+                    periodType: 'SIXMONTHLYAPR',
+                    id: '2014AprilS1',
+                    iso: '2014AprilS1',
+                    name: 'April - September 2014',
+                    displayName: 'April - September 2014',
+                    startDate: '2014-04-01',
+                    endDate: '2014-09-30',
+                })
+            })
+
+            it('should generate all periods for a year', () => {
+                const results = generateFixedPeriods({
+                    periodType: 'SIXMONTHLYAPR',
+                    year: 2014,
+                    calendar: 'gregory',
+                    locale: 'en',
+                })
+
+                expect(results.length).toBe(2)
+                expect(results[0]).toMatchObject({
+                    periodType: 'SIXMONTHLYAPR',
+                    id: '2014AprilS1',
+                    iso: '2014AprilS1',
+                    name: 'April - September 2014',
+                    displayName: 'April - September 2014',
+                    startDate: '2014-04-01',
+                    endDate: '2014-09-30',
+                })
+                expect(results[1]).toMatchObject({
+                    periodType: 'SIXMONTHLYAPR',
+                    id: '2014AprilS2',
+                    iso: '2014AprilS2',
+                    name: 'October 2014 - March 2015',
+                    displayName: 'October 2014 - March 2015',
+                    startDate: '2014-10-01',
+                    endDate: '2015-03-31',
+                })
             })
         })
     })
