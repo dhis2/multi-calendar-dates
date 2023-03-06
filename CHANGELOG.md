@@ -1,3 +1,10 @@
+# [1.0.0-alpha.22](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.21...v1.0.0-alpha.22) (2023-03-06)
+
+
+### Bug Fixes
+
+* **generate daily fixed periods:** use correct comparison for "endsBefore" ([#21](https://github.com/dhis2/multi-calendar-dates/issues/21)) ([3cdb2be](https://github.com/dhis2/multi-calendar-dates/commit/3cdb2be65c4faff2462ef8df1984c3f945f8cd22))
+
 # [1.0.0-alpha.21](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.20...v1.0.0-alpha.21) (2023-03-02)
 
 
