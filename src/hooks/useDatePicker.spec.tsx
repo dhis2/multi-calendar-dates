@@ -550,7 +550,7 @@ describe('changing the calendar on the fly', () => {
 describe('default options for hook', () => {
     const originalDateTimeFormat = Intl.DateTimeFormat
     afterEach(() => {
-        // eslint-disable-next-line @typescript-eslint/no-extra-semi
+        // eslint-disable-next-line @typescript-eslint/no-extra-semi, @typescript-eslint/no-explicit-any
         ;(Intl.DateTimeFormat as any) = originalDateTimeFormat
     })
 
@@ -597,4 +597,26 @@ describe('default options for hook', () => {
         const result = renderedHook?.result?.current as UseDatePickerReturn
         expect(result.weekDayLabels).toContain('lunes')
     })
+})
+
+it('should generate the correct calendar weeks when passed "Ethiopian" rather than "ethiopic" (bug)', () => {
+    const onDateSelect = jest.fn()
+    const date = '2015-06-29'
+    const options = {
+        calendar: 'ethiopian' as SupportedCalendar,
+    }
+    const renderedHook = renderHook(() =>
+        useDatePicker({ onDateSelect, date, options })
+    )
+    const result = renderedHook.result?.current as UseDatePickerReturn
+
+    expect(
+        result.calendarWeekDays.map((week) => week.map((d) => d.label))
+    ).toEqual([
+        ['29', '30', '1', '2', '3', '4', '5'],
+        ['6', '7', '8', '9', '10', '11', '12'],
+        ['13', '14', '15', '16', '17', '18', '19'],
+        ['20', '21', '22', '23', '24', '25', '26'],
+        ['27', '28', '29', '30', '1', '2', '3'],
+    ])
 })

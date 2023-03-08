@@ -78,7 +78,14 @@ export const useDatePicker: UseDatePickerHookType = ({
     date: dateParts,
     options,
 }) => {
-    const resolvedOptions = useResolvedLocaleOptions(options)
+    const calendar = getCustomCalendarIfExists(
+        dhis2CalendarsMap[options.calendar!] ?? options.calendar
+    ) as SupportedCalendar
+
+    const resolvedOptions = useResolvedLocaleOptions({
+        ...options,
+        calendar,
+    })
     const prevDateStringRef = useRef(dateParts)
 
     const todayZdt = useMemo(
@@ -98,16 +105,12 @@ export const useDatePicker: UseDatePickerHookType = ({
               Temporal.MonthOrMonthCode & { day: number })
         : todayZdt
 
-    const calendar: Temporal.CalendarLike = getCustomCalendarIfExists(
-        dhis2CalendarsMap[resolvedOptions.calendar] ?? resolvedOptions.calendar
-    )
-
     const temporalCalendar = useMemo(
-        () => Temporal.Calendar.from(calendar),
-        [calendar]
+        () => Temporal.Calendar.from(resolvedOptions.calendar),
+        [resolvedOptions.calendar]
     )
     const temporalTimeZone = useMemo(
-        () => Temporal.TimeZone.from(resolvedOptions.timeZone!),
+        () => Temporal.TimeZone.from(resolvedOptions.timeZone),
         [resolvedOptions]
     )
 
