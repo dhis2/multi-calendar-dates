@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0...v1.0.1) (2023-03-09)
+
+
+### Bug Fixes
+
+* parse date correctly when a dhis2 calendar type is passed ([#22](https://github.com/dhis2/multi-calendar-dates/issues/22)) ([08c8032](https://github.com/dhis2/multi-calendar-dates/commit/08c8032e5dc32ad9f6f2810ecd7b9cb594766d36))
+
 # 1.0.0 (2023-02-23)
 
 
