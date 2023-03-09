@@ -6,6 +6,7 @@ import {
     WeekDayFormat,
 } from '../../types'
 import getValidLocale from '../../utils/getValidLocale'
+import { isCustomCalendar } from '../../utils/helpers'
 
 type UseResolvedLocaleOptionsHook = (
     options: PickerOptions
@@ -59,9 +60,20 @@ export const useResolvedLocaleOptions: UseResolvedLocaleOptionsHook = (
                 weekday: userOptions.weekDayFormat,
             }).resolvedOptions()
 
+        let localeToUse = resolvedLocale || defaultUserOptions.locale
+        // This step is necessary for custom locales where we have our own localisation values (like ne-NP)
+        // otherwise they can be overridden by  Intl.DateTimeFormat().resolvedOptions()
+        if (
+            userOptions.calendar &&
+            userOptions.locale &&
+            isCustomCalendar(userOptions.calendar)
+        ) {
+            localeToUse = userOptions.locale
+        }
+
         return {
             calendar: userOptions.calendar || defaultUserOptions.calendar,
-            locale: resolvedLocale || defaultUserOptions.locale,
+            locale: localeToUse,
             timeZone: resolvedOptions.timeZone || defaultUserOptions.timeZone,
             numberingSystem:
                 resolvedOptions.numberingSystem ||
