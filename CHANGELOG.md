@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.1...v1.0.2) (2023-03-09)
+
+
+### Bug Fixes
+
+* use custom locale when it exists ([#23](https://github.com/dhis2/multi-calendar-dates/issues/23)) ([3cfb58a](https://github.com/dhis2/multi-calendar-dates/commit/3cfb58a436f1c3e4c58a5599b14097c50590c9c3))
+
 ## [1.0.1](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0...v1.0.1) (2023-03-09)
 
 
