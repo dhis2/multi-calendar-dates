@@ -94,7 +94,10 @@ Calling `generateFixedPeriods({year: 2015, periodType: "FYNOV", calendar: "grego
 
 ### Types
 
-The method takes an `options` object of type `GeneratedPeriodParams` and returns an `Array<FixedPeriod>`.
+The method takes a single `options` parameter and returns an `Array<FixedPeriod>`.
+#### The `options` param
+
+The `options` param is an object of type `GeneratedPeriodParams`:
 
 ```ts
 type GeneratedPeriodParams = {
@@ -111,7 +114,9 @@ For convenience, `locale` can be passed in the Java-like style (i.e. `ar_SD` rat
 
 `periodType` can be one of the period identifiers defined [here](https://github.com/dhis2/multi-calendar-dates/blob/multi-calendar-docs/src/period-calculation/fixed-periods.ts#L10). Although the library internally is flexible and can accept, for example, quarterly periods starting any month (i.e. `QUARTERLYMAY`), support for such periods might not be available in the backend, so they should be used carefully. The flexibility, though, means that a new period could be added to the backend and used without changes in the frontend.
 
-The result value is of type `FixedPeriod`:
+#### The return value
+
+The returned value is an array of `FixedPeriod`s:
 
 ```ts
 type FixedPeriod = {
@@ -137,7 +142,7 @@ type FixedPeriod = {
 
 ### Examples
 
-```
+```js
 // Assuming today's date is 13th October 2021
 beforeEach(() => {
     // 13 October 2021 UTC
@@ -163,12 +168,12 @@ it('should get today date in Ethiopic', () => {
 
 ### Types
 
-The method takes two arguments:
+The method takes two positional arguments:
 
 -   `calendarToUse` which can be one of the calendars specified [here](https://github.com/dhis2/multi-calendar-dates/blob/multi-calendar-docs/src/constants/calendars.ts) (defaults to `gregory` calendar if not specied.
 -   `timeZone`: a string representing the time zone (defaults to `UTC`) of the user.
 
-and returns a [ZonedDateTime](https://tc39.es/proposal-temporal/docs/zoneddatetime.html) object, which can be destructured to `.year` or `.eraYear` (`eraYear` preferred to avoid an issue with Ethiopic calendar), `.month`, `.day` which returns the values in the specified calendar, or you can `.getISOFields()` to return the underlying iso8601 (gregory) date.
+and returns a [ZonedDateTime](https://tc39.es/proposal-temporal/docs/zoneddatetime.html#properties) object, which can be destructured to `.year` or `.eraYear` (`eraYear` preferred to avoid an issue with Ethiopic calendar), `.month`, `.day` which returns the values in the specified calendar, or you can `.getISOFields()` to return the underlying iso8601 (gregory) date.
 
 > ToDo: we should also return the date stringified into `yyyy-MM-dd` since this is the most common usecase and it would help clients not to have to do the conversion manually.
 
@@ -180,7 +185,7 @@ There are new methods that will be added soon (in the alpha release right now), 
 
 # Special cases and considerations with periods logic
 
-There are some special DHIS-2 specific cases when doing period calculations that we handle. The specs for these are documented in the tests and cucumber feature files. Some of these are:
+There are some special DHIS2-specific cases when doing period calculations that we handle. The specs for these are documented in the tests and cucumber feature files. Some of these are:
 
 -   Dealing with the 13th month in the Ethiopian calendar: the Ethiopic calendar has 13 months: 12 months of 30 days, then the 13th month has 5 or 6 days depending on whether it's a leap year or not. When generating periods for bi-weekly or less (bi-weekly, weekly, daily) then the 13th month is displayed. But when we are generating periods for monthly or larger, we do not display the 13th month. The backend then makes the decision about where to include any data for the 13th month, so when doing monthly analytics, the 13th month will be lumped with the following month's data.
 
