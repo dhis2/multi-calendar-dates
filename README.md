@@ -63,38 +63,165 @@ The library also provides helper methods to work with periods and dates in multi
 
 `generateFixedPeriods` returns the periods of a specific type in a specific year. This is used, for example in [Data Visualizer](https://github.com/dhis2/data-visualizer-app/pull/2233), to display the list of periods of different types (i.e. monthly, weekly, yearly) in a specific year, according to the user's calendar and locale.
 
-### Example
+### Examples
 
-Calling `generateFixedPeriods({year: 2015, periodType: "FYNOV", calendar: "gregory"})` will return all the November financial year periods (FYNOV) from the year 2015 (defaults to 10 years):
+Calling `generateFixedPeriods({year: 2015, periodType: "FYNOV", calendar: "gregory"})` will return all the November financial year periods (FYNOV) from the year 2015 (defaults to 10 years). Here are some more examples:
 
 ```js
-// example result when calling generateFixedPeriods({year: 2015, periodType: "FYNOV", calendar: "gregory"})
-;[
-    {
-        id: '2015Nov',
-        name: 'November 2015 - October 2016',
-        startDate: '2015-11-01',
-        endDate: '2016-10-31',
-    },
-    {
-        id: '2014Nov',
-        name: 'November 2014 - October 2015',
-        startDate: '2014-11-01',
-        endDate: '2015-10-31',
-    },
-    //....
-    {
-        id: '2006Nov',
-        name: 'November 2006 - October 2007',
-        startDate: '2006-11-01',
-        endDate: '2007-10-31',
-    },
-]
+// some examples
+import { generateFixedPeriods } from '@dhis2/multi-calendar-dates'
+
+describe('generateFixedPeriods', () => {
+    it('should generate financial years periods (starting November) for the specified', () => {
+        const result = generateFixedPeriods({
+            year: 2015,
+            calendar: 'gregory',
+            locale: 'en',
+            periodType: 'FYNOV',
+        })
+
+        expect(result).toEqual(
+            expect.arrayContaining([
+                {
+                    id: '2015Nov',
+                    name: 'November 2015 - October 2016',
+                    startDate: '2015-11-01',
+                    endDate: '2016-10-31',
+                },
+                {
+                    id: '2014Nov',
+                    name: 'November 2014 - October 2015',
+                    startDate: '2014-11-01',
+                    endDate: '2015-10-31',
+                },
+                // .... up to
+                {
+                    id: '2006Nov',
+                    name: 'November 2006 - October 2007',
+                    startDate: '2006-11-01',
+                    endDate: '2007-10-31',
+                },
+            ])
+        )
+    })
+    it('should generate weekly periods (weeks starting on Sunday) for the specified year', () => {
+        const result = generateFixedPeriods({
+            year: 2015,
+            calendar: 'gregory',
+            locale: 'en',
+            periodType: 'WEEKLYSUN',
+        })
+
+        expect(result).toEqual(
+            expect.arrayContaining([
+                {
+                    id: '2015SunW1',
+                    iso: '2015SunW1',
+                    name: 'Week 1 - 2015-01-04 - 2015-01-10',
+                    startDate: '2015-01-04',
+                    endDate: '2015-01-10',
+                },
+                // .... up to
+                {
+                    id: '2015SunW52',
+                    iso: '2015SunW52',
+                    name: 'Week 52 - 2015-12-27 - 2016-01-02',
+                    startDate: '2015-12-27',
+                    endDate: '2016-01-02',
+                },
+            ])
+        )
+    })
+
+    it('should generate monthly periods (localised in Spanish) for the specified year', () => {
+        const result = generateFixedPeriods({
+            year: 2015,
+            calendar: 'gregory',
+            locale: 'es',
+            periodType: 'MONTHLY',
+        })
+
+        expect(result).toEqual(
+            expect.arrayContaining([
+                {
+                    id: '201501',
+                    iso: '201501',
+                    name: 'Enero de 2015',
+                    startDate: '2015-01-01',
+                    endDate: '2015-01-31',
+                },
+                // .... up to
+                {
+                    id: '201512',
+                    iso: '201512',
+                    name: 'Diciembre de 2015',
+                    startDate: '2015-12-01',
+                    endDate: '2015-12-31',
+                },
+            ])
+        )
+    })
+
+    it('should generate bi-monthly periods for the Ethiopic calendar for the specified year', () => {
+        const result = generateFixedPeriods({
+            year: 2015,
+            calendar: 'ethiopic',
+            locale: 'en',
+            periodType: 'BIMONTHLY',
+        })
+
+        expect(result).toEqual(
+            expect.arrayContaining([
+                {
+                    id: '201501B',
+                    iso: '201501B',
+                    name: 'Meskerem - Tekemt 2015',
+                    startDate: '2015-01-01',
+                    endDate: '2015-02-30',
+                },
+                // .... up to
+                {
+                    endDate: '2015-12-30',
+                    id: '201506B',
+                    iso: '201506B',
+                    name: 'Hamle - Nehasse 2015',
+                    startDate: '2015-11-01',
+                },
+            ])
+        )
+    })
+    it('should generate six-monthly periods for the Nepali calendar for the specified year', () => {
+        const result = generateFixedPeriods({
+            year: 2078,
+            calendar: 'nepali',
+            locale: 'en',
+            periodType: 'SIXMONTHLY',
+        })
+
+        expect(result).toEqual([
+            {
+                id: '2078S1',
+                iso: '2078S1',
+                name: 'Baisakh - Ashwin 2078',
+                startDate: '2078-01-01',
+                endDate: '2078-06-31',
+            },
+            {
+                id: '2078S2',
+                iso: '2078S2',
+                name: 'Kartik - Chaitra 2078',
+                startDate: '2078-07-01',
+                endDate: '2078-12-30',
+            },
+        ])
+    })
+})
 ```
 
 ### Types
 
 The method takes a single `options` parameter and returns an `Array<FixedPeriod>`.
+
 #### The `options` param
 
 The `options` param is an object of type `GeneratedPeriodParams`:
@@ -153,11 +280,7 @@ it('should get today date in Gregorian', () => {
     expect({ day, month, year }).toEqual({ day: 13, month: 10, year: 2021 })
 })
 it('should get today date in Ethiopic', () => {
-    const {
-        day,
-        month,
-        eraYear: year,
-    } = getNowInCalendar('ethiopic', 'UTC')
+    const { day, month, eraYear: year } = getNowInCalendar('ethiopic', 'UTC')
     expect({ day, month, year }).toEqual({
         day: 3,
         month: 2,
