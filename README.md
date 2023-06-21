@@ -3,7 +3,7 @@
 This library is used to work with dates in multiple calendrical system (i.e. Ethiopic, Nepali etc..) across DHIS-2 applications. It mainly exposes two components:
 
 1. Hooks like [useDatePicker](https://github.com/dhis2/multi-calendar-dates/blob/multi-calendar-docs/src/hooks/useDatePicker.ts) used to build UI components (part of @dhis/ui) such as the [Calendar](https://ui.dhis2.nu/components/calendar) and [CalendarInput](https://ui.dhis2.nu/components/calendar-input) components.
-1. Helper methods, like `generateFixedPeriods` to deal with period generations, date manipulation and arithmetic across multiple calendrical systems.
+1. Helper methods, like `generateFixedPeriods` and `getNowInCalendar` to deal with period generations, date manipulation and arithmetic across multiple calendrical systems.
 
 The idea behind this library is to abstract the complicated details of dealing with dates in DHIS2, and to centralise them in one place for consumption in different apps and libraries.
 
@@ -12,46 +12,6 @@ Internally, the library relies on the [Temporal API](https://tc39.es/proposal-te
 This [document](https://docs.google.com/document/d/19zjyB45oBbqC5KeubaU8E7cw9fGhFc3tOXY0GkzZKqc/edit?userstoinvite=hendrik%40dhis2.org#heading=h.rjt0etsbsqh6) has some of the requirements and design decisions for this project.
 
 This [Jira epic](https://dhis2.atlassian.net/browse/DHIS2-14051) lists the app that moved to using the library, and what comes next.
-
-# Hooks for Calendar UI
-
-The library provides a hook `useDatePicker` that's consumed by the dhis/ui calendar components. There are two components that currently use it:
-
--   [Calendar](https://ui.dhis2.nu/components/calendar): a calendar component supporting non-Greogorian calendars
--   [CalendarInput](https://ui.dhis2.nu/components/calendar-input): a wrapper around the Calendar component to support the most common use case for a calendar when we want to display it next to an input.
-
-`useDatePicker` takes a [DatePickerOptions](https://github.com/dhis2/multi-calendar-dates/blob/multi-calendar-docs/src/hooks/useDatePicker.ts#L16) object, and returns [UseDatePickerReturn](https://github.com/dhis2/multi-calendar-dates/blob/multi-calendar-docs/src/hooks/useDatePicker.ts#LL28C13-L28C32) that contains information needed to render a UI component, i.e. the localised day names, and the weeks in the current view (month).
-
-```ts
-// the options passed to useDatePicker
-type DatePickerOptions = {
-    date: string
-    options: PickerOptions
-    onDateSelect: ({
-        calendarDate,
-        calendarDateString,
-    }: {
-        calendarDate: Temporal.ZonedDateTime
-        calendarDateString: string
-    }) => void
-}
-```
-
-```ts
-// the return type of the hook
-type UseDatePickerReturn = UseNavigationReturnType & {
-    weekDayLabels: string[]
-    calendarWeekDays: {
-        zdt: Temporal.ZonedDateTime
-        label: string | number
-        calendarDate: string
-        onClick: () => void
-        isSelected: boolean | undefined
-        isToday: boolean
-        isInCurrentMonth: boolean
-    }[][]
-}
-```
 
 # Periods and Dates helpers
 
@@ -325,6 +285,46 @@ There are some special DHIS2-specific cases when doing period calculations that 
 -   In Ethiopic calendar, when consuming a date, use `.eraYear` rather than `.year` to get the year part of a date. There is an ongoing discussion on Temporal to decide which era of the Ethiopic calendar should be the default, but it's likely to be browser-dependent at the end, so it's safer to use `eraYear` as this is what users in Ethiopia would expect to see. We looked at abstracting this difference away in the library, but there was no easy solution for it.
 
 -   The library also abstracts some DHIS2-specific inconsistencies with the backend to make it easier for consumers of the library. For example, it has a map to convert from the calendar IDs used in DHIS2 to the ones expected by the library: [dhis2CalendarsMap.ts](https://github.com/dhis2/multi-calendar-dates/blob/multi-calendar-docs/src/constants/dhis2CalendarsMap.ts). This maps "ethiopian" (used in DHIS2) to "ethiopic" which is the standard ID used in JavaScript (in [Unicode CLDR](https://cldr.unicode.org/)). It also maps the Java locale names with an underscore to ones with a dash, to make them easier to use in a JavaScript context (i.e from `ar_SD` to `ar-SD`).
+
+# Hooks for Calendar UI
+
+The library provides a hook `useDatePicker` that's consumed by the dhis/ui calendar components. There are two components that currently use it:
+
+-   [Calendar](https://ui.dhis2.nu/components/calendar): a calendar component supporting non-Greogorian calendars
+-   [CalendarInput](https://ui.dhis2.nu/components/calendar-input): a wrapper around the Calendar component to support the most common use case for a calendar when we want to display it next to an input.
+
+`useDatePicker` takes a [DatePickerOptions](https://github.com/dhis2/multi-calendar-dates/blob/multi-calendar-docs/src/hooks/useDatePicker.ts#L16) object, and returns [UseDatePickerReturn](https://github.com/dhis2/multi-calendar-dates/blob/multi-calendar-docs/src/hooks/useDatePicker.ts#LL28C13-L28C32) that contains information needed to render a UI component, i.e. the localised day names, and the weeks in the current view (month).
+
+```ts
+// the options passed to useDatePicker
+type DatePickerOptions = {
+    date: string
+    options: PickerOptions
+    onDateSelect: ({
+        calendarDate,
+        calendarDateString,
+    }: {
+        calendarDate: Temporal.ZonedDateTime
+        calendarDateString: string
+    }) => void
+}
+```
+
+```ts
+// the return type of the hook
+type UseDatePickerReturn = UseNavigationReturnType & {
+    weekDayLabels: string[]
+    calendarWeekDays: {
+        zdt: Temporal.ZonedDateTime
+        label: string | number
+        calendarDate: string
+        onClick: () => void
+        isSelected: boolean | undefined
+        isToday: boolean
+        isInCurrentMonth: boolean
+    }[][]
+}
+```
 
 # Architecture Design Records
 
