@@ -25,3 +25,4 @@ yarn-error.log*
 lib/
 
 .d2
+.yalc/
