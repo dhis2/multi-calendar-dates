@@ -45,6 +45,7 @@ Feature: Ethiopic Calendar fixed periods
             | 2015 | MONTHLY    | 11          | Hamle 2015    | 201511      |
             | 2015 | MONTHLY    | 12          | Nehasse 2015  | 201512      |
 
+    @kotlin
     Scenario: Generate daily Periods
         When the user requests "daily" periods for "2015"
         Then the dates for the period type should be generated

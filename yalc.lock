@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "packages": {
+    "dhis2-period-generator": {
+      "version": "1.0.0-SNAPSHOT",
+      "signature": "2eb4256d4b725603aa17d68c5ac3a3d3",
+      "file": true
+    }
+  }
+}
