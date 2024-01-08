@@ -1,9 +1,9 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { useMemo } from 'react'
+import { PickerOptions } from '../../types'
 import localisationHelpers from '../../utils/localisationHelpers'
-import { LocaleOptions } from '../useDatePicker'
 
-export const useWeekDayLabels = (localeOptions: LocaleOptions) =>
+export const useWeekDayLabels = (localeOptions: PickerOptions) =>
     useMemo(() => {
         if (!localeOptions.calendar) {
             throw new Error('a calendar must be provided to useWeekDayLabels')
@@ -29,7 +29,7 @@ export const useWeekDayLabels = (localeOptions: LocaleOptions) =>
 
 const getWeekDayString: (
     date: Temporal.ZonedDateTime,
-    localeOptions: LocaleOptions
+    localeOptions: PickerOptions
 ) => string = (date, localeOptions) => {
     return localisationHelpers.localiseWeekDayLabel(date, localeOptions)
 }

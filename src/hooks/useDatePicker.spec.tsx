@@ -1,9 +1,24 @@
+import { Intl } from '@js-temporal/polyfill'
 import { render } from '@testing-library/react'
 import { renderHook } from '@testing-library/react-hooks'
 import React from 'react'
 import { SupportedCalendar } from '../types'
 import localisationHelpers from '../utils/localisationHelpers'
 import { useDatePicker, UseDatePickerReturn } from './useDatePicker'
+
+beforeEach(() => {
+    // 13 October 2021 UTC
+    jest.spyOn(Date, 'now').mockReturnValue(1634089600000)
+})
+
+afterEach(jest.clearAllMocks)
+
+jest.mock('@js-temporal/polyfill', () => ({
+    ...jest.requireActual('@js-temporal/polyfill'),
+    Intl: {
+        ...jest.requireActual('@js-temporal/polyfill').Intl,
+    }, // this is needed, otherwise jest spying fails with " Cannot assign to read only property 'DateTimeFormat'"
+}))
 
 const renderCalendar = (
     weekDayFormat: 'long' | 'narrow' | 'short',
@@ -32,7 +47,7 @@ describe('useDatePicker hook', () => {
             const options = {
                 locale: 'en-GB',
                 timeZone: 'Africa/Khartoum',
-                // no calendar means it should default to gregory
+                // no calendar should default to iso8601
             }
             const renderedHook = renderHook(() =>
                 useDatePicker({ onDateSelect, date, options })
@@ -252,6 +267,46 @@ describe('useDatePicker hook', () => {
             expect(result.currYear.label).toEqual('٢٠١٨')
             expect(result.nextYear.label).toEqual('٢٠١٩')
             expect(result.prevYear.label).toEqual('٢٠١٧')
+        })
+    })
+    describe('highlighting today', () => {
+        const getDayByDate: (
+            calendarWeekDays: { calendarDate: string; isToday: boolean }[][],
+            dayToFind: string
+        ) => { calendarDate: string; isToday: boolean }[] = (
+            calendarWeekDays,
+            dayToFind
+        ) => {
+            const days = calendarWeekDays.flatMap((week) => week)
+
+            return days.filter((day) => day.calendarDate === dayToFind)
+        }
+
+        it('should highlight today date in a an ethiopic calendar', () => {
+            const date = `2014-02-03` // today mock date in ethiopic
+            const options = {
+                calendar: 'ethiopic' as const,
+            }
+            const { result } = renderHook(() =>
+                useDatePicker({ onDateSelect: jest.fn(), date, options })
+            )
+            const matches = getDayByDate(result.current.calendarWeekDays, date)
+            expect(matches[0]?.isToday).toEqual(true)
+            expect(matches.length).toEqual(1)
+        })
+
+        it('should highlight today date in a a nepali calendar', () => {
+            const date = `2078-06-27` // today mock date in nepali
+            const options = {
+                calendar: 'nepali' as const,
+                timeZone: 'UTC',
+            }
+            const { result } = renderHook(() =>
+                useDatePicker({ onDateSelect: jest.fn(), date, options })
+            )
+            const matches = getDayByDate(result.current.calendarWeekDays, date)
+            expect(matches[0]?.isToday).toEqual(true)
+            expect(matches.length).toEqual(1)
         })
     })
 })
@@ -490,4 +545,78 @@ describe('changing the calendar on the fly', () => {
         rerender(<Component calendar="nepali" />)
         expect(getByText('Paush')).toBeDefined()
     })
+})
+
+describe('default options for hook', () => {
+    const originalDateTimeFormat = Intl.DateTimeFormat
+    afterEach(() => {
+        // eslint-disable-next-line @typescript-eslint/no-extra-semi, @typescript-eslint/no-explicit-any
+        ;(Intl.DateTimeFormat as any) = originalDateTimeFormat
+    })
+
+    it('should infer default options from system if none passed', () => {
+        jest.spyOn(Intl, 'DateTimeFormat').mockReturnValue({
+            resolvedOptions: () => {
+                return {
+                    locale: 'ar-SD',
+                    numberingSystem: 'arab',
+                }
+            },
+        } as Intl.DateTimeFormat)
+        const onDateSelect = jest.fn()
+        const date = '2018-01-22'
+        const options = {
+            calendar: 'gregory' as const,
+            weekDayFormat: 'long' as const,
+        }
+        const renderedHook = renderHook(() =>
+            useDatePicker({ onDateSelect, date, options })
+        )
+
+        const result = renderedHook?.result?.current as UseDatePickerReturn
+        expect(result.weekDayLabels).toContain('الاثنين')
+        expect(result.weekDayLabels).not.toContain('Monday')
+        expect(
+            result.calendarWeekDays.flatMap((week) =>
+                week.map((day) => day.label)
+            )
+        ).toContain('١٥')
+    })
+    it('should infer from system if part of the options are passed', () => {
+        const onDateSelect = jest.fn()
+        const date = '2018-01-22'
+        const options = {
+            calendar: 'gregory' as const,
+            weekDayFormat: 'long' as const,
+            locale: 'es-ES',
+        }
+        const renderedHook = renderHook(() =>
+            useDatePicker({ onDateSelect, date, options })
+        )
+
+        const result = renderedHook?.result?.current as UseDatePickerReturn
+        expect(result.weekDayLabels).toContain('lunes')
+    })
+})
+
+it('should generate the correct calendar weeks when passed "Ethiopian" rather than "ethiopic" (bug)', () => {
+    const onDateSelect = jest.fn()
+    const date = '2015-06-29'
+    const options = {
+        calendar: 'ethiopian' as SupportedCalendar,
+    }
+    const renderedHook = renderHook(() =>
+        useDatePicker({ onDateSelect, date, options })
+    )
+    const result = renderedHook.result?.current as UseDatePickerReturn
+
+    expect(
+        result.calendarWeekDays.map((week) => week.map((d) => d.label))
+    ).toEqual([
+        ['29', '30', '1', '2', '3', '4', '5'],
+        ['6', '7', '8', '9', '10', '11', '12'],
+        ['13', '14', '15', '16', '17', '18', '19'],
+        ['20', '21', '22', '23', '24', '25', '26'],
+        ['27', '28', '29', '30', '1', '2', '3'],
+    ])
 })
