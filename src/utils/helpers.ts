@@ -28,8 +28,12 @@ export const formatYyyyMmDD = (
     return `${year}-${month}-${dayString}`
 }
 
-export const capitalize = (string: string) =>
-    string.charAt(0).toUpperCase() + string.slice(1).toLowerCase()
+// capitalize method taking into account locales that have different way of lower/upper case
+// based on https://stackoverflow.com/a/53930826
+export const capitalize = (
+    [firstLetter = '', ...rest]: string,
+    locale = 'en'
+) => [firstLetter.toLocaleUpperCase(locale), ...rest].join('')
 
 export const getCustomCalendarIfExists = (
     calendar: Temporal.CalendarLike

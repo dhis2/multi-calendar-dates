@@ -5,12 +5,12 @@ import {
     customCalendars,
     CustomCalendarTypes,
 } from '../custom-calendars'
-import { LocaleOptions } from '../hooks/useDatePicker'
+import { PickerOptions, SupportedCalendar } from '../types'
 import { formatYyyyMmDD, isCustomCalendar } from './helpers'
 
 const getCustomCalendarLocale = (
     calendar: Temporal.CalendarLike,
-    locale: string
+    locale: string | undefined
 ): CalendarCustomLocale | undefined => {
     const customCalendar = customCalendars[calendar as CustomCalendarTypes]
 
@@ -19,7 +19,7 @@ const getCustomCalendarLocale = (
     }
     const customLocalisations = customCalendar.locales || {}
     const result =
-        customLocalisations?.[locale] ??
+        (locale && customLocalisations?.[locale]) ??
         customLocalisations?.[customCalendar.defaultLocale]
 
     if (!result) {
@@ -32,7 +32,10 @@ const getCustomCalendarLocale = (
 
 type LocaliseDateLabel = (
     selectedDateZdt: Temporal.ZonedDateTime | Temporal.PlainDate,
-    localeOptions: LocaleOptions,
+    localeOptions: {
+        calendar: SupportedCalendar
+        locale: string
+    },
     options?: { dateStyle: 'full' | 'long' | 'medium' | 'short' | undefined }
 ) => string
 
@@ -68,7 +71,7 @@ const localiseDateLabel: LocaliseDateLabel = (
 
 const localiseWeekLabel = (
     zdt: Temporal.ZonedDateTime,
-    localeOptions: LocaleOptions
+    localeOptions: PickerOptions
 ) => {
     if (!localeOptions.calendar) {
         throw new Error('no calendar provided to localise function')
@@ -94,7 +97,7 @@ const localiseWeekLabel = (
 
 const localiseMonth = (
     zdt: Temporal.ZonedDateTime | Temporal.PlainYearMonth | Temporal.PlainDate,
-    localeOptions: LocaleOptions,
+    localeOptions: PickerOptions,
     format: Intl.DateTimeFormatOptions
 ) => {
     if (!localeOptions.calendar) {
@@ -113,7 +116,7 @@ const localiseMonth = (
 
 export const localiseWeekDayLabel = (
     zdt: Temporal.ZonedDateTime,
-    localeOptions: LocaleOptions
+    localeOptions: PickerOptions
 ) => {
     if (!localeOptions.calendar) {
         throw new Error('no calendar provided to localise function')
@@ -136,7 +139,7 @@ export const localiseWeekDayLabel = (
 
 export const localiseYear = (
     zdt: Temporal.ZonedDateTime,
-    localeOptions: LocaleOptions,
+    localeOptions: PickerOptions,
     format: Intl.DateTimeFormatOptions
 ) => {
     if (!localeOptions.calendar) {
