@@ -5,9 +5,8 @@ import {
     customCalendars,
     CustomCalendarTypes,
 } from '../custom-calendars'
-import { LocaleOptions } from '../hooks/useDatePicker'
+import { PickerOptions, SupportedCalendar } from '../types'
 import { formatYyyyMmDD, isCustomCalendar } from './helpers'
-import { PickerOptions } from '../types'
 
 const getCustomCalendarLocale = (
     calendar: Temporal.CalendarLike,
@@ -33,7 +32,10 @@ const getCustomCalendarLocale = (
 
 type LocaliseDateLabel = (
     selectedDateZdt: Temporal.ZonedDateTime | Temporal.PlainDate,
-    localeOptions: LocaleOptions,
+    localeOptions: {
+        calendar: SupportedCalendar
+        locale: string
+    },
     options?: { dateStyle: 'full' | 'long' | 'medium' | 'short' | undefined }
 ) => string
 
