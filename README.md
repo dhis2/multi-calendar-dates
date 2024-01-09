@@ -316,18 +316,262 @@ underlying iso8601 (gregory) date.
 > is the most common usecase and it would help clients not to have to do the
 > conversion manually.
 
-## Upcoming methods
+## `createFixedPeriodFromPeriodId`
 
-There are new methods that will be added soon (in the alpha release right now),
-such as `getFixedPeriodByDate` (which, given a date in a calendar, it returns
-what fixed period the date falls in) and `getAdjacentFixedPeriods` (that
-facilitates being able to navigate to next and previous periods).
+* [API](#createFixedPeriodFromPeriodId-api)
+* [Examples](#createFixedPeriodFromPeriodId-examples)
 
-> These new methods will be documented when merged into main branch, but this
-> gives an idea about the general approach we want to follow with the library;
-> if you encounter a use case that you think it should be included in the
-> library then please get in touch to discuss whether it should live there, or
-> at the consumer level.
+<a name="createFixedPeriodFromPeriodId-api"></a>
+### API
+
+#### Arguments
+
+The function expects an options object with the following properties:
+
+| Option | type | Required | Default value | Description |
+|-|-|-|-|-|
+| `periodId` | `string` | yes | - | A period id, e.g. `2020` or `2020April` |
+| `calendar` | `SupportedCalendar` | yes | - | A calendar sytem, e.g. `gregory` or `ethiopic` |
+| `locale` | `string` | no | `"en"` | A language locale for the displayed labels |
+
+#### Return value
+
+Returns a `FixedPeriod` whos `id` equals the provided `periodId`, see `src/period-calculation/types.ts`
+
+<a name="createFixedPeriodFromPeriodId-examples"></a>
+### Examples
+
+```ts
+createFixedPeriodFromPeriodId({
+    periodId: '2023',
+    calendar: 'gregory',
+})
+```
+
+will return:
+
+```ts
+{
+    periodType: 'YEARLY',
+    name: '2023',
+    displayName: '2023',
+    id: '2023',
+    iso: '2023',
+    startDate: '2023-01-01',
+    endDate: '2023-12-31',
+}
+```
+
+## `getAdjacentFixedPeriods`
+
+* [API](#getAdjacentFixedPeriods-api)
+* [Examples](#getAdjacentFixedPeriods-examples)
+
+<a name="getAdjacentFixedPeriods-api"></a>
+### API
+
+#### Arguments
+
+The function expects an options object with the following properties:
+
+| Option | Type | Required | Default value | Description |
+|-|-|-|-|-|
+| `period` | `FixedPeriod` | yes | - | A period id, e.g. `2020` or `2020April` |
+| `calendar` | `SupportedCalendar` | yes | - | A calendar sytem, e.g. `gregory` or `ethiopic` |
+| `steps` | `integer` | no | `1` | Amount of adjacent fixed period forward/backward, can be negative |
+| `locale` | `string` | no | `"en"` | A language locale for the displayed labels |
+
+#### Return value
+
+Returns a collection with fixed periods, see `src/period-calculation/types.ts`
+
+<a name="getAdjacentFixedPeriods-examples"></a>
+### Examples
+
+**With `steps: 1` (default):**
+
+```ts
+const period = createFixedPeriodFromPeriodId({
+    periodId: '20230101',
+    calendar: 'gregory',
+})
+getAdjacentFixedPeriods({
+    period,
+    calendar: 'gregory',
+})
+```
+
+will return:
+
+```ts
+{
+    periodType: 'YEARLY',
+    name: '2023',
+    displayName: '2023',
+    id: '2023',
+    iso: '2023',
+    startDate: '2023-01-01',
+    endDate: '2023-12-31',
+}
+```
+
+**With `steps: 2`:**
+
+```ts
+const period = createFixedPeriodFromPeriodId({
+    periodId: '20221230',
+    calendar: 'gregory',
+})
+getAdjacentFixedPeriods({
+    period,
+    calendar: 'gregory',
+    steps: 2,
+})
+```
+
+will return:
+
+```ts
+[
+    {
+        periodType: 'DAILY',
+        name: '2022-12-31',
+        displayName: 'December 31, 2022',
+        id: '20221231',
+        iso: '20221231',
+        startDate: '2022-12-31',
+        endDate: '2022-12-31',
+    },
+    {
+        periodType: 'DAILY',
+        name: '2023-01-01',
+        displayName: 'January 1, 2023',
+        id: '20230101',
+        iso: '20230101',
+        startDate: '2023-01-01',
+        endDate: '2023-01-01',
+    },
+]
+```
+
+**With `steps: -3`:**
+
+```ts
+const period = createFixedPeriodFromPeriodId({
+    periodId: '20230102',
+    calendar: 'gregory',
+})
+getAdjacentFixedPeriods({
+    period,
+    calendar: 'gregory',
+    steps: -3,
+})
+```
+
+will return:
+
+```ts
+[
+    {
+        periodType: 'DAILY',
+        name: '2022-12-30',
+        displayName: 'December 30, 2022',
+        id: '20221230',
+        iso: '20221230',
+        startDate: '2022-12-30',
+        endDate: '2022-12-30',
+    },
+    {
+        periodType: 'DAILY',
+        name: '2022-12-31',
+        displayName: 'December 31, 2022',
+        id: '20221231',
+        iso: '20221231',
+        startDate: '2022-12-31',
+        endDate: '2022-12-31',
+    },
+    {
+        periodType: 'DAILY',
+        name: '2023-01-01',
+        displayName: 'January 1, 2023',
+        id: '20230101',
+        iso: '20230101',
+        startDate: '2023-01-01',
+        endDate: '2023-01-01',
+    },
+]
+```
+
+## `getFixedPeriodByDate`
+
+* [API](#getFixedPeriodByDate-api)
+* [Examples](#getFixedPeriodByDate-examples)
+
+<a name="getFixedPeriodByDate-api"></a>
+### API
+
+#### Arguments
+
+The function expects an options object with the following properties:
+
+| Option | Type | Required | Default value | Description |
+|-|-|-|-|-|
+| `periodType` | `PeriodType` | yes | - | E.g. `'YEARLY'` (see
+`src/period-calculation/period-types.ts`) |
+| `calendar` | `SupportedCalendar` | yes | - | A calendar sytem, e.g. `gregory` or `ethiopic` |
+| `date` | `string` | yes | - | E.g. `'2020-10-04'` |
+| `locale` | `string` | no | `"en"` | A language locale for the displayed labels |
+
+#### Return value
+
+Returns a fixed period, see `src/period-calculation/types.ts`
+
+<a name="getFixedPeriodByDate-examples"></a>
+### Examples
+
+```ts
+getFixedPeriodByDate({
+    periodType: 'DAILY',
+    date: '2022-01-01',
+    calendar: 'gregory',
+})
+```
+
+will return:
+
+```ts
+{
+    periodType: 'DAILY',
+    id: '20220101',
+    iso: '20220101',
+    displayName: 'January 1, 2022',
+    name: '2022-01-01',
+    startDate: '2022-01-01',
+    endDate: '2022-01-01'
+}
+```
+
+## `periodTypes`
+
+Some functions require a period type to be passed. Instead of hardcoding string
+or manually replicating the constants used in the library, they're being
+exposed. `periodTypes` is an array with string, which can easily be converted
+to an object:
+
+```ts
+const obj = periodTypes.reduce(
+    (acc, periodType) => ({ ...acc, [periodType]: periodType }),
+    {}
+)
+```
+
+### API
+
+For all available period types, see: `src/period-calculation/period-types.ts`
+
+```ts
+type periodTypes = string[]
+```
 
 # Special cases and considerations with periods logic
 
