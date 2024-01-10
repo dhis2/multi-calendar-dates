@@ -1,11 +1,8 @@
 import { Temporal } from '@js-temporal/polyfill'
-import { SupportedCalendar } from '../types'
-import { formatYyyyMmDD, padWithZeroes } from '../utils/helpers'
-import {
-    FixedPeriod,
-    GeneratedPeriodsFunc,
-    PeriodIdentifier,
-} from './fixed-periods'
+import { SupportedCalendar } from '../../types'
+import { fromAnyDate, formatYyyyMmDD, padWithZeroes } from '../../utils/index'
+import { FixedPeriod, PeriodType } from '../types'
+import doesPeriodEndBefore from './does-period-end-before'
 
 const Days = {
     Monday: 1,
@@ -17,33 +14,22 @@ const Days = {
     Sunday: 7,
 }
 
-const getStartingDay = (
-    periodType: PeriodIdentifier,
-    startingDay: number | undefined
-) => {
-    switch (periodType) {
-        case 'WEEKLY':
-        case 'BIWEEKLY':
-            return startingDay || Days.Monday
-        case 'WEEKLYSAT':
-            return Days.Saturday
-        case 'WEEKLYSUN':
-            return Days.Sunday
-        case 'WEEKLYTHU':
-            return Days.Thursday
-        case 'WEEKLYWED':
-            return Days.Wednesday
-        default:
-            throw new Error(`unrecoginsed weekly period type: ${periodType}`)
-    }
-}
+type GenerateFixedPeriodsWeekly = (options: {
+    year: number
+    periodType: PeriodType
+    calendar: SupportedCalendar
+    startingDay: number /** 1 is Monday */
+    endsBefore?: Temporal.PlainDate
+}) => Array<FixedPeriod>
 
-export const getWeeklyPeriods: GeneratedPeriodsFunc = ({
+// Does not need a `locale` as we're displaying the month as number in the
+// displayName/name
+const generateFixedPeriodsWeekly: GenerateFixedPeriodsWeekly = ({
     year,
     calendar,
     periodType,
     startingDay,
-    locale = 'en-GB',
+    endsBefore,
 }) => {
     const startingDayToUse = getStartingDay(periodType, startingDay)
     let date = getStartingDate({
@@ -60,37 +46,81 @@ export const getWeeklyPeriods: GeneratedPeriodsFunc = ({
 
     do {
         const endofWeek = date.add({ days: daysToAdd })
+
+        if (
+            endsBefore &&
+            doesPeriodEndBefore({
+                period: {
+                    startDate: date.toString(),
+                    endDate: endofWeek.toString(),
+                },
+                date: endsBefore,
+            })
+        ) {
+            break
+        }
+
         const value = buildValue({
             periodType,
             startingDay: startingDayToUse,
             year,
             weekIndex: i,
         })
+
         if (!(endofWeek.year === year + 1 && endofWeek.day >= 4)) {
+            const name = buildLabel({
+                periodType,
+                date,
+                nextWeek: endofWeek,
+                weekIndex: i,
+            })
             days.push({
+                periodType,
                 id: value,
                 iso: value,
-                name: buildLabel({
-                    periodType,
-                    date,
-                    nextWeek: endofWeek,
-                    weekIndex: i,
-                }),
+                name,
+                displayName: name,
                 startDate: formatYyyyMmDD(date),
                 endDate: formatYyyyMmDD(endofWeek),
             })
         }
-        date = Temporal.PlainDate.from(endofWeek).add({ days: 1 })
+        date = fromAnyDate({ date: endofWeek, calendar }).add({ days: 1 })
         i++
     } while (date.year === year) // important to have the condition after since the very first day can be in the previous year
     return days
+}
+
+const getStartingDay = (
+    periodType: PeriodType,
+    startingDay: number | undefined
+) => {
+    switch (periodType) {
+        case 'WEEKLYMON':
+            return Days.Monday
+        case 'WEEKLYTUE':
+            return Days.Tuesday
+        case 'WEEKLYWED':
+            return Days.Wednesday
+        case 'WEEKLYTHU':
+            return Days.Thursday
+        case 'WEEKLYFRI':
+            return Days.Friday
+        case 'WEEKLYSAT':
+            return Days.Saturday
+        case 'WEEKLYSUN':
+            return Days.Sunday
+        case 'WEEKLY':
+        case 'BIWEEKLY':
+        default:
+            return startingDay || Days.Monday
+    }
 }
 
 const getStartingDate = (options: {
     year: number
     startingDay: number
     calendar: SupportedCalendar
-    periodType: PeriodIdentifier
+    periodType: PeriodType
 }) => {
     const { year, calendar, startingDay } = options
 
@@ -129,7 +159,7 @@ const buildValue = ({
     year,
     weekIndex,
 }: {
-    periodType: PeriodIdentifier
+    periodType: PeriodType
     startingDay: number
     year: number
     weekIndex: number
@@ -139,7 +169,7 @@ const buildValue = ({
 }
 
 type BuildLabelFunc = (options: {
-    periodType: PeriodIdentifier
+    periodType: PeriodType
     date: Temporal.PlainDate
     nextWeek: Temporal.PlainDate
     weekIndex: number
@@ -153,7 +183,7 @@ const buildLabel: BuildLabelFunc = ({
 }) => {
     const { year, month, day } = date
     const { year: nextYear, month: nextMonth, day: nextDay } = nextWeek
-    const prefix = periodType == 'BIWEEKLY' ? 'Bi-Week' : 'Week'
+    const prefix = periodType === 'BIWEEKLY' ? 'Bi-Week' : 'Week'
     const label = `${prefix} ${weekIndex} - ${year}-${padWithZeroes(
         month
     )}-${padWithZeroes(day)} - ${nextYear}-${padWithZeroes(
@@ -161,3 +191,5 @@ const buildLabel: BuildLabelFunc = ({
     )}-${padWithZeroes(nextDay)}`
     return label
 }
+
+export default generateFixedPeriodsWeekly
