@@ -1,3 +1,18 @@
+# [1.1.0](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.2...v1.1.0) (2024-01-10)
+
+
+### Bug Fixes
+
+* **generate daily fixed periods:** use correct comparison for "endsBefore" ([#21](https://github.com/dhis2/multi-calendar-dates/issues/21)) ([3cdb2be](https://github.com/dhis2/multi-calendar-dates/commit/3cdb2be65c4faff2462ef8df1984c3f945f8cd22))
+
+
+### Features
+
+* add createFixedPeriodFromPeriodId method ([#13](https://github.com/dhis2/multi-calendar-dates/issues/13)) ([ef1132e](https://github.com/dhis2/multi-calendar-dates/commit/ef1132e9a7abc2112d5ae94a365d0ed8ae21e9b8))
+* add getFixedPeriodByDate ([#14](https://github.com/dhis2/multi-calendar-dates/issues/14)) ([9de82e0](https://github.com/dhis2/multi-calendar-dates/commit/9de82e027a00766f41413b37bb07767fed049c53))
+* add getSiblingFixedPeriods ([#15](https://github.com/dhis2/multi-calendar-dates/issues/15)) ([59cb406](https://github.com/dhis2/multi-calendar-dates/commit/59cb40642f23b70717430a3a9bce95bcb2e3e584))
+* **generate fixed periods:** add "endsBefore" option ([#20](https://github.com/dhis2/multi-calendar-dates/issues/20)) ([6667c97](https://github.com/dhis2/multi-calendar-dates/commit/6667c9760df86f592f6c094eb77f4e5c02cfc8c9))
+
 ## [1.0.2](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.1...v1.0.2) (2023-03-09)
 
 
