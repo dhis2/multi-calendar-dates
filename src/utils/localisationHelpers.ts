@@ -5,8 +5,8 @@ import {
     customCalendars,
     CustomCalendarTypes,
 } from '../custom-calendars'
-import { PickerOptions } from '../types'
-import { isCustomCalendar } from './helpers'
+import { PickerOptions, SupportedCalendar } from '../types'
+import { formatYyyyMmDD, isCustomCalendar } from './helpers'
 
 const getCustomCalendarLocale = (
     calendar: Temporal.CalendarLike,
@@ -30,26 +30,41 @@ const getCustomCalendarLocale = (
     return result
 }
 
-const localiseDateLabel = (
-    selectedDateZdt: Temporal.ZonedDateTime | null,
-    localeOptions: PickerOptions
+type LocaliseDateLabel = (
+    selectedDateZdt: Temporal.ZonedDateTime | Temporal.PlainDate,
+    localeOptions: {
+        calendar: SupportedCalendar
+        locale: string
+    },
+    options?: { dateStyle: 'full' | 'long' | 'medium' | 'short' | undefined }
+) => string
+
+const localiseDateLabel: LocaliseDateLabel = (
+    selectedDateZdt,
+    localeOptions,
+    options = { dateStyle: 'full' }
 ) => {
     if (!localeOptions.calendar) {
         throw new Error('no calendar provided to localise function')
     }
+
     if (!selectedDateZdt) {
         throw new Error('a date must be provided to localiseDateLabel')
     }
 
     const isCustom = isCustomCalendar(localeOptions.calendar)
 
+    const nonCustomDate =
+        selectedDateZdt instanceof Temporal.ZonedDateTime
+            ? selectedDateZdt?.toPlainDate()
+            : selectedDateZdt
+
     return isCustom
-        ? `${selectedDateZdt?.day}-${selectedDateZdt?.month}-${selectedDateZdt?.year}`
-        : selectedDateZdt
-              ?.toPlainDate()
+        ? formatYyyyMmDD(selectedDateZdt)
+        : nonCustomDate
               .toLocaleString(localeOptions.locale, {
                   calendar: localeOptions.calendar,
-                  dateStyle: 'full',
+                  dateStyle: options.dateStyle,
               })
               .toString()
 }

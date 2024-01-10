@@ -1,0 +1,486 @@
+import createFixedPeriodFromPeriodId from './create-fixed-period-from-period-id'
+
+describe('Gregorian/createFixedPeriodFromPeriodId', () => {
+    describe('yearly period types', () => {
+        it('should return "YEARLY"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'YEARLY',
+                name: '2023',
+                displayName: '2023',
+                id: '2023',
+                iso: '2023',
+                startDate: '2023-01-01',
+                endDate: '2023-12-31',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return "FYAPR"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023April',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'FYAPR',
+                name: 'April 2023 - March 2024',
+                displayName: 'April 2023 - March 2024',
+                id: '2023April',
+                iso: '2023April',
+                startDate: '2023-04-01',
+                endDate: '2024-03-31',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return "FYJUL"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023July',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'FYJUL',
+                name: 'July 2023 - June 2024',
+                displayName: 'July 2023 - June 2024',
+                id: '2023July',
+                iso: '2023July',
+                startDate: '2023-07-01',
+                endDate: '2024-06-30',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return "FYOCT"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023Oct',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'FYOCT',
+                name: 'October 2023 - September 2024',
+                displayName: 'October 2023 - September 2024',
+                id: '2023Oct',
+                iso: '2023Oct',
+                startDate: '2023-10-01',
+                endDate: '2024-09-30',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return "FYNOV"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023Nov',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'FYNOV',
+                name: 'November 2023 - October 2024',
+                displayName: 'November 2023 - October 2024',
+                id: '2023Nov',
+                iso: '2023Nov',
+                startDate: '2023-11-01',
+                endDate: '2024-10-31',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+    })
+
+    describe('monthly period types', () => {
+        it('should return period of type "MONTHLY"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '202301',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'MONTHLY',
+                name: 'January 2023',
+                displayName: 'January 2023',
+                id: '202301',
+                iso: '202301',
+                startDate: '2023-01-01',
+                endDate: '2023-01-31',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return period of type "BIMONTHLY"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '202302B',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'BIMONTHLY',
+                name: 'March - April 2023',
+                displayName: 'March - April 2023',
+                id: '202302B',
+                iso: '202302B',
+                startDate: '2023-03-01',
+                endDate: '2023-04-30',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return period of type "QUARTERLY"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023Q1',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'QUARTERLY',
+                name: 'January - March 2023',
+                displayName: 'January - March 2023',
+                id: '2023Q1',
+                iso: '2023Q1',
+                startDate: '2023-01-01',
+                endDate: '2023-03-31',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return the first period of type "QUARTERLYJUL" in 2023', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023JulyQ1',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'QUARTERLYJUL',
+                name: 'July - September 2023',
+                displayName: 'July - September 2023',
+                id: '2023JulyQ1',
+                iso: '2023JulyQ1',
+                startDate: '2023-07-01',
+                endDate: '2023-09-30',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return the last period period of type "QUARTERLYJUL"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023JulyQ4',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'QUARTERLYJUL',
+                name: 'April - June 2024',
+                displayName: 'April - June 2024',
+                id: '2023JulyQ4',
+                iso: '2023JulyQ4',
+                startDate: '2024-04-01',
+                endDate: '2024-06-30',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return the first period of type "QUARTERLYNOV" in 2023/2024', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023NovemberQ1',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'QUARTERLYNOV',
+                name: 'November 2023 - January 2024',
+                displayName: 'November 2023 - January 2024',
+                id: '2023NovemberQ1',
+                iso: '2023NovemberQ1',
+                startDate: '2023-11-01',
+                endDate: '2024-01-31',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return the last period period of type "QUARTERLYNOV"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023NovemberQ4',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'QUARTERLYNOV',
+                name: 'August - October 2024',
+                displayName: 'August - October 2024',
+                id: '2023NovemberQ4',
+                iso: '2023NovemberQ4',
+                startDate: '2024-08-01',
+                endDate: '2024-10-31',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return the first period period of type "SIXMONTHLYAPR"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023AprilS1',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'SIXMONTHLYAPR',
+                name: 'April - September 2023',
+                displayName: 'April - September 2023',
+                id: '2023AprilS1',
+                iso: '2023AprilS1',
+                startDate: '2023-04-01',
+                endDate: '2023-09-30',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return the last period period of type "SIXMONTHLYAPR"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023AprilS2',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'SIXMONTHLYAPR',
+                name: 'October 2023 - March 2024',
+                displayName: 'October 2023 - March 2024',
+                id: '2023AprilS2',
+                iso: '2023AprilS2',
+                startDate: '2023-10-01',
+                endDate: '2024-03-31',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return the first period period of type "SIXMONTHLYJUL"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023JulyS1',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'SIXMONTHLYJUL',
+                name: 'July - December 2023',
+                displayName: 'July - December 2023',
+                id: '2023JulyS1',
+                iso: '2023JulyS1',
+                startDate: '2023-07-01',
+                endDate: '2023-12-31',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return the last period period of type "SIXMONTHLYJUL"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023JulyS2',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'SIXMONTHLYJUL',
+                name: 'January - June 2024',
+                displayName: 'January - June 2024',
+                id: '2023JulyS2',
+                iso: '2023JulyS2',
+                startDate: '2024-01-01',
+                endDate: '2024-06-30',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return the first period period of type "SIXMONTHLYNOV"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023NovemberS1',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'SIXMONTHLYNOV',
+                name: 'November 2023 - April 2024',
+                displayName: 'November 2023 - April 2024',
+                id: '2023NovemberS1',
+                iso: '2023NovemberS1',
+                startDate: '2023-11-01',
+                endDate: '2024-04-30',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return the last period period of type "SIXMONTHLYNOV"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023NovemberS2',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'SIXMONTHLYNOV',
+                name: 'May - October 2024',
+                displayName: 'May - October 2024',
+                id: '2023NovemberS2',
+                iso: '2023NovemberS2',
+                startDate: '2024-05-01',
+                endDate: '2024-10-31',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+    })
+
+    describe('weekly period types', () => {
+        it('should return period of type "WEEKLY"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023W1',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'WEEKLY',
+                name: 'Week 1 - 2023-01-02 - 2023-01-08',
+                displayName: 'Week 1 - 2023-01-02 - 2023-01-08',
+                id: '2023W1',
+                iso: '2023W1',
+                startDate: '2023-01-02',
+                endDate: '2023-01-08',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return period of type "BIWEEKLY"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023BiW1',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'BIWEEKLY',
+                name: 'Bi-Week 1 - 2023-01-02 - 2023-01-15',
+                displayName: 'Bi-Week 1 - 2023-01-02 - 2023-01-15',
+                id: '2023BiW1',
+                iso: '2023BiW1',
+                startDate: '2023-01-02',
+                endDate: '2023-01-15',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return period of type "WEEKLYWED"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023WedW1',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'WEEKLYWED',
+                name: 'Week 1 - 2023-01-04 - 2023-01-10',
+                displayName: 'Week 1 - 2023-01-04 - 2023-01-10',
+                id: '2023WedW1',
+                iso: '2023WedW1',
+                startDate: '2023-01-04',
+                endDate: '2023-01-10',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return period of type "WEEKLYTHU"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023ThuW1',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'WEEKLYTHU',
+                name: 'Week 1 - 2022-12-29 - 2023-01-04',
+                displayName: 'Week 1 - 2022-12-29 - 2023-01-04',
+                id: '2023ThuW1',
+                iso: '2023ThuW1',
+                startDate: '2022-12-29',
+                endDate: '2023-01-04',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return period of type "WEEKLYSAT"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023SatW1',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'WEEKLYSAT',
+                name: 'Week 1 - 2022-12-31 - 2023-01-06',
+                displayName: 'Week 1 - 2022-12-31 - 2023-01-06',
+                id: '2023SatW1',
+                iso: '2023SatW1',
+                startDate: '2022-12-31',
+                endDate: '2023-01-06',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+
+        it('should return period of type "WEEKLYSUN"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '2023SunW1',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'WEEKLYSUN',
+                name: 'Week 1 - 2023-01-01 - 2023-01-07',
+                displayName: 'Week 1 - 2023-01-01 - 2023-01-07',
+                id: '2023SunW1',
+                iso: '2023SunW1',
+                startDate: '2023-01-01',
+                endDate: '2023-01-07',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+    })
+
+    describe('daily period types', () => {
+        it('should return period of type "DAILY"', () => {
+            const actual = createFixedPeriodFromPeriodId({
+                periodId: '20230101',
+                calendar: 'gregory',
+            })
+
+            const expected = {
+                periodType: 'DAILY',
+                name: '2023-01-01',
+                displayName: 'January 1, 2023',
+                id: '20230101',
+                iso: '20230101',
+                startDate: '2023-01-01',
+                endDate: '2023-01-01',
+            }
+
+            expect(actual).toEqual(expected)
+        })
+    })
+})
