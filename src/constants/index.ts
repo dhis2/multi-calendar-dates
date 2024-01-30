@@ -1,2 +1,2 @@
-export * from './calendars'
-export * from './numberingSystems'
+export { calendars } from './calendars'
+export { numberingSystems } from './numberingSystems'

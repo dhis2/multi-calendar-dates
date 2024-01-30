@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
 import { getNowInCalendar } from '../index'
 import { PickerOptions, SupportedCalendar } from '../types'
+import { extractDatePartsFromDateString } from '../utils'
 import { formatYyyyMmDD, getCustomCalendarIfExists } from '../utils/helpers'
 import localisationHelpers from '../utils/localisationHelpers'
 import { useCalendarWeekDays } from './internal/useCalendarWeekDays'
@@ -44,14 +45,8 @@ const fromDateParts = (date: string, options: PickerOptions) => {
     let result: Temporal.PlainDateLike
 
     try {
-        const dateParts = date?.split('-')
-        if (dateParts.length !== 3) {
-            throw new Error(
-                `Invalid date ${date} - date should be in the format YYYY-MM-DD`
-            )
-        }
-        const [year, month, day] = dateParts
-        result = { year: Number(year), month: Number(month), day: Number(day) }
+        const { year, month, day } = extractDatePartsFromDateString(date)
+        result = { year, month, day }
     } catch (err) {
         console.warn(err)
 
