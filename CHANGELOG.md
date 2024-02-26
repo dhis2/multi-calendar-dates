@@ -1,3 +1,10 @@
+# [1.0.0-alpha.23](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.22...v1.0.0-alpha.23) (2024-02-26)
+
+
+### Features
+
+* **validation:** add and expose validateDateString utility ([cb4c919](https://github.com/dhis2/multi-calendar-dates/commit/cb4c9191dd96ff0da3e05a73ac0149e9304f974d))
+
 ## [1.0.2](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.1...v1.0.2) (2023-03-09)
 
 
