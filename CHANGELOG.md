@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/dhis2/multi-calendar-dates/compare/v1.1.0...v1.1.1) (2024-04-08)
+
+
+### Bug Fixes
+
+* **deps:** relax peer deps requirements to avoid conflicts [LIBS-587] ([#33](https://github.com/dhis2/multi-calendar-dates/issues/33)) ([662a3eb](https://github.com/dhis2/multi-calendar-dates/commit/662a3eb9213ff6e64e9399b826d2c5ab271fe489))
+
 # [1.1.0](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.2...v1.1.0) (2024-01-10)
 
 
