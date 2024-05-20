@@ -97,9 +97,9 @@ export const useDatePicker: UseDatePickerHookType = ({
               dateParts,
               resolvedOptions
           ) as Temporal.YearOrEraAndEraYear &
-              Temporal.MonthOrMonthCode & { day: number })
-        : todayZdt
-
+              Temporal.MonthOrMonthCode & { day: number } & { format: string })
+        : (todayZdt as Temporal.ZonedDateTime & { format: string })
+    const format = date.format
     const temporalCalendar = useMemo(
         () => Temporal.Calendar.from(resolvedOptions.calendar),
         [resolvedOptions.calendar]
@@ -193,7 +193,7 @@ export const useDatePicker: UseDatePickerHookType = ({
         calendarWeekDays: calendarWeekDaysZdts.map((week) =>
             week.map((weekDayZdt) => ({
                 zdt: weekDayZdt,
-                calendarDate: formatYyyyMmDD(weekDayZdt),
+                calendarDate: formatYyyyMmDD(weekDayZdt, format),
                 label: localisationHelpers.localiseWeekLabel(
                     weekDayZdt.withCalendar(localeOptions.calendar),
                     localeOptions

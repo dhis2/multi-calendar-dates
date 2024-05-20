@@ -29,7 +29,7 @@ export const useCalendarWeekDays = (dayZdt: Temporal.ZonedDateTime) => {
             minute: 0,
             second: 0,
             calendar: dayZdt.calendar,
-            timeZone: dayZdt.timeZone,
+            timeZone: 'UTC',
         }
 
         // get first day of the month
