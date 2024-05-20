@@ -42,11 +42,12 @@ export type UseDatePickerReturn = UseNavigationReturnType & {
 type UseDatePickerHookType = (options: DatePickerOptions) => UseDatePickerReturn
 
 const fromDateParts = (date: string, options: PickerOptions) => {
-    let result: Temporal.PlainDateLike
+    let result: Temporal.PlainDateLike & { format?: string }
 
     try {
-        const { year, month, day } = extractDatePartsFromDateString(date)
-        result = { year, month, day }
+        const { year, month, day, format } =
+            extractDatePartsFromDateString(date)
+        result = { year, month, day, format }
     } catch (err) {
         console.warn(err)
 
