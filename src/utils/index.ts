@@ -5,4 +5,4 @@ export * from './helpers'
 export { default as localisationHelpers } from './localisationHelpers'
 export { validateDateString } from './validate-date-string'
 
-export { convertDate } from './convert-date'
+export { convertFromIso8601 } from './convert-date'

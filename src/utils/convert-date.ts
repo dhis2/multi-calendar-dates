@@ -8,7 +8,7 @@ type ConvertDateFn = (
     calendar: SupportedCalendar
 ) => Temporal.PlainDate
 
-export const convertDate: ConvertDateFn = (date, userCalendar) => {
+export const convertFromIso8601: ConvertDateFn = (date, userCalendar) => {
     const calendar = getCustomCalendarIfExists(
         dhis2CalendarsMap[userCalendar] ?? userCalendar
     ) as SupportedCalendar
