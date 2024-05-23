@@ -249,6 +249,44 @@ it('should get today date in Ethiopic', () => {
 })
 ```
 
+## convertFromIso8601 and convertToIso8601
+
+`convertFromIso8601` and `convertToIso8601` are used to convert between Iso8601 (gregorian) dates and specific calendars (i.e. Ethiopic or Nepali). It accepts either a string in the format `yyyy-MM-dd` or an object representing the date properties (`year`, `month` and `day`).
+
+### Examples
+
+```js
+it('should convert a gregorian date to ethiopic', () => {
+    const result = convertFromIso8601('2024-05-23', 'ethiopic')
+    expect(result).toMatchObject({
+        year: 7516,
+        eraYear: 2016,
+        month: 9,
+        day: 15,
+    })
+})
+it('should convert a Nepali date to gregorian', () => {
+    const result = convertToIso8601('2081-02-10', 'nepali')
+    expect(result).toMatchObject({ year: 2024, month: 5, day: 23 })
+})
+ it('should convert an ethiopic date to gregorian', () => {
+    const result = convertToIso8601('2016-09-15', 'ethiopic')
+    expect(result).toMatchObject({ year: 2024, month: 5, day: 23 })
+})
+it('should accept a date object instead of a string', () => {
+    const result = convertToIso8601(
+        {
+            year: 2081,
+            month: 2,
+            day: 10,
+        },
+        'nepali'
+    )
+    expect(result).toMatchObject({ year: 2024, month: 5, day: 23 })
+})
+```
+
+
 ### Types
 
 The method takes two positional arguments:
