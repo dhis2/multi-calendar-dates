@@ -10,12 +10,12 @@ export function validateDateString(
         calendar = 'gregory',
         minDateString,
         maxDateString,
-        validationType = 'throw', // "throw" | "no-throw"
+        validation = 'error', // "error" | "warning"
     }: {
         calendar?: SupportedCalendar
         minDateString?: string
         maxDateString?: string
-        validationType?: string
+        validation?: string
     } = {}
 ): {
     isValid: boolean
@@ -49,7 +49,7 @@ export function validateDateString(
             })
 
             if (Temporal.PlainDate.compare(date, minDate) < 0) {
-                if (validationType === 'throw') {
+                if (validation === 'error') {
                     throw new Error(
                         `Date ${dateString} is less than the minimum allowed date ${minDateString}.`
                     )
@@ -67,7 +67,7 @@ export function validateDateString(
             })
 
             if (Temporal.PlainDate.compare(date, maxDate) > 0) {
-                if (validationType === 'throw') {
+                if (validation === 'error') {
                     throw new Error(
                         `Date ${dateString} is greater than the maximum allowed date ${maxDateString}.`
                     )

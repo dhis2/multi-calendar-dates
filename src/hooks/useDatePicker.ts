@@ -24,6 +24,9 @@ type DatePickerOptions = {
         calendarDate: Temporal.ZonedDateTime
         calendarDateString: string
     }) => void
+    minDate?: string
+    maxDate?: string
+    validation?: string
 }
 
 export type UseDatePickerReturn = UseNavigationReturnType & {
@@ -44,7 +47,14 @@ export type UseDatePickerReturn = UseNavigationReturnType & {
 
 type UseDatePickerHookType = (options: DatePickerOptions) => UseDatePickerReturn
 
-const extractAndValidateDateParts = (date: string, options: PickerOptions) => {
+const extractAndValidateDateParts = (
+    date: string,
+    options: PickerOptions & {
+        minDateString?: string
+        maxDateString?: string
+        validation?: string
+    }
+) => {
     let result: Temporal.PlainDateLike & {
         isValid: boolean
         warningMessage: string
@@ -56,11 +66,13 @@ const extractAndValidateDateParts = (date: string, options: PickerOptions) => {
         options
     )
     if (isValid) {
-        const { year, month, day } = extractDatePartsFromDateString(date)
+        const { year, month, day, format } =
+            extractDatePartsFromDateString(date)
         result = {
             year,
             month,
             day,
+            format,
             isValid,
             warningMessage,
             errorMessage,
@@ -93,6 +105,9 @@ const extractAndValidateDateParts = (date: string, options: PickerOptions) => {
 export const useDatePicker: UseDatePickerHookType = ({
     onDateSelect,
     date: dateParts,
+    minDate,
+    maxDate,
+    validation,
     options,
 }) => {
     const calendar = getCustomCalendarIfExists(
@@ -114,13 +129,19 @@ export const useDatePicker: UseDatePickerHookType = ({
         [resolvedOptions]
     )
 
-    const result = extractAndValidateDateParts(dateParts, resolvedOptions)
+    const result = extractAndValidateDateParts(dateParts, {
+        ...resolvedOptions,
+        minDateString: minDate,
+        maxDateString: maxDate,
+        validation: validation,
+    })
     const date = result as Temporal.YearOrEraAndEraYear &
         Temporal.MonthOrMonthCode & {
             day: number
             isValid: boolean
             warningMessage: string
             errorMessage: string
+            format: string
         }
 
     const temporalCalendar = useMemo(
@@ -139,7 +160,7 @@ export const useDatePicker: UseDatePickerHookType = ({
                   timeZone: temporalTimeZone,
               })
         : null
-
+    console.log(selectedDateZdt, 'selectedDateZdt')
     const [firstZdtOfVisibleMonth, setFirstZdtOfVisibleMonth] = useState(() => {
         const zdt = selectedDateZdt || todayZdt
         return zdt.with({ day: 1 })
@@ -165,12 +186,13 @@ export const useDatePicker: UseDatePickerHookType = ({
     )
     const selectDate = useCallback(
         (zdt: Temporal.ZonedDateTime) => {
+            console.log(zdt, 'zdt')
             onDateSelect({
                 calendarDate: zdt,
-                calendarDateString: formatYyyyMmDD(zdt),
+                calendarDateString: formatYyyyMmDD(zdt, date.format),
             })
         },
-        [onDateSelect]
+        [onDateSelect, date.format]
     )
     const calendarWeekDaysZdts = useCalendarWeekDays(firstZdtOfVisibleMonth)
 
@@ -212,15 +234,15 @@ export const useDatePicker: UseDatePickerHookType = ({
         calendarWeekDays: calendarWeekDaysZdts.map((week) =>
             week.map((weekDayZdt) => ({
                 zdt: weekDayZdt,
-                calendarDate: formatYyyyMmDD(weekDayZdt),
+                calendarDate: formatYyyyMmDD(weekDayZdt, date.format),
                 label: localisationHelpers.localiseWeekLabel(
                     weekDayZdt.withCalendar(localeOptions.calendar),
                     localeOptions
                 ),
                 onClick: () => selectDate(weekDayZdt),
-                isSelected: selectedDateZdt
-                    ?.withCalendar('iso8601')
-                    .equals(weekDayZdt.withCalendar('iso8601')),
+                isSelected: selectedDateZdt ? 
+                selectedDateZdt?.withCalendar('iso8601')
+                    .equals(weekDayZdt.withCalendar('iso8601')) : false,
                 isToday: todayZdt && weekDayZdt.equals(todayZdt),
                 isInCurrentMonth:
                     firstZdtOfVisibleMonth &&

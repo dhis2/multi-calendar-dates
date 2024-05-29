@@ -1,6 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { customCalendars, CustomCalendarTypes } from '../custom-calendars'
-import { extractDatePartsFromDateString } from './extract-date-parts-from-date-string'
 
 export const isCustomCalendar = (calendar: Temporal.CalendarLike) =>
     !!customCalendars[calendar as CustomCalendarTypes]

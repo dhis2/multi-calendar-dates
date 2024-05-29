@@ -16,3 +16,8 @@ export type ResolvedLocaleOptions = {
     numberingSystem: string
     weekDayFormat: WeekDayFormat
 }
+
+export type ValidationOptions = {
+    minDateString?: string
+    maxDateString?: string
+}
