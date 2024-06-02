@@ -1,8 +1,40 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
+import { NEPALI_CALENDAR_DATA } from '../custom-calendars/nepaliCalendarData'
 import type { SupportedCalendar } from '../types'
 import { extractDatePartsFromDateString } from './extract-date-parts-from-date-string'
 import { getCustomCalendarIfExists } from './helpers'
+
+function validateNepaliDate(year: number, month: number, day: number) {
+    const nepaliYearData = NEPALI_CALENDAR_DATA[year]
+    if (!nepaliYearData) {
+        return {
+            isValid: false,
+            errorMessage: `Year ${year} is out of range.`,
+        }
+    }
+
+    if (month < 1 || month > 12) {
+        return {
+            isValid: false,
+            errorMessage: `Month ${month} is out of range: 1 <= ${month} <= 12.`,
+        }
+    }
+
+    const daysInMonth = nepaliYearData[month]
+
+    if (day < 1 || day > daysInMonth) {
+        return {
+            isValid: false,
+            errorMessage: `Day ${day} is out of range: 1 <= ${day} <= ${daysInMonth}.`,
+        }
+    }
+
+    return {
+        isValid: true,
+        errorMessage: '',
+    }
+}
 
 export function validateDateString(
     dateString: string,
@@ -27,11 +59,23 @@ export function validateDateString(
 } {
     const resolvedCalendar = getCustomCalendarIfExists(
         dhis2CalendarsMap[calendar] ?? calendar
-    ) as SupportedCalendar
+    )
 
     try {
         // Will throw if the format of the date is incorrect
         const dateParts = extractDatePartsFromDateString(dateString)
+
+        if (resolvedCalendar.toString() === 'nepali') {
+            const { isValid, errorMessage } = validateNepaliDate(
+                dateParts.year,
+                dateParts.month,
+                dateParts.day
+            )
+            console.log(isValid, 'isValid')
+            if (!isValid) {
+                throw new Error(errorMessage)
+            }
+        }
 
         // Will throw if the year, month or day is out of range
         const date = Temporal.PlainDate.from(
@@ -82,7 +126,7 @@ export function validateDateString(
             warningMessage,
         }
     } catch (e) {
-        console.warn(e)
+        //console.warn(e)
         return {
             isValid: false,
             errorMessage: (e as Error).message,

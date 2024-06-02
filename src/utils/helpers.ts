@@ -11,13 +11,12 @@ type DayType = 'endOfMonth' | 'startOfMonth'
 
 export const formatYyyyMmDD = (
     date: Temporal.PlainDate | Temporal.ZonedDateTime,
-    format?: string,
-    dayType?: DayType
+    dayType?: DayType,
+    format?: string
 ) => {
     const year = date.eraYear ?? date.year
     const month = padWithZeroes(date.month)
     let day = date.day
-
     if (dayType === 'endOfMonth') {
         day = date.daysInMonth
     } else if (dayType === 'startOfMonth') {
