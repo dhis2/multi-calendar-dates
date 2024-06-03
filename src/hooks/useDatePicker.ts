@@ -112,7 +112,7 @@ export const useDatePicker: UseDatePickerHookType = ({
     options,
 }) => {
     const calendar = getCustomCalendarIfExists(
-        dhis2CalendarsMap[options.calendar!] ?? options.calendar
+        dhis2CalendarsMap[options.calendar ?? 'gregorian'] ?? options.calendar
     ) as SupportedCalendar
 
     const resolvedOptions = useResolvedLocaleOptions({
