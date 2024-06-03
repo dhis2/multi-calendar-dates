@@ -48,6 +48,11 @@ export type UseDatePickerReturn = UseNavigationReturnType & {
 
 type UseDatePickerHookType = (options: DatePickerOptions) => UseDatePickerReturn
 
+type CustomDate = Temporal.ZonedDateTime & {
+    format?: string
+    isValid: boolean
+}
+
 const extractAndValidateDateString = (
     date: string,
     options: PickerOptions & {
@@ -58,10 +63,18 @@ const extractAndValidateDateString = (
 ) => {
     let result: Temporal.PlainDateLike & {
         isValid: boolean
-        warningMessage: string
-        errorMessage: string
+        warningMessage?: string
+        errorMessage?: string
     }
+    if (!date) {
+        const { year, month, day } = getNowInCalendar(
+            options.calendar,
+            options.timeZone
+        )
 
+        result = { year, month, day, isValid: true }
+        return result
+    }
     const { isValid, warningMessage, errorMessage } = validateDateString(
         date,
         options
@@ -83,14 +96,12 @@ const extractAndValidateDateString = (
             errorMessage: string
         }
     } else {
-        result = {
-            isValid,
-            errorMessage,
-        } as Temporal.PlainDateLike & {
-            isValid: boolean
-            warningMessage: string
-            errorMessage: string
-        }
+        const { year, month, day } = getNowInCalendar(
+            options.calendar,
+            options.timeZone
+        )
+
+        result = { year, month, day, isValid: false, errorMessage }
     }
 
     // for ethiopic, we need to make sure it's the correct era
@@ -101,13 +112,15 @@ const extractAndValidateDateString = (
         result.eraYear = result.year
         delete result.year
     }
+
     return result
 }
 export const useDatePicker: UseDatePickerHookType = ({
     onDateSelect,
-    date: dateParts,
+    date: dateString,
     minDate,
     maxDate,
+    format,
     validation,
     options,
 }) => {
@@ -119,7 +132,7 @@ export const useDatePicker: UseDatePickerHookType = ({
         ...options,
         calendar,
     })
-    const prevDateStringRef = useRef(dateParts)
+    const prevDateStringRef = useRef(dateString)
 
     const todayZdt = useMemo(
         () =>
@@ -130,7 +143,7 @@ export const useDatePicker: UseDatePickerHookType = ({
         [resolvedOptions]
     )
 
-    const result = extractAndValidateDateString(dateParts, {
+    const result = extractAndValidateDateString(dateString, {
         ...resolvedOptions,
         minDateString: minDate,
         maxDateString: maxDate,
@@ -143,8 +156,10 @@ export const useDatePicker: UseDatePickerHookType = ({
             isValid: boolean
             warningMessage: string
             errorMessage: string
-            format: string
+            format?: string
         }
+
+    date.format = !date.format ? format : date.format
 
     const temporalCalendar = useMemo(
         () => Temporal.Calendar.from(resolvedOptions.calendar),
@@ -198,15 +213,15 @@ export const useDatePicker: UseDatePickerHookType = ({
     const calendarWeekDaysZdts = useCalendarWeekDays(firstZdtOfVisibleMonth)
 
     useEffect(() => {
-        if (dateParts === prevDateStringRef.current) {
+        if (dateString === prevDateStringRef.current) {
             return
         }
 
-        prevDateStringRef.current = dateParts
+        prevDateStringRef.current = dateString
 
-        if (!date.isValid) {
+        /*     if (!date.isValid) {
             return
-        }
+        } */
 
         const zdt = Temporal.Calendar.from(temporalCalendar)
             .dateFromFields(date)
@@ -225,7 +240,7 @@ export const useDatePicker: UseDatePickerHookType = ({
         }
     }, [
         date,
-        dateParts,
+        dateString,
         firstZdtOfVisibleMonth,
         calendarWeekDaysZdts,
         temporalCalendar,
