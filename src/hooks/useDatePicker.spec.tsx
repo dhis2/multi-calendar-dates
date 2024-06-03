@@ -291,7 +291,7 @@ describe('useDatePicker hook', () => {
                 useDatePicker({ onDateSelect: jest.fn(), date, options })
             )
             const matches = getDayByDate(result.current.calendarWeekDays, date)
-            expect(matches[0]?.isToday).toEqual(true)
+            expect(matches[0].isToday).toEqual(true)
             expect(matches.length).toEqual(1)
         })
 

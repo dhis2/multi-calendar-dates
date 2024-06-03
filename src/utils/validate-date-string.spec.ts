@@ -1,4 +1,3 @@
-import { Temporal } from '@js-temporal/polyfill'
 import { validateDateString } from './validate-date-string'
 
 describe('validateDateString (gregory)', () => {

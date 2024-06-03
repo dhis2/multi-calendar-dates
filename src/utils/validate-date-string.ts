@@ -63,6 +63,9 @@ export function validateDateString(
 
     try {
         // Will throw if the format of the date is incorrect
+        if (!dateString) {
+            throw new Error(`Date is not given`)
+        }
         const dateParts = extractDatePartsFromDateString(dateString)
 
         if (resolvedCalendar.toString() === 'nepali') {
@@ -71,7 +74,7 @@ export function validateDateString(
                 dateParts.month,
                 dateParts.day
             )
-            console.log(isValid, 'isValid')
+
             if (!isValid) {
                 throw new Error(errorMessage)
             }
@@ -126,7 +129,7 @@ export function validateDateString(
             warningMessage,
         }
     } catch (e) {
-        //console.warn(e)
+        console.warn(e)
         return {
             isValid: false,
             errorMessage: (e as Error).message,
