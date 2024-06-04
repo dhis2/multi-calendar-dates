@@ -11,11 +11,15 @@ export function extractDatePartsFromDateString(dateString: string) {
 
     if (parts[1]) {
         // Match for YYYY-MM-DD
-        [, yearStr, , monthStr, , dayStr] = parts
+        yearStr = parts[1]
+        monthStr = parts[3]
+        dayStr = parts[5]
         format = 'YYYY-MM-DD'
     } else {
         // Match for DD-MM-YYYY
-        [, , , , , , dayStr, , monthStr, , yearStr] = parts
+        dayStr = parts[6]
+        monthStr = parts[8]
+        yearStr = parts[10]
         format = 'DD-MM-YYYY'
     }
 

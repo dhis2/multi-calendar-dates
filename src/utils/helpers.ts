@@ -1,5 +1,9 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { customCalendars, CustomCalendarTypes } from '../custom-calendars'
+import { PickerOptions } from '../types'
+import { extractDatePartsFromDateString } from './extract-date-parts-from-date-string'
+import getNowInCalendar from './getNowInCalendar'
+import { validateDateString } from './validate-date-string'
 
 export const isCustomCalendar = (calendar: Temporal.CalendarLike) =>
     !!customCalendars[calendar as CustomCalendarTypes]
@@ -9,7 +13,7 @@ export const padWithZeroes = (number: number, count = 2) =>
 
 type DayType = 'endOfMonth' | 'startOfMonth'
 
-export const formatYyyyMmDD = (
+export const formatDate = (
     date: Temporal.PlainDate | Temporal.ZonedDateTime,
     dayType?: DayType,
     format?: string
@@ -56,4 +60,85 @@ export const getCustomCalendarIfExists = (
     }
 
     return customCalendar
+}
+
+export const extractAndValidateDateString = (
+    date: string,
+    options: PickerOptions & {
+        minDateString?: string
+        maxDateString?: string
+        validation?: string
+    }
+): Temporal.PlainDateLike & {
+    isValid: boolean
+    warningMessage?: string
+    errorMessage?: string
+} => {
+    if (!date) {
+        return getCurrentDateResult(options)
+    }
+
+    const validation = validateDateString(date, options)
+    if (validation.isValid) {
+        return getValidDateResult(date, validation, options)
+    } else {
+        return getInvalidDateResult(options, validation.errorMessage)
+    }
+}
+
+const getCurrentDateResult = (options: PickerOptions) => {
+    const { year, month, day } = getNowInCalendar(
+        options.calendar,
+        options.timeZone
+    )
+    return { year, month, day, isValid: true }
+}
+
+const getValidDateResult = (
+    date: string,
+    validation: {
+        isValid: boolean
+        warningMessage?: string
+        errorMessage?: string
+    },
+    options: PickerOptions
+) => {
+    const { year, month, day, format } = extractDatePartsFromDateString(date)
+    let result = {
+        year,
+        month,
+        day,
+        format,
+        isValid: validation.isValid,
+        warningMessage: validation.warningMessage,
+        errorMessage: validation.errorMessage,
+    } as Temporal.PlainDateLike & {
+        isValid: boolean
+        warningMessage?: string
+        errorMessage?: string
+    }
+
+    if (options.calendar === 'ethiopic') {
+        result = adjustForEthiopicCalendar(result)
+    }
+
+    return result
+}
+
+const getInvalidDateResult = (
+    options: PickerOptions,
+    errorMessage?: string
+) => {
+    const { year, month, day } = getNowInCalendar(
+        options.calendar,
+        options.timeZone
+    )
+    return { year, month, day, isValid: false, errorMessage }
+}
+
+const adjustForEthiopicCalendar = (result: any) => {
+    result.era = 'era1'
+    result.eraYear = result.year
+    delete result.year
+    return result
 }

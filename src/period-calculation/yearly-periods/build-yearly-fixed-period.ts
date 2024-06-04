@@ -2,7 +2,7 @@ import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
 import {
     fromAnyDate,
-    formatYyyyMmDD,
+    formatDate,
     isCustomCalendar,
 } from '../../utils/index'
 import localisationHelpers from '../../utils/localisationHelpers'
@@ -47,8 +47,8 @@ const buildYearlyFixedPeriod: BuildYearlyFixedPeriod = ({
         iso: value,
         name,
         displayName: name,
-        startDate: formatYyyyMmDD(startDate, 'startOfMonth'),
-        endDate: formatYyyyMmDD(endDate, 'endOfMonth'),
+        startDate: formatDate(startDate, 'startOfMonth'),
+        endDate: formatDate(endDate, 'endOfMonth'),
     }
 }
 

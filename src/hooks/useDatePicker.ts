@@ -3,8 +3,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
 import { getNowInCalendar } from '../index'
 import { PickerOptions, SupportedCalendar } from '../types'
-import { extractDatePartsFromDateString, validateDateString } from '../utils'
-import { formatYyyyMmDD, getCustomCalendarIfExists } from '../utils/helpers'
+import {
+    formatDate,
+    getCustomCalendarIfExists,
+    extractAndValidateDateString,
+} from '../utils/helpers'
 import localisationHelpers from '../utils/localisationHelpers'
 import { useCalendarWeekDays } from './internal/useCalendarWeekDays'
 import {
@@ -48,73 +51,6 @@ export type UseDatePickerReturn = UseNavigationReturnType & {
 
 type UseDatePickerHookType = (options: DatePickerOptions) => UseDatePickerReturn
 
-type CustomDate = Temporal.ZonedDateTime & {
-    format?: string
-    isValid: boolean
-}
-
-const extractAndValidateDateString = (
-    date: string,
-    options: PickerOptions & {
-        minDateString?: string
-        maxDateString?: string
-        validation?: string
-    }
-) => {
-    let result: Temporal.PlainDateLike & {
-        isValid: boolean
-        warningMessage?: string
-        errorMessage?: string
-    }
-    if (!date) {
-        const { year, month, day } = getNowInCalendar(
-            options.calendar,
-            options.timeZone
-        )
-
-        result = { year, month, day, isValid: true }
-        return result
-    }
-    const { isValid, warningMessage, errorMessage } = validateDateString(
-        date,
-        options
-    )
-    if (isValid) {
-        const { year, month, day, format } =
-            extractDatePartsFromDateString(date)
-        result = {
-            year,
-            month,
-            day,
-            format,
-            isValid,
-            warningMessage,
-            errorMessage,
-        } as Temporal.PlainDateLike & {
-            isValid: boolean
-            warningMessage: string
-            errorMessage: string
-        }
-    } else {
-        const { year, month, day } = getNowInCalendar(
-            options.calendar,
-            options.timeZone
-        )
-
-        result = { year, month, day, isValid: false, errorMessage }
-    }
-
-    // for ethiopic, we need to make sure it's the correct era
-    // there is a discussion in the Temporal proposal whether this
-    // should be made the default era, for now this is a workaround
-    if (options.calendar === 'ethiopic') {
-        result.era = 'era1'
-        result.eraYear = result.year
-        delete result.year
-    }
-
-    return result
-}
 export const useDatePicker: UseDatePickerHookType = ({
     onDateSelect,
     date: dateString,
@@ -205,7 +141,7 @@ export const useDatePicker: UseDatePickerHookType = ({
         (zdt: Temporal.ZonedDateTime) => {
             onDateSelect({
                 calendarDate: zdt,
-                calendarDateString: formatYyyyMmDD(zdt, undefined, date.format),
+                calendarDateString: formatDate(zdt, undefined, date.format),
             })
         },
         [onDateSelect, date.format]
@@ -219,9 +155,9 @@ export const useDatePicker: UseDatePickerHookType = ({
 
         prevDateStringRef.current = dateString
 
-        /*     if (!date.isValid) {
+        if (!dateString) {
             return
-        } */
+        }
 
         const zdt = Temporal.Calendar.from(temporalCalendar)
             .dateFromFields(date)
@@ -250,11 +186,7 @@ export const useDatePicker: UseDatePickerHookType = ({
         calendarWeekDays: calendarWeekDaysZdts.map((week) =>
             week.map((weekDayZdt) => ({
                 zdt: weekDayZdt,
-                calendarDate: formatYyyyMmDD(
-                    weekDayZdt,
-                    undefined,
-                    date.format
-                ),
+                calendarDate: formatDate(weekDayZdt, undefined, date.format),
                 label: localisationHelpers.localiseWeekLabel(
                     weekDayZdt.withCalendar(localeOptions.calendar),
                     localeOptions
