@@ -1,10 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
-import {
-    fromAnyDate,
-    formatDate,
-    isCustomCalendar,
-} from '../../utils/index'
+import { fromAnyDate, formatDate, isCustomCalendar } from '../../utils/index'
 import localisationHelpers from '../../utils/localisationHelpers'
 import { financialYearFixedPeriodTypes } from '../period-type-groups'
 import { FixedPeriod, PeriodType } from '../types'

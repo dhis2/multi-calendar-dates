@@ -13,6 +13,13 @@ export const padWithZeroes = (number: number, count = 2) =>
 
 type DayType = 'endOfMonth' | 'startOfMonth'
 
+type customDate = Temporal.PlainDateLike & {
+    isValid: boolean
+    warningMessage?: string
+    errorMessage?: string
+    format?: string
+}
+
 export const formatDate = (
     date: Temporal.PlainDate | Temporal.ZonedDateTime,
     dayType?: DayType,
@@ -104,7 +111,7 @@ const getValidDateResult = (
     options: PickerOptions
 ) => {
     const { year, month, day, format } = extractDatePartsFromDateString(date)
-    let result = {
+    let result: customDate = {
         year,
         month,
         day,
@@ -112,10 +119,6 @@ const getValidDateResult = (
         isValid: validation.isValid,
         warningMessage: validation.warningMessage,
         errorMessage: validation.errorMessage,
-    } as Temporal.PlainDateLike & {
-        isValid: boolean
-        warningMessage?: string
-        errorMessage?: string
     }
 
     if (options.calendar === 'ethiopic') {
@@ -136,7 +139,7 @@ const getInvalidDateResult = (
     return { year, month, day, isValid: false, errorMessage }
 }
 
-const adjustForEthiopicCalendar = (result: any) => {
+const adjustForEthiopicCalendar = (result: customDate) => {
     result.era = 'era1'
     result.eraYear = result.year
     delete result.year
