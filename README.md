@@ -1,3 +1,6 @@
+[![codecov](https://codecov.io/github/dhis2/multi-calendar-dates/graph/badge.svg?token=VZBHOLXYP1)](https://codecov.io/github/dhis2/multi-calendar-dates)
+
+
 # multi-calendar-engine
 
 This library is used to work with dates in multiple calendrical system (i.e.

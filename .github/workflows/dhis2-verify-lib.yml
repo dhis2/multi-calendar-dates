@@ -99,7 +99,10 @@ jobs:
                   key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
 
             - name: Test
-              run: yarn test && yarn cucumber --tags 'not @draft'
+              run: yarn test --coverage && yarn cucumber --tags 'not @draft'
+
+            - name: Upload coverage to Codecov
+              uses: codecov/codecov-action@v3
 
     publish:
         runs-on: ubuntu-latest
