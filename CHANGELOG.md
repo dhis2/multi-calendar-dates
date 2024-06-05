@@ -1,3 +1,18 @@
+# [1.0.0-alpha.25](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.24...v1.0.0-alpha.25) (2024-05-27)
+
+
+### Features
+
+* expose methods for converting between iso8601 and calendars ([#37](https://github.com/dhis2/multi-calendar-dates/issues/37)) ([33fa25d](https://github.com/dhis2/multi-calendar-dates/commit/33fa25d30e9b0f5fe45e2174e18d41bc4cd7c058))
+
+# [1.0.0-alpha.24](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.23...v1.0.0-alpha.24) (2024-05-15)
+
+
+### Features
+
+* expose function to convert dates ([622f0eb](https://github.com/dhis2/multi-calendar-dates/commit/622f0ebb5aa9952866127feb140a50639669975d))
+* expose function to convert dates ([9d42640](https://github.com/dhis2/multi-calendar-dates/commit/9d426408e06f7f2d04025edc267559edb8f73768))
+
 # [1.0.0-alpha.23](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.22...v1.0.0-alpha.23) (2024-02-26)
 
 
