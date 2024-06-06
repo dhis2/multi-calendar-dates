@@ -1,6 +1,5 @@
 [![codecov](https://codecov.io/github/dhis2/multi-calendar-dates/graph/badge.svg?token=VZBHOLXYP1)](https://codecov.io/github/dhis2/multi-calendar-dates)
 
-
 # multi-calendar-engine
 
 This library is used to work with dates in multiple calendrical system (i.e.
@@ -257,10 +256,10 @@ type FixedPeriod = {
 
 -   `id` (and `iso`) are the same right now, and return a period identifier,
     i.e. `2015Q1` (quarter one of the year 2015) or `2015SunW1` (the first week
-    - starting Sunday - of the year 2015). The full list of values are
-    documented in
-    [periodValues](https://github.com/dhis2/multi-calendar-dates/blob/main/features/fixed-periods.ethiopic.feature)
-    in the feature files.
+    -   starting Sunday - of the year 2015). The full list of values are
+        documented in
+        [periodValues](https://github.com/dhis2/multi-calendar-dates/blob/main/features/fixed-periods.ethiopic.feature)
+        in the feature files.
 
 > please use `id` to identify the period. `iso` was added for backwards
 > compatibility with existing implementations
@@ -321,27 +320,29 @@ underlying iso8601 (gregory) date.
 
 ## `createFixedPeriodFromPeriodId`
 
-* [API](#createFixedPeriodFromPeriodId-api)
-* [Examples](#createFixedPeriodFromPeriodId-examples)
+-   [API](#createFixedPeriodFromPeriodId-api)
+-   [Examples](#createFixedPeriodFromPeriodId-examples)
 
 <a name="createFixedPeriodFromPeriodId-api"></a>
+
 ### API
 
 #### Arguments
 
 The function expects an options object with the following properties:
 
-| Option | type | Required | Default value | Description |
-|-|-|-|-|-|
-| `periodId` | `string` | yes | - | A period id, e.g. `2020` or `2020April` |
-| `calendar` | `SupportedCalendar` | yes | - | A calendar sytem, e.g. `gregory` or `ethiopic` |
-| `locale` | `string` | no | `"en"` | A language locale for the displayed labels |
+| Option     | type                | Required | Default value | Description                                    |
+| ---------- | ------------------- | -------- | ------------- | ---------------------------------------------- |
+| `periodId` | `string`            | yes      | -             | A period id, e.g. `2020` or `2020April`        |
+| `calendar` | `SupportedCalendar` | yes      | -             | A calendar sytem, e.g. `gregory` or `ethiopic` |
+| `locale`   | `string`            | no       | `"en"`        | A language locale for the displayed labels     |
 
 #### Return value
 
 Returns a `FixedPeriod` whos `id` equals the provided `periodId`, see `src/period-calculation/types.ts`
 
 <a name="createFixedPeriodFromPeriodId-examples"></a>
+
 ### Examples
 
 ```ts
@@ -367,28 +368,30 @@ will return:
 
 ## `getAdjacentFixedPeriods`
 
-* [API](#getAdjacentFixedPeriods-api)
-* [Examples](#getAdjacentFixedPeriods-examples)
+-   [API](#getAdjacentFixedPeriods-api)
+-   [Examples](#getAdjacentFixedPeriods-examples)
 
 <a name="getAdjacentFixedPeriods-api"></a>
+
 ### API
 
 #### Arguments
 
 The function expects an options object with the following properties:
 
-| Option | Type | Required | Default value | Description |
-|-|-|-|-|-|
-| `period` | `FixedPeriod` | yes | - | A period id, e.g. `2020` or `2020April` |
-| `calendar` | `SupportedCalendar` | yes | - | A calendar sytem, e.g. `gregory` or `ethiopic` |
-| `steps` | `integer` | no | `1` | Amount of adjacent fixed period forward/backward, can be negative |
-| `locale` | `string` | no | `"en"` | A language locale for the displayed labels |
+| Option     | Type                | Required | Default value | Description                                                       |
+| ---------- | ------------------- | -------- | ------------- | ----------------------------------------------------------------- |
+| `period`   | `FixedPeriod`       | yes      | -             | A period id, e.g. `2020` or `2020April`                           |
+| `calendar` | `SupportedCalendar` | yes      | -             | A calendar sytem, e.g. `gregory` or `ethiopic`                    |
+| `steps`    | `integer`           | no       | `1`           | Amount of adjacent fixed period forward/backward, can be negative |
+| `locale`   | `string`            | no       | `"en"`        | A language locale for the displayed labels                        |
 
 #### Return value
 
 Returns a collection with fixed periods, see `src/period-calculation/types.ts`
 
 <a name="getAdjacentFixedPeriods-examples"></a>
+
 ### Examples
 
 **With `steps: 1` (default):**
@@ -435,7 +438,7 @@ getAdjacentFixedPeriods({
 will return:
 
 ```ts
-[
+;[
     {
         periodType: 'DAILY',
         name: '2022-12-31',
@@ -474,7 +477,7 @@ getAdjacentFixedPeriods({
 will return:
 
 ```ts
-[
+;[
     {
         periodType: 'DAILY',
         name: '2022-12-30',
@@ -507,29 +510,31 @@ will return:
 
 ## `getFixedPeriodByDate`
 
-* [API](#getFixedPeriodByDate-api)
-* [Examples](#getFixedPeriodByDate-examples)
+-   [API](#getFixedPeriodByDate-api)
+-   [Examples](#getFixedPeriodByDate-examples)
 
 <a name="getFixedPeriodByDate-api"></a>
+
 ### API
 
 #### Arguments
 
 The function expects an options object with the following properties:
 
-| Option | Type | Required | Default value | Description |
-|-|-|-|-|-|
-| `periodType` | `PeriodType` | yes | - | E.g. `'YEARLY'` (see
-`src/period-calculation/period-types.ts`) |
-| `calendar` | `SupportedCalendar` | yes | - | A calendar sytem, e.g. `gregory` or `ethiopic` |
-| `date` | `string` | yes | - | E.g. `'2020-10-04'` |
-| `locale` | `string` | no | `"en"` | A language locale for the displayed labels |
+| Option                                    | Type                | Required | Default value | Description                                    |
+| ----------------------------------------- | ------------------- | -------- | ------------- | ---------------------------------------------- |
+| `periodType`                              | `PeriodType`        | yes      | -             | E.g. `'YEARLY'` (see                           |
+| `src/period-calculation/period-types.ts`) |
+| `calendar`                                | `SupportedCalendar` | yes      | -             | A calendar sytem, e.g. `gregory` or `ethiopic` |
+| `date`                                    | `string`            | yes      | -             | E.g. `'2020-10-04'`                            |
+| `locale`                                  | `string`            | no       | `"en"`        | A language locale for the displayed labels     |
 
 #### Return value
 
 Returns a fixed period, see `src/period-calculation/types.ts`
 
 <a name="getFixedPeriodByDate-examples"></a>
+
 ### Examples
 
 ```ts
