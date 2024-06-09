@@ -269,7 +269,7 @@ it('should convert a Nepali date to gregorian', () => {
     const result = convertToIso8601('2081-02-10', 'nepali')
     expect(result).toMatchObject({ year: 2024, month: 5, day: 23 })
 })
- it('should convert an ethiopic date to gregorian', () => {
+it('should convert an ethiopic date to gregorian', () => {
     const result = convertToIso8601('2016-09-15', 'ethiopic')
     expect(result).toMatchObject({ year: 2024, month: 5, day: 23 })
 })
@@ -285,7 +285,6 @@ it('should accept a date object instead of a string', () => {
     expect(result).toMatchObject({ year: 2024, month: 5, day: 23 })
 })
 ```
-
 
 ### Types
 
