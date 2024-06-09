@@ -1,3 +1,10 @@
+# [1.0.0-alpha.26](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.25...v1.0.0-alpha.26) (2024-06-09)
+
+
+### Features
+
+* support min & max date, DD-MM-YYYY date format  ([#36](https://github.com/dhis2/multi-calendar-dates/issues/36)) ([3b2e57e](https://github.com/dhis2/multi-calendar-dates/commit/3b2e57e7bc1bb3326ab83662c7eaac8e6447be41))
+
 # [1.0.0-alpha.25](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.24...v1.0.0-alpha.25) (2024-05-27)
 
 
