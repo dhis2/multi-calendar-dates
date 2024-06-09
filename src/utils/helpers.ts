@@ -1,5 +1,9 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { customCalendars, CustomCalendarTypes } from '../custom-calendars'
+import { PickerOptions } from '../types'
+import { extractDatePartsFromDateString } from './extract-date-parts-from-date-string'
+import getNowInCalendar from './getNowInCalendar'
+import { validateDateString } from './validate-date-string'
 
 export const isCustomCalendar = (calendar: Temporal.CalendarLike) =>
     !!customCalendars[calendar as CustomCalendarTypes]
@@ -9,14 +13,21 @@ export const padWithZeroes = (number: number, count = 2) =>
 
 type DayType = 'endOfMonth' | 'startOfMonth'
 
-export const formatYyyyMmDD = (
+type customDate = Temporal.PlainDateLike & {
+    isValid: boolean
+    warningMessage?: string
+    errorMessage?: string
+    format?: string
+}
+
+export const formatDate = (
     date: Temporal.PlainDate | Temporal.ZonedDateTime,
-    dayType?: DayType
+    dayType?: DayType,
+    format?: string
 ) => {
     const year = date.eraYear ?? date.year
     const month = padWithZeroes(date.month)
     let day = date.day
-
     if (dayType === 'endOfMonth') {
         day = date.daysInMonth
     } else if (dayType === 'startOfMonth') {
@@ -25,7 +36,9 @@ export const formatYyyyMmDD = (
 
     const dayString = padWithZeroes(day)
 
-    return `${year}-${month}-${dayString}`
+    return format === 'DD-MM-YYYY'
+        ? `${dayString}-${month}-${year}`
+        : `${year}-${month}-${dayString}`
 }
 
 // capitalize method taking into account locales that have different way of lower/upper case
@@ -54,4 +67,81 @@ export const getCustomCalendarIfExists = (
     }
 
     return customCalendar
+}
+
+export const extractAndValidateDateString = (
+    date: string,
+    options: PickerOptions & {
+        minDateString?: string
+        maxDateString?: string
+        validation?: string
+    }
+): Temporal.PlainDateLike & {
+    isValid: boolean
+    warningMessage?: string
+    errorMessage?: string
+} => {
+    if (!date) {
+        return getCurrentDateResult(options)
+    }
+
+    const validation = validateDateString(date, options)
+    if (validation.isValid) {
+        return getValidDateResult(date, validation, options)
+    } else {
+        return getInvalidDateResult(options, validation.errorMessage)
+    }
+}
+
+const getCurrentDateResult = (options: PickerOptions) => {
+    const { year, month, day } = getNowInCalendar(
+        options.calendar,
+        options.timeZone
+    )
+    return { year, month, day, isValid: true }
+}
+
+const getValidDateResult = (
+    date: string,
+    validation: {
+        isValid: boolean
+        warningMessage?: string
+        errorMessage?: string
+    },
+    options: PickerOptions
+) => {
+    const { year, month, day, format } = extractDatePartsFromDateString(date)
+    let result: customDate = {
+        year,
+        month,
+        day,
+        format,
+        isValid: validation.isValid,
+        warningMessage: validation.warningMessage,
+        errorMessage: validation.errorMessage,
+    }
+
+    if (options.calendar === 'ethiopic') {
+        result = adjustForEthiopicCalendar(result)
+    }
+
+    return result
+}
+
+const getInvalidDateResult = (
+    options: PickerOptions,
+    errorMessage?: string
+) => {
+    const { year, month, day } = getNowInCalendar(
+        options.calendar,
+        options.timeZone
+    )
+    return { year, month, day, isValid: false, errorMessage }
+}
+
+const adjustForEthiopicCalendar = (result: customDate) => {
+    result.era = 'era1'
+    result.eraYear = result.year
+    delete result.year
+    return result
 }

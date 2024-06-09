@@ -1,6 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
-import { formatYyyyMmDD, localisationHelpers } from '../../utils/index'
+import { formatDate, localisationHelpers } from '../../utils/index'
 import { FixedPeriod } from '../types'
 
 const { localiseDateLabel } = localisationHelpers
@@ -31,9 +31,9 @@ const buildDailyFixedPeriod: BuildDailyFixedPeriod = ({
         id: value,
         iso: value,
         displayName,
-        name: formatYyyyMmDD(date),
-        startDate: formatYyyyMmDD(date),
-        endDate: formatYyyyMmDD(date),
+        name: formatDate(date),
+        startDate: formatDate(date),
+        endDate: formatDate(date),
     }
 }
 

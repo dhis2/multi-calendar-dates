@@ -7,7 +7,11 @@ describe('getting Now', () => {
     })
     it('should get today date in Gregorian', () => {
         const { day, month, year } = getNowInCalendar('gregory', 'UTC')
-        expect({ day, month, year }).toEqual({ day: 13, month: 10, year: 2021 })
+        expect({ day, month, year }).toEqual({
+            day: 13,
+            month: 10,
+            year: 2021,
+        })
     })
     it('should get today date in Ethiopic', () => {
         const {

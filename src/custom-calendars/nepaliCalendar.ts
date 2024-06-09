@@ -1,7 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { NEPALI_CALENDAR_DATA } from './nepaliCalendarData'
 type CalendarYMD = { year: number; month: number; day: number }
-type AssignmentOptions = { overflow?: 'constrain' | 'reject' }
 
 /**
  * https://tc39.es/proposal-temporal/docs/calendar.html
@@ -65,10 +64,7 @@ class NepaliCalendar extends Temporal.Calendar {
      *
      * A custom implementation of these methods is used to convert the calendar-space arguments to the ISO calendar.
      */
-    dateFromFields(
-        fields: CalendarYMD,
-        options?: AssignmentOptions
-    ): Temporal.PlainDate {
+    dateFromFields(fields: CalendarYMD): Temporal.PlainDate {
         const { year, day, month } = _nepaliToIso({
             year: fields.year,
             month: fields.month,
@@ -76,10 +72,7 @@ class NepaliCalendar extends Temporal.Calendar {
         })
         return new Temporal.PlainDate(year, month, day, this)
     }
-    yearMonthFromFields(
-        fields: CalendarYMD,
-        options?: AssignmentOptions
-    ): Temporal.PlainYearMonth {
+    yearMonthFromFields(fields: CalendarYMD): Temporal.PlainYearMonth {
         const { year, day, month } = _nepaliToIso({
             year: fields.year,
             month: fields.month,
@@ -87,10 +80,7 @@ class NepaliCalendar extends Temporal.Calendar {
         })
         return new Temporal.PlainYearMonth(year, month, this, day)
     }
-    monthDayFromFields(
-        fields: CalendarYMD,
-        options?: AssignmentOptions
-    ): Temporal.PlainMonthDay {
+    monthDayFromFields(fields: CalendarYMD): Temporal.PlainMonthDay {
         const { year, day, month } = _nepaliToIso({
             year: fields.year,
             month: fields.month,

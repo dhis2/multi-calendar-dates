@@ -6,7 +6,7 @@ import {
     CustomCalendarTypes,
 } from '../custom-calendars'
 import { PickerOptions, SupportedCalendar } from '../types'
-import { formatYyyyMmDD, isCustomCalendar } from './helpers'
+import { formatDate, isCustomCalendar } from './helpers'
 
 const getCustomCalendarLocale = (
     calendar: Temporal.CalendarLike,
@@ -60,7 +60,7 @@ const localiseDateLabel: LocaliseDateLabel = (
             : selectedDateZdt
 
     return isCustom
-        ? formatYyyyMmDD(selectedDateZdt)
+        ? formatDate(selectedDateZdt)
         : nonCustomDate
               .toLocaleString(localeOptions.locale, {
                   calendar: localeOptions.calendar,
