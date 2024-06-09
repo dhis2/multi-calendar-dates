@@ -106,7 +106,7 @@ export const useDatePicker: UseDatePickerHookType = ({
         [resolvedOptions]
     )
 
-    const selectedDateZdt = date.isValid
+    const selectedDateZdt = dateString
         ? Temporal.Calendar.from(temporalCalendar)
               .dateFromFields(date)
               .toZonedDateTime({
@@ -154,10 +154,6 @@ export const useDatePicker: UseDatePickerHookType = ({
         }
 
         prevDateStringRef.current = dateString
-
-        if (!dateString) {
-            return
-        }
 
         const zdt = Temporal.Calendar.from(temporalCalendar)
             .dateFromFields(date)
