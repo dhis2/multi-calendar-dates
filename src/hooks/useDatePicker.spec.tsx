@@ -620,3 +620,128 @@ it('should generate the correct calendar weeks when passed "Ethiopian" rather th
         ['27', '28', '29', '30', '1', '2', '3'],
     ])
 })
+
+describe('validation rules', () => {
+    it('should validate correct format', () => {
+        const onDateSelect = jest.fn()
+        const date = '2015-'
+        const options = {}
+        const renderedHook = renderHook(() =>
+            useDatePicker({ onDateSelect, date, options })
+        )
+        const result = renderedHook.result?.current as UseDatePickerReturn
+
+        expect(result.isValid).toEqual(false)
+    })
+    it('should validate min date for yyyy-mm-dd format', () => {
+        const onDateSelect = jest.fn()
+        const date = '2015-06-27'
+        const options = {}
+        const minDate = '2015-06-28'
+
+        const renderedHook = renderHook(() =>
+            useDatePicker({ onDateSelect, date, options, minDate })
+        )
+        const result = renderedHook.result?.current as UseDatePickerReturn
+
+        expect(result.isValid).toEqual(false)
+    })
+
+    it('should validate max date for yyyy-mm-dd format', () => {
+        const onDateSelect = jest.fn()
+        const date = '2018-06-29'
+        const options = {}
+        //const minDate = '2015-06-28'
+        const maxDate = '2018-06-28'
+        const renderedHook = renderHook(() =>
+            useDatePicker({ onDateSelect, date, options, maxDate })
+        )
+        const result = renderedHook.result?.current as UseDatePickerReturn
+
+        expect(result.isValid).toEqual(false)
+    })
+
+    it('should validate min date for dd-mm-yyyy format', () => {
+        const onDateSelect = jest.fn()
+        const date = '27-06-2015'
+        const options = {}
+        const minDate = '28-06-2015'
+        //const maxDate = '2018-06-28'
+        const renderedHook = renderHook(() =>
+            useDatePicker({ onDateSelect, date, options, minDate })
+        )
+        const result = renderedHook.result?.current as UseDatePickerReturn
+
+        expect(result.isValid).toEqual(false)
+    })
+
+    it('should validate max date for dd-mm-yyyy format', () => {
+        const onDateSelect = jest.fn()
+        const date = '29-06-2018'
+        const options = {
+            locale: 'ar-EG',
+            calendar: 'islamic-civil' as const,
+            timeZone: 'Africa/Khartoum',
+            weekDayFormat: 'long' as const,
+        }
+        //const minDate = '2015-06-28'
+        const maxDate = '28-06-2018'
+        const renderedHook = renderHook(() =>
+            useDatePicker({ onDateSelect, date, options, maxDate })
+        )
+        const result = renderedHook.result?.current as UseDatePickerReturn
+
+        expect(result.isValid).toEqual(false)
+    })
+
+    it('should validate min date for an Ethiopic calendar in Amharic', () => {
+        const onDateSelect = jest.fn()
+        const date = '2015-01-22'
+        const options = {
+            locale: 'am-ET',
+            calendar: 'ethiopic' as const,
+            timeZone: 'Africa/Khartoum',
+            weekDayFormat: 'long' as const,
+        }
+        const minDate = '2015-01-23'
+        const renderedHook = renderHook(() =>
+            useDatePicker({ onDateSelect, date, options, minDate })
+        )
+
+        const result = renderedHook?.result?.current as UseDatePickerReturn
+
+        expect(result.isValid).toEqual(false)
+    })
+
+    it('should validate max date for an Ethiopic calendar in Amharic', () => {
+        const onDateSelect = jest.fn()
+        const date = '2015-01-37'
+        const options = {
+            locale: 'am-ET',
+            calendar: 'ethiopic' as const,
+            timeZone: 'Africa/Khartoum',
+            weekDayFormat: 'long' as const,
+        }
+        const maxDate = '20-01-2015'
+        const renderedHook = renderHook(() =>
+            useDatePicker({ onDateSelect, date, options, maxDate })
+        )
+
+        const result = renderedHook?.result?.current as UseDatePickerReturn
+        expect(result.isValid).toEqual(false)
+    })
+
+    it('should validate max & min date for different formats', () => {
+        const onDateSelect = jest.fn()
+        const date = '29-06-2018'
+        const options = {}
+        const minDate = '2018-06-28'
+        const maxDate = '30-06-2018'
+        const renderedHook = renderHook(() =>
+            useDatePicker({ onDateSelect, date, options, minDate, maxDate })
+        )
+        const result = renderedHook.result?.current as UseDatePickerReturn
+
+        expect(result.isValid).toEqual(true)
+    })
+})
