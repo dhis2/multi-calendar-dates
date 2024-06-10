@@ -731,6 +731,41 @@ describe('validation rules', () => {
         expect(result.isValid).toEqual(false)
     })
 
+    it('should validate min date for an Nepali calendar', () => {
+        const onDateSelect = jest.fn()
+        const date = '2079-01-12'
+        const options = {
+            locale: 'ne-NP',
+            calendar: 'nepali' as const,
+            timeZone: 'Africa/Khartoum',
+        }
+        const minDate = '2079-01-12'
+        const renderedHook = renderHook(() =>
+            useDatePicker({ onDateSelect, date, options, minDate })
+        )
+
+        const result = renderedHook?.result?.current as UseDatePickerReturn
+
+        expect(result.isValid).toEqual(true)
+    })
+
+    it('should validate max date for an Ethiopic calendar in Amharic', () => {
+        const onDateSelect = jest.fn()
+        const date = '2079-01-12'
+        const options = {
+            locale: 'ne-NP',
+            calendar: 'nepali' as const,
+            timeZone: 'Africa/Khartoum',
+        }
+        const maxDate = '11-1-2079'
+        const renderedHook = renderHook(() =>
+            useDatePicker({ onDateSelect, date, options, maxDate })
+        )
+
+        const result = renderedHook?.result?.current as UseDatePickerReturn
+        expect(result.isValid).toEqual(false)
+    })
+
     it('should validate max & min date for different formats', () => {
         const onDateSelect = jest.fn()
         const date = '29-06-2018'
