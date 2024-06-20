@@ -8,6 +8,21 @@ import {
 import { PickerOptions, SupportedCalendar } from '../types'
 import { formatYyyyMmDD, isCustomCalendar } from './helpers'
 
+const getPartialLocaleMatch: (
+    locales: Record<string, CalendarCustomLocale>,
+    locale: string | undefined
+) => CalendarCustomLocale | undefined = (availableLocales, locale) => {
+    // try to see if there is a language match (even if the region doesn't match)
+    const partialLocaleMatch = Object.keys(availableLocales).find(
+        (supportedLocale) =>
+            supportedLocale.split('-')?.[0]?.toLowerCase() === locale
+    )
+
+    if (partialLocaleMatch) {
+        return availableLocales[partialLocaleMatch]
+    }
+}
+
 const getCustomCalendarLocale = (
     calendar: Temporal.CalendarLike,
     locale: string | undefined
@@ -17,9 +32,11 @@ const getCustomCalendarLocale = (
     if (!customCalendar) {
         return undefined
     }
+
     const customLocalisations = customCalendar.locales || {}
     const result =
         (locale && customLocalisations?.[locale]) ??
+        getPartialLocaleMatch(customLocalisations, locale) ??
         customLocalisations?.[customCalendar.defaultLocale]
 
     if (!result) {
