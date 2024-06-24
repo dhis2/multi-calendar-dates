@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/dhis2/multi-calendar-dates/compare/v1.1.2...v1.2.0) (2024-06-24)
+
+
+### Features
+
+* add i18n/transifex support ([7c3d3af](https://github.com/dhis2/multi-calendar-dates/commit/7c3d3afe24ff230f8dba10021c0000a9981babfb))
+
 ## [1.1.2](https://github.com/dhis2/multi-calendar-dates/compare/v1.1.1...v1.1.2) (2024-06-17)
 
 
