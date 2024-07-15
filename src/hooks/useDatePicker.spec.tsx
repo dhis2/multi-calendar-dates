@@ -407,6 +407,29 @@ describe('custom calendars', () => {
 
             expect(result.currMonth.label).toEqual('Ashadh')
         })
+        it('should default to Nepali if NE is passed as it is the case for DHIS2', () => {
+            const onDateSelect = jest.fn()
+            const date = '2079-03-32'
+            const options = {
+                locale: 'ne', // non-supported locale
+                calendar: 'nepali' as const,
+                timeZone: 'Africa/Khartoum',
+            }
+            const renderedHook = renderHook(() =>
+                useDatePicker({ onDateSelect, date, options })
+            )
+            const result = renderedHook?.result.current as UseDatePickerReturn
+
+            expect(result.weekDayLabels).toEqual([
+                'सोम',
+                'मंगल',
+                'बुध',
+                'बिही',
+                'शुक्र',
+                'शनि',
+                'आइत',
+            ])
+        })
     })
     describe('rendering Nepali (custom) day names', () => {
         it('should render Nepali with ne-NP passed', () => {
