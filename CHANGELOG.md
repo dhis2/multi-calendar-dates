@@ -1,3 +1,18 @@
+## [1.2.3](https://github.com/dhis2/multi-calendar-dates/compare/v1.2.2...v1.2.3) (2024-06-25)
+
+
+### Bug Fixes
+
+* **LIBS-629:** default 'ne' locale to Nepali script ([9cf94d7](https://github.com/dhis2/multi-calendar-dates/commit/9cf94d7121cc967491084eecc9c4d2dcd457f6a3))
+
+## [1.2.2](https://github.com/dhis2/multi-calendar-dates/compare/v1.2.1...v1.2.2) (2024-06-25)
+
+
+### Bug Fixes
+
+* initialise i18n properly ([1a28c55](https://github.com/dhis2/multi-calendar-dates/commit/1a28c550e7a89235ed309a51dc2576df9c627b61))
+* update Calendar Localization data for nepali calendar ([f172662](https://github.com/dhis2/multi-calendar-dates/commit/f172662124ce798357fc17f309b2d46042c6d071))
+
 ## [1.2.1](https://github.com/dhis2/multi-calendar-dates/compare/v1.2.0...v1.2.1) (2024-06-24)
 
 
