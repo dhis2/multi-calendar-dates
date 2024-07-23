@@ -1,0 +1,22 @@
+# 
+# Translators:
+# Ibatov <ibatovk@who.int>, 2024
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: i18next-conv\n"
+"POT-Creation-Date: 2024-06-24T08:00:25.810Z\n"
+"PO-Revision-Date: 2024-06-24 10:02+0000\n"
+"Last-Translator: Ibatov <ibatovk@who.int>, 2024\n"
+"Language-Team: Uzbek (Cyrillic) (https://app.transifex.com/hisp-uio/teams/100509/uz@Cyrl/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: uz@Cyrl\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Bi-Week"
+msgstr "Жуфт-Ҳафта"
+
+msgid "Week"
+msgstr "Ҳафта"
