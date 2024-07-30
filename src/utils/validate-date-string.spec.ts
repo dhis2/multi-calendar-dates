@@ -110,10 +110,10 @@ describe('validateDateString', () => {
         expect(validation.isValid).toBe(false)
     })
 
-    it('Should give a warning when date is less than the min date and validation is set to "warning"', () => {
+    it('Should give a warning when date is less than the min date and strictValidation is set to false', () => {
         const date = '27-06-2015'
         const minDate = '28-06-2015'
-        const options = { minDateString: minDate, validation: 'warning' }
+        const options = { minDateString: minDate, strictValidation: false }
 
         const validation = validateDateString(date, options)
         expect(validation.errorMessage).toBe('')
@@ -123,10 +123,10 @@ describe('validateDateString', () => {
         expect(validation.isValid).toBe(true)
     })
 
-    it('Should give a warning when date is greater than the max date and validation is set to "warning"', () => {
+    it('Should give a warning when date is greater than the max date and strictValidation is set to false"', () => {
         const date = '27-06-2015'
         const maxDate = '26-06-2015'
-        const options = { maxDateString: maxDate, validation: 'warning' }
+        const options = { maxDateString: maxDate, strictValidation: false }
 
         const validation = validateDateString(date, options)
         expect(validation.errorMessage).toBe('')
