@@ -74,7 +74,8 @@ export const extractAndValidateDateString = (
     options: PickerOptions & {
         minDateString?: string
         maxDateString?: string
-        validation?: string
+        strictValidation?: boolean
+        format?: 'YYYY-MM-DD' | 'DD-MM-YYYY'
     }
 ): Temporal.PlainDateLike & {
     isValid: boolean

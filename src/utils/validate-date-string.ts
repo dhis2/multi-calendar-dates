@@ -42,12 +42,14 @@ export function validateDateString(
         calendar = 'gregory',
         minDateString,
         maxDateString,
-        validation = 'error', // "error" | "warning"
+        strictValidation = true,
+        format,
     }: {
         calendar?: SupportedCalendar
         minDateString?: string
         maxDateString?: string
-        validation?: string
+        strictValidation?: boolean
+        format?: 'YYYY-MM-DD' | 'DD-MM-YYYY'
     } = {}
 ): {
     isValid: boolean
@@ -66,7 +68,7 @@ export function validateDateString(
         if (!dateString) {
             throw new Error(`Date is not given`)
         }
-        const dateParts = extractDatePartsFromDateString(dateString)
+        const dateParts = extractDatePartsFromDateString(dateString, format)
 
         if (resolvedCalendar.toString() === 'nepali') {
             const { isValid, errorMessage } = validateNepaliDate(
@@ -96,7 +98,7 @@ export function validateDateString(
             })
 
             if (Temporal.PlainDate.compare(date, minDate) < 0) {
-                if (validation === 'error') {
+                if (strictValidation) {
                     throw new Error(
                         `Date ${dateString} is less than the minimum allowed date ${minDateString}.`
                     )
@@ -114,7 +116,7 @@ export function validateDateString(
             })
 
             if (Temporal.PlainDate.compare(date, maxDate) > 0) {
-                if (validation === 'error') {
+                if (strictValidation) {
                     throw new Error(
                         `Date ${dateString} is greater than the maximum allowed date ${maxDateString}.`
                     )
