@@ -131,7 +131,6 @@ export function validateDateString(
             warningMessage,
         }
     } catch (e) {
-        console.warn(e)
         return {
             isValid: false,
             errorMessage: (e as Error).message,
