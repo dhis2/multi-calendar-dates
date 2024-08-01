@@ -1,3 +1,10 @@
+# [1.0.0-alpha.27](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.26...v1.0.0-alpha.27) (2024-08-01)
+
+
+### Bug Fixes
+
+* remove unnecessary console warn ([b2d795d](https://github.com/dhis2/multi-calendar-dates/commit/b2d795d39d4e5a6d936b10ef3f6bb46bd9ead798))
+
 # [1.0.0-alpha.26](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.25...v1.0.0-alpha.26) (2024-06-09)
 
 
