@@ -29,8 +29,8 @@ type DatePickerOptions = {
     }) => void
     minDate?: string
     maxDate?: string
-    format?: string
-    validation?: string
+    format?: 'YYYY-MM-DD' | 'DD-MM-YYYY'
+    strictValidation?: boolean
 }
 
 export type UseDatePickerReturn = UseNavigationReturnType & {
@@ -57,7 +57,7 @@ export const useDatePicker: UseDatePickerHookType = ({
     minDate,
     maxDate,
     format,
-    validation,
+    strictValidation,
     options,
 }) => {
     const calendar = getCustomCalendarIfExists(
@@ -83,7 +83,8 @@ export const useDatePicker: UseDatePickerHookType = ({
         ...resolvedOptions,
         minDateString: minDate,
         maxDateString: maxDate,
-        validation: validation,
+        strictValidation,
+        format,
     })
 
     const date = result as Temporal.YearOrEraAndEraYear &
@@ -94,8 +95,6 @@ export const useDatePicker: UseDatePickerHookType = ({
             errorMessage: string
             format?: string
         }
-
-    date.format = !date.format ? format : date.format
 
     const temporalCalendar = useMemo(
         () => Temporal.Calendar.from(resolvedOptions.calendar),
