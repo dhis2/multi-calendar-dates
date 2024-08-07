@@ -1,3 +1,11 @@
+## [1.2.4](https://github.com/dhis2/multi-calendar-dates/compare/v1.2.3...v1.2.4) (2024-08-07)
+
+
+### Bug Fixes
+
+* **translations:** sync translations from transifex (main) ([#48](https://github.com/dhis2/multi-calendar-dates/issues/48)) ([e8a30f1](https://github.com/dhis2/multi-calendar-dates/commit/e8a30f130821b105219734f33ef04b6540232c6e))
+* date conversion nepali ([#47](https://github.com/dhis2/multi-calendar-dates/issues/47)) ([9f5b3cc](https://github.com/dhis2/multi-calendar-dates/commit/9f5b3cc3dfcd94d4b566362d707c66c83b679f1f))
+
 ## [1.2.3](https://github.com/dhis2/multi-calendar-dates/compare/v1.2.2...v1.2.3) (2024-06-25)
 
 
