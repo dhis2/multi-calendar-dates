@@ -96,6 +96,8 @@ export const useDatePicker: UseDatePickerHookType = ({
             format?: string
         }
 
+    date.format = !date.format ? format : date.format
+
     const temporalCalendar = useMemo(
         () => Temporal.Calendar.from(resolvedOptions.calendar),
         [resolvedOptions.calendar]
