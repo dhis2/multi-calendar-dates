@@ -1,3 +1,10 @@
+# [1.0.0-alpha.28](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.27...v1.0.0-alpha.28) (2024-08-08)
+
+
+### Bug Fixes
+
+* format undefined when thers is a mismatch ([79b54fd](https://github.com/dhis2/multi-calendar-dates/commit/79b54fdbac8d8de1eab5e197dc65f2cb523e35cc))
+
 # [1.0.0-alpha.27](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.26...v1.0.0-alpha.27) (2024-08-01)
 
 

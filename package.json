@@ -1,6 +1,6 @@
 {
     "name": "@dhis2/multi-calendar-dates",
-    "version": "1.0.0-alpha.27",
+    "version": "1.0.0-alpha.28",
     "license": "BSD-3-Clause",
     "publishConfig": {
         "access": "public"
