@@ -50,6 +50,14 @@ export type UseDatePickerReturn = UseNavigationReturnType & {
 }
 
 type UseDatePickerHookType = (options: DatePickerOptions) => UseDatePickerReturn
+type ValidatedDate = Temporal.YearOrEraAndEraYear &
+    Temporal.MonthOrMonthCode & {
+        day: number
+        isValid: boolean
+        warningMessage: string
+        errorMessage: string
+        format?: string
+    }
 
 export const useDatePicker: UseDatePickerHookType = ({
     onDateSelect,
@@ -60,14 +68,21 @@ export const useDatePicker: UseDatePickerHookType = ({
     strictValidation,
     options,
 }) => {
-    const calendar = getCustomCalendarIfExists(
-        dhis2CalendarsMap[options.calendar ?? 'gregorian'] ?? options.calendar
-    ) as SupportedCalendar
+    const optionsWithCustomerCalendar = useMemo(() => {
+        const calendar = getCustomCalendarIfExists(
+            dhis2CalendarsMap[options.calendar ?? 'gregorian'] ??
+                options.calendar
+        ) as SupportedCalendar
+        return {
+            ...options,
+            calendar,
+        }
+    }, [options])
 
-    const resolvedOptions = useResolvedLocaleOptions({
-        ...options,
-        calendar,
-    })
+    const resolvedOptions = useResolvedLocaleOptions(
+        optionsWithCustomerCalendar
+    )
+
     const prevDateStringRef = useRef(dateString)
 
     const todayZdt = useMemo(
@@ -79,22 +94,24 @@ export const useDatePicker: UseDatePickerHookType = ({
         [resolvedOptions]
     )
 
-    const result = extractAndValidateDateString(dateString, {
-        ...resolvedOptions,
-        minDateString: minDate,
-        maxDateString: maxDate,
-        strictValidation,
-        format,
-    })
-
-    const date = result as Temporal.YearOrEraAndEraYear &
-        Temporal.MonthOrMonthCode & {
-            day: number
-            isValid: boolean
-            warningMessage: string
-            errorMessage: string
-            format?: string
-        }
+    const date = useMemo(
+        () =>
+            extractAndValidateDateString(dateString, {
+                ...resolvedOptions,
+                minDateString: minDate,
+                maxDateString: maxDate,
+                strictValidation,
+                format,
+            }) as ValidatedDate,
+        [
+            minDate,
+            maxDate,
+            strictValidation,
+            format,
+            resolvedOptions,
+            dateString,
+        ]
+    )
 
     date.format = !date.format ? format : date.format
 
@@ -104,7 +121,7 @@ export const useDatePicker: UseDatePickerHookType = ({
     )
     const temporalTimeZone = useMemo(
         () => Temporal.TimeZone.from(resolvedOptions.timeZone),
-        [resolvedOptions]
+        [resolvedOptions.timeZone]
     )
 
     const selectedDateZdt = dateString
