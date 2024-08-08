@@ -1,3 +1,10 @@
+# [1.0.0-alpha.29](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.28...v1.0.0-alpha.29) (2024-08-08)
+
+
+### Features
+
+* reararnge memorized variables so that we only recompute them when necessary ([b754dcc](https://github.com/dhis2/multi-calendar-dates/commit/b754dcc4c3c8f0aecb06836b0c3915af1b2af6d5))
+
 # [1.0.0-alpha.28](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.27...v1.0.0-alpha.28) (2024-08-08)
 
 
