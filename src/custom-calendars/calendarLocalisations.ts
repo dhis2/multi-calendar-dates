@@ -73,6 +73,7 @@ const calendarLocalisations: {
                 '२९',
                 '३०',
                 '३१',
+                '३२',
             ],
         },
         'en-NP': {
