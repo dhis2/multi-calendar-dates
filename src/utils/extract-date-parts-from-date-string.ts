@@ -1,3 +1,4 @@
+import i18n from '@dhis2/d2-i18n'
 import { dateStringRegExp } from './date-string-regexp'
 
 export function extractDatePartsFromDateString(
@@ -7,7 +8,11 @@ export function extractDatePartsFromDateString(
     const parts = dateString.match(dateStringRegExp)
 
     if (!parts) {
-        throw new Error(`Date string is invalid, received "${dateString}"`)
+        throw new Error(
+            i18n.t(`Date string is invalid, received "{{dateString}}"`, {
+                dateString,
+            })
+        )
     }
 
     let yearStr, monthStr, dayStr, detectedFormat
@@ -28,7 +33,10 @@ export function extractDatePartsFromDateString(
 
     if (format && detectedFormat !== format.toUpperCase()) {
         throw new Error(
-            `Date string format does not match the specified format. Expected ${format}, but got ${detectedFormat}`
+            i18n.t(
+                `Date string format does not match the specified format. Expected {{format}} but got {{detectedFormat}}.`,
+                { format, detectedFormat }
+            )
         )
     }
 

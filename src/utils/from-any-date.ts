@@ -1,3 +1,4 @@
+import i18n from '@dhis2/d2-i18n'
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../types'
 import fromDateString from './from-date-string'
@@ -30,7 +31,7 @@ const fromAnyDate: FromAnyDate = ({ date, calendar }) => {
         })
     }
 
-    throw new Error(`Unrecognized date, received "${date}"`)
+    throw new Error(i18n.t(`Unrecognized date, received "{{date}}"`, { date }))
 }
 
 export default fromAnyDate

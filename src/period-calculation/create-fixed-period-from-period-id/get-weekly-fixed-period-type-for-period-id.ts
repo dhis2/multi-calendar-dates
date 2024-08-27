@@ -1,3 +1,4 @@
+import i18n from '@dhis2/d2-i18n'
 import {
     regexBiWeeklyPeriodId,
     regexWeeklyOffsetPeriodId,
@@ -22,7 +23,10 @@ const getWeeklyFixedPeriodTypeForPeriodId = (periodId: string) => {
 
         if (!periodTypes.includes(periodType)) {
             throw new Error(
-                `Could not determine a period type for period id "${periodId}"`
+                i18n.t(
+                    `Could not determine a period type for period id "{{periodId}}"`,
+                    { periodId }
+                )
             )
         }
 
@@ -30,7 +34,10 @@ const getWeeklyFixedPeriodTypeForPeriodId = (periodId: string) => {
     }
 
     throw new Error(
-        `Couldn't find a period type for weekly period id "${periodId}"`
+        i18n.t(
+            `Couldn't find a period type for weekly period id "{{periodId}}"`,
+            { periodId }
+        )
     )
 }
 
