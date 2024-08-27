@@ -158,7 +158,7 @@ describe('validateDateString (gregory)', () => {
 
     it('should return an error message for a date with mixed delimiters', () => {
         expect(validateDateString('2024/02.02').errorMessage).toBe(
-            'Date string is invalid, received "2024/02.02"'
+            'Date string is invalid, received "2024&#x2F;02.02"'
         )
     })
 
@@ -225,28 +225,28 @@ describe('validateDateString (ethiopic)', () => {
         expect(
             validateDateString('2015.13/06', { calendar: 'ethiopic' })
                 .errorMessage
-        ).toBe('Date string is invalid, received "2015.13/06"')
+        ).toBe('Date string is invalid, received "2015.13&#x2F;06"')
     })
 
     it('should return an error message for a date missing year digits', () => {
         expect(
             validateDateString('201.13/06', { calendar: 'ethiopic' })
                 .errorMessage
-        ).toBe('Date string is invalid, received "201.13/06"')
+        ).toBe('Date string is invalid, received "201.13&#x2F;06"')
     })
 
     it('should return an error message for a date missing month digits', () => {
         expect(
             validateDateString('201.1/06', { calendar: 'ethiopic' })
                 .errorMessage
-        ).toBe('Date string is invalid, received "201.1/06"')
+        ).toBe('Date string is invalid, received "201.1&#x2F;06"')
     })
 
     it('should return an error message for a date missing day digits', () => {
         expect(
             validateDateString('2015.13/6', { calendar: 'ethiopic' })
                 .errorMessage
-        ).toBe('Date string is invalid, received "2015.13/6"')
+        ).toBe('Date string is invalid, received "2015.13&#x2F;6"')
     })
 
     it('should return an error message when the value is out of range', () => {
@@ -280,7 +280,7 @@ describe('validateDateString (nepali)', () => {
         expect(
             validateDateString('2080.10/29', { calendar: 'nepali' })
                 .errorMessage
-        ).toBe('Date string is invalid, received "2080.10/29"')
+        ).toBe('Date string is invalid, received "2080.10&#x2F;29"')
     })
 
     it('should return an error message for a date missing year digits', () => {
@@ -305,14 +305,14 @@ describe('validateDateString (nepali)', () => {
         expect(
             validateDateString('2080.04.33', { calendar: 'nepali' })
                 .errorMessage
-        ).toBe('Day 33 is out of range: 1 <= 33 <= 32.')
+        ).toBe('Day 33 is out of range | 1 <= 33 <= 32.')
     })
 
     it('should return an error message when month is out of range', () => {
         expect(
             validateDateString('2080.13.33', { calendar: 'nepali' })
                 .errorMessage
-        ).toBe('Month 13 is out of range: 1 <= 13 <= 12.')
+        ).toBe('Month 13 is out of range | 1 <= 13 <= 12.')
     })
 
     it('should return an error message when year is out of supported range', () => {

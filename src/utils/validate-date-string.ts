@@ -32,7 +32,7 @@ function validateNepaliDate(year: number, month: number, day: number) {
             isValid: false,
             errorMessage: i18n.t(
                 `Day {{day}} is out of range | 1 <= {{day}} <= {{daysInMonth}}.`,
-                { day }
+                { day, daysInMonth }
             ),
         }
     }
