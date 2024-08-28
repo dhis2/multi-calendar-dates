@@ -240,7 +240,7 @@ describe('Nepali/getAdjacentFixedPeriods', () => {
                     id: '2081',
                     iso: '2081',
                     startDate: '2081-01-01',
-                    endDate: '2081-12-30',
+                    endDate: '2081-12-31',
                 },
             ])
         })
