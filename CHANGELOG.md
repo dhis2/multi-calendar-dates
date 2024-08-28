@@ -1,3 +1,10 @@
+# [1.3.0-alpha.2](https://github.com/dhis2/multi-calendar-dates/compare/v1.3.0-alpha.1...v1.3.0-alpha.2) (2024-08-28)
+
+
+### Bug Fixes
+
+* localise validation message in multi calendar ([#61](https://github.com/dhis2/multi-calendar-dates/issues/61)) ([ead860b](https://github.com/dhis2/multi-calendar-dates/commit/ead860bb9513b6436f345ef36f374829240cefe5))
+
 # [1.0.0-alpha.29](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.28...v1.0.0-alpha.29) (2024-08-08)
 
 
