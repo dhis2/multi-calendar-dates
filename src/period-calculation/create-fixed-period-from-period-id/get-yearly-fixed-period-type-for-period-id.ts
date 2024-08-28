@@ -1,3 +1,4 @@
+import i18n from '@dhis2/d2-i18n'
 import monthNumbers from '../month-numbers'
 import {
     regexYearlyStandardPeriodId,
@@ -27,7 +28,11 @@ const getYearlyFixedPeriodTypeForPeriodId = (periodId: string): PeriodType => {
         return `FY${month}` as PeriodType
     }
 
-    throw new Error(`Could not find a period type for period id "${periodId}"`)
+    throw new Error(
+        i18n.t(`Could not find a period type for period id "{{periodId}}"`, {
+            periodId,
+        })
+    )
 }
 
 export default getYearlyFixedPeriodTypeForPeriodId
