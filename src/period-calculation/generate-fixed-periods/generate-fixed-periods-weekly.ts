@@ -1,3 +1,4 @@
+import i18n from '@dhis2/d2-i18n'
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
 import { fromAnyDate, formatDate, padWithZeroes } from '../../utils/index'
@@ -183,7 +184,8 @@ const buildLabel: BuildLabelFunc = ({
 }) => {
     const { year, month, day } = date
     const { year: nextYear, month: nextMonth, day: nextDay } = nextWeek
-    const prefix = periodType === 'BIWEEKLY' ? 'Bi-Week' : 'Week'
+    const prefix =
+        periodType === 'BIWEEKLY' ? i18n.t('Bi-Week') : i18n.t('Week')
     const label = `${prefix} ${weekIndex} - ${year}-${padWithZeroes(
         month
     )}-${padWithZeroes(day)} - ${nextYear}-${padWithZeroes(

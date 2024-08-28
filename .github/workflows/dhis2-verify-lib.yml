@@ -97,9 +97,17 @@ jobs:
               with:
                   path: '**/node_modules'
                   key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+            
+            - name: Build
+              run: yarn build
 
             - name: Test
-              run: yarn test && yarn cucumber --tags 'not @draft'
+              run: yarn test --coverage && yarn cucumber --tags 'not @draft'
+
+            - name: Upload coverage reports to Codecov
+              uses: codecov/codecov-action@v4.0.1
+              with:
+                  token: ${{ secrets.CODECOV_TOKEN }}
 
     publish:
         runs-on: ubuntu-latest
