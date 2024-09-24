@@ -1,16 +1,26 @@
-## [1.2.4](https://github.com/dhis2/multi-calendar-dates/compare/v1.2.3...v1.2.4) (2024-08-07)
+# [1.3.0-alpha.2](https://github.com/dhis2/multi-calendar-dates/compare/v1.3.0-alpha.1...v1.3.0-alpha.2) (2024-08-28)
 
 
 ### Bug Fixes
 
-* **translations:** sync translations from transifex (main) ([#48](https://github.com/dhis2/multi-calendar-dates/issues/48)) ([e8a30f1](https://github.com/dhis2/multi-calendar-dates/commit/e8a30f130821b105219734f33ef04b6540232c6e))
-* date conversion nepali ([#47](https://github.com/dhis2/multi-calendar-dates/issues/47)) ([9f5b3cc](https://github.com/dhis2/multi-calendar-dates/commit/9f5b3cc3dfcd94d4b566362d707c66c83b679f1f))
+* localise validation message in multi calendar ([#61](https://github.com/dhis2/multi-calendar-dates/issues/61)) ([ead860b](https://github.com/dhis2/multi-calendar-dates/commit/ead860bb9513b6436f345ef36f374829240cefe5))
 
+# [1.0.0-alpha.29](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.28...v1.0.0-alpha.29) (2024-08-08)
+
+
+### Features
+
+* reararnge memorized variables so that we only recompute them when necessary ([b754dcc](https://github.com/dhis2/multi-calendar-dates/commit/b754dcc4c3c8f0aecb06836b0c3915af1b2af6d5))
+
+# [1.0.0-alpha.28](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.27...v1.0.0-alpha.28) (2024-08-08)
 ## [1.2.3](https://github.com/dhis2/multi-calendar-dates/compare/v1.2.2...v1.2.3) (2024-06-25)
 
 
 ### Bug Fixes
 
+* format undefined when thers is a mismatch ([79b54fd](https://github.com/dhis2/multi-calendar-dates/commit/79b54fdbac8d8de1eab5e197dc65f2cb523e35cc))
+
+# [1.0.0-alpha.27](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.26...v1.0.0-alpha.27) (2024-08-01)
 * **LIBS-629:** default 'ne' locale to Nepali script ([9cf94d7](https://github.com/dhis2/multi-calendar-dates/commit/9cf94d7121cc967491084eecc9c4d2dcd457f6a3))
 
 ## [1.2.2](https://github.com/dhis2/multi-calendar-dates/compare/v1.2.1...v1.2.2) (2024-06-25)
@@ -18,6 +28,9 @@
 
 ### Bug Fixes
 
+* remove unnecessary console warn ([b2d795d](https://github.com/dhis2/multi-calendar-dates/commit/b2d795d39d4e5a6d936b10ef3f6bb46bd9ead798))
+
+# [1.0.0-alpha.26](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.25...v1.0.0-alpha.26) (2024-06-09)
 * initialise i18n properly ([1a28c55](https://github.com/dhis2/multi-calendar-dates/commit/1a28c550e7a89235ed309a51dc2576df9c627b61))
 * update Calendar Localization data for nepali calendar ([f172662](https://github.com/dhis2/multi-calendar-dates/commit/f172662124ce798357fc17f309b2d46042c6d071))
 
@@ -33,6 +46,9 @@
 
 ### Features
 
+* support min & max date, DD-MM-YYYY date format  ([#36](https://github.com/dhis2/multi-calendar-dates/issues/36)) ([3b2e57e](https://github.com/dhis2/multi-calendar-dates/commit/3b2e57e7bc1bb3326ab83662c7eaac8e6447be41))
+
+# [1.0.0-alpha.25](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.24...v1.0.0-alpha.25) (2024-05-27)
 * add i18n/transifex support ([7c3d3af](https://github.com/dhis2/multi-calendar-dates/commit/7c3d3afe24ff230f8dba10021c0000a9981babfb))
 
 ## [1.1.2](https://github.com/dhis2/multi-calendar-dates/compare/v1.1.1...v1.1.2) (2024-06-17)
@@ -59,6 +75,22 @@
 
 ### Features
 
+* expose methods for converting between iso8601 and calendars ([#37](https://github.com/dhis2/multi-calendar-dates/issues/37)) ([33fa25d](https://github.com/dhis2/multi-calendar-dates/commit/33fa25d30e9b0f5fe45e2174e18d41bc4cd7c058))
+
+# [1.0.0-alpha.24](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.23...v1.0.0-alpha.24) (2024-05-15)
+
+
+### Features
+
+* expose function to convert dates ([622f0eb](https://github.com/dhis2/multi-calendar-dates/commit/622f0ebb5aa9952866127feb140a50639669975d))
+* expose function to convert dates ([9d42640](https://github.com/dhis2/multi-calendar-dates/commit/9d426408e06f7f2d04025edc267559edb8f73768))
+
+# [1.0.0-alpha.23](https://github.com/dhis2/multi-calendar-dates/compare/v1.0.0-alpha.22...v1.0.0-alpha.23) (2024-02-26)
+
+
+### Features
+
+* **validation:** add and expose validateDateString utility ([cb4c919](https://github.com/dhis2/multi-calendar-dates/commit/cb4c9191dd96ff0da3e05a73ac0149e9304f974d))
 * add createFixedPeriodFromPeriodId method ([#13](https://github.com/dhis2/multi-calendar-dates/issues/13)) ([ef1132e](https://github.com/dhis2/multi-calendar-dates/commit/ef1132e9a7abc2112d5ae94a365d0ed8ae21e9b8))
 * add getFixedPeriodByDate ([#14](https://github.com/dhis2/multi-calendar-dates/issues/14)) ([9de82e0](https://github.com/dhis2/multi-calendar-dates/commit/9de82e027a00766f41413b37bb07767fed049c53))
 * add getSiblingFixedPeriods ([#15](https://github.com/dhis2/multi-calendar-dates/issues/15)) ([59cb406](https://github.com/dhis2/multi-calendar-dates/commit/59cb40642f23b70717430a3a9bce95bcb2e3e584))

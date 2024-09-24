@@ -31,20 +31,6 @@ export const useResolvedLocaleOptions: UseResolvedLocaleOptionsHook = (
     // validate that the passed locale is valid, use it if valid, otherwise, keep it undefined
     const locale = getValidLocale(userOptions.locale)
 
-    const defaultDateTimeOptions = Intl?.DateTimeFormat?.().resolvedOptions?.()
-
-    const defaultUserOptions = useMemo(
-        () => ({
-            calendar: 'gregory' as const,
-            timeZone: defaultDateTimeOptions?.timeZone ?? 'UTC',
-            numberingSystem: defaultDateTimeOptions?.numberingSystem ?? 'latn',
-            locale: defaultDateTimeOptions?.locale ?? 'en',
-            weekDayFormat: (defaultDateTimeOptions?.weekday ??
-                'narrow') as WeekDayFormat,
-        }),
-        [defaultDateTimeOptions]
-    )
-
     return useMemo(() => {
         /**
          * If no options are provided this will use the values of the user browser
@@ -59,6 +45,18 @@ export const useResolvedLocaleOptions: UseResolvedLocaleOptionsHook = (
                 numberingSystem: userOptions.numberingSystem,
                 weekday: userOptions.weekDayFormat,
             }).resolvedOptions()
+
+        const defaultDateTimeOptions =
+            Intl?.DateTimeFormat?.().resolvedOptions?.()
+
+        const defaultUserOptions = {
+            calendar: 'gregory' as const,
+            timeZone: defaultDateTimeOptions?.timeZone ?? 'UTC',
+            numberingSystem: defaultDateTimeOptions?.numberingSystem ?? 'latn',
+            locale: defaultDateTimeOptions?.locale ?? 'en',
+            weekDayFormat: (defaultDateTimeOptions?.weekday ??
+                'narrow') as WeekDayFormat,
+        }
 
         let localeToUse = resolvedLocale || defaultUserOptions.locale
         // This step is necessary for custom locales where we have our own localisation values (like ne-NP)
@@ -81,5 +79,5 @@ export const useResolvedLocaleOptions: UseResolvedLocaleOptionsHook = (
             weekDayFormat:
                 userOptions.weekDayFormat || defaultUserOptions.weekDayFormat,
         }
-    }, [defaultUserOptions, locale, userOptions])
+    }, [locale, userOptions])
 }

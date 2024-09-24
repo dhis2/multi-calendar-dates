@@ -1,3 +1,4 @@
+import i18n from '@dhis2/d2-i18n'
 import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
 import { fromAnyDate, getCustomCalendarIfExists } from '../../utils/index'
@@ -70,7 +71,10 @@ const createFixedPeriodFromPeriodId: ParseFixedPeriodId = ({
 
         if (!foundNextYear) {
             throw new Error(
-                `Couldn't find a monthly period for weekly period id "${periodId}"`
+                i18n.t(
+                    `Couldn't find a monthly period for weekly period id "{{periodId}}"`,
+                    { periodId }
+                )
             )
         }
 
@@ -110,7 +114,10 @@ const createFixedPeriodFromPeriodId: ParseFixedPeriodId = ({
         }
 
         throw new Error(
-            `Couldn't find a weekly period for weekly period id "${periodId}"`
+            i18n.t(
+                `Couldn't find a weekly period for weekly period id "{{periodId}}"`,
+                { periodId }
+            )
         )
     }
 
@@ -123,7 +130,9 @@ const createFixedPeriodFromPeriodId: ParseFixedPeriodId = ({
         return buildDailyFixedPeriod({ date, locale, calendar })
     }
 
-    throw new Error(`Couldn't handle unknown period id "${periodId}"`)
+    throw new Error(
+        i18n.t(`Couldn't handle unknown period id "{{periodId}}"`, { periodId })
+    )
 }
 
 export default createFixedPeriodFromPeriodId

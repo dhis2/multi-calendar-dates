@@ -1,7 +1,7 @@
 import i18n from '@dhis2/d2-i18n'
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
-import { fromAnyDate, formatYyyyMmDD, padWithZeroes } from '../../utils/index'
+import { fromAnyDate, formatDate, padWithZeroes } from '../../utils/index'
 import { FixedPeriod, PeriodType } from '../types'
 import doesPeriodEndBefore from './does-period-end-before'
 
@@ -81,8 +81,8 @@ const generateFixedPeriodsWeekly: GenerateFixedPeriodsWeekly = ({
                 iso: value,
                 name,
                 displayName: name,
-                startDate: formatYyyyMmDD(date),
-                endDate: formatYyyyMmDD(endofWeek),
+                startDate: formatDate(date),
+                endDate: formatDate(endofWeek),
             })
         }
         date = fromAnyDate({ date: endofWeek, calendar }).add({ days: 1 })

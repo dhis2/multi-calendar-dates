@@ -1,3 +1,4 @@
+import i18n from '@dhis2/d2-i18n'
 import monthNumbers from '../month-numbers'
 import {
     regexMonthlyStandardPeriodId,
@@ -64,7 +65,10 @@ const getMonthlyFixedPeriodTypeForPeriodId: GetMonthlyFixedPeriodTypeForPeriodId
         }
 
         throw new Error(
-            `Could not find a period type for period id "${periodId}"`
+            i18n.t(
+                `Could not find a period type for period id "{{periodId}}"`,
+                { periodId }
+            )
         )
     }
 
