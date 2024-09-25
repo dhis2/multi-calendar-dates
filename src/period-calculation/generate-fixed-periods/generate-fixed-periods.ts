@@ -1,5 +1,6 @@
 import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
+import getValidLocale from '../../utils/getValidLocale'
 import { fromAnyDate, getCustomCalendarIfExists } from '../../utils/index'
 import {
     monthlyFixedPeriodTypes,
@@ -53,6 +54,8 @@ const generateFixedPeriods: GenerateFixedPeriods = ({
         dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
     ) as SupportedCalendar
 
+    const validLocale = getValidLocale(locale) ?? 'en'
+
     const endsBefore = _endsBefore
         ? fromAnyDate({ calendar, date: _endsBefore })
         : undefined
@@ -71,7 +74,7 @@ const generateFixedPeriods: GenerateFixedPeriods = ({
         return generateFixedPeriodsYearly({
             year,
             periodType,
-            locale,
+            locale: validLocale,
             calendar,
             endsBefore,
             yearsCount,
@@ -82,7 +85,7 @@ const generateFixedPeriods: GenerateFixedPeriods = ({
         return generateFixedPeriodsMonthly({
             year,
             periodType,
-            locale,
+            locale: validLocale,
             calendar,
             endsBefore,
         })
@@ -91,7 +94,7 @@ const generateFixedPeriods: GenerateFixedPeriods = ({
     if (periodType === 'DAILY') {
         return generateFixedPeriodsDaily({
             year,
-            locale,
+            locale: validLocale,
             calendar,
             endsBefore,
         })

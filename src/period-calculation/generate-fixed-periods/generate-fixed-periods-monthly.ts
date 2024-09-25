@@ -62,7 +62,7 @@ const generateFixedPeriodsMonthly: GenerateFixedPeriodsMonthly = ({
 
             if (
                 endsBefore &&
-                doesPeriodEndBefore({ period, date: endsBefore })
+                doesPeriodEndBefore({ period, date: endsBefore, calendar })
             ) {
                 break
             }
