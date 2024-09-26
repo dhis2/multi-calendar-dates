@@ -293,4 +293,101 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             // expect(periods[periods.length - 1]).toEqual("2015-11-01/2015-13-06");
         })
     })
+
+    describe('periods calculated with endsBefore', () => {
+        it('should omit every period on/after the exclude date (daily)', () => {
+            const results = generateFixedPeriods({
+                periodType: 'DAILY',
+                year: 2016,
+                calendar: 'ethiopic',
+                locale: 'en',
+                endsBefore: '2016-03-03',
+            })
+
+            expect(results.length).toBe(62)
+            expect(results[0]).toMatchObject({
+                displayName: 'Meskerem 1, 2016 ERA0',
+                endDate: '2016-01-01',
+                id: '20160101',
+                iso: '20160101',
+                name: '2016-01-01',
+                periodType: 'DAILY',
+                startDate: '2016-01-01',
+            })
+            expect(results[results.length - 1]).toMatchObject({
+                displayName: 'Hedar 2, 2016 ERA0',
+                endDate: '2016-03-02',
+                id: '20160302',
+                iso: '20160302',
+                name: '2016-03-02',
+                periodType: 'DAILY',
+                startDate: '2016-03-02',
+            })
+        })
+
+        it('should omit every period on/after the exclude date (monthly)', () => {
+            const results = generateFixedPeriods({
+                periodType: 'MONTHLY',
+                year: 2014,
+                calendar: 'ethiopic',
+                locale: 'en',
+                endsBefore: '2014-07-12',
+            })
+
+            expect(results.length).toBe(6)
+            expect(results[0]).toMatchObject({
+                periodType: 'MONTHLY',
+                id: '201401',
+                iso: '201401',
+                name: 'Meskerem 2014',
+                displayName: 'Meskerem 2014',
+                startDate: '2014-01-01',
+                endDate: '2014-01-30',
+            })
+            expect(results[results.length - 1]).toMatchObject({
+                periodType: 'MONTHLY',
+                id: '201406',
+                iso: '201406',
+                name: 'Yekatit 2014',
+                displayName: 'Yekatit 2014',
+                startDate: '2014-06-01',
+                endDate: '2014-06-30',
+            })
+        })
+
+        it('should omit every period on/after the exclude date (weekly)', () => {
+            const results = generateFixedPeriods({
+                periodType: 'WEEKLY',
+                year: 2014,
+                calendar: 'ethiopic',
+                locale: 'en',
+                endsBefore: '2014-07-12',
+                startingDay: 1,
+            })
+
+            expect(results[results.length - 1]).toMatchObject({
+                id: '2014W26',
+                iso: '2014W26',
+                name: 'Week 26 - 2014-06-29 - 2014-07-05',
+                displayName: 'Week 26 - 2014-06-29 - 2014-07-05',
+            })
+        })
+
+        it('should omit every period on/after the exclude date (yearly)', () => {
+            const result = generateFixedPeriods({
+                periodType: 'YEARLY',
+                year: 2015,
+                endsBefore: '2015-03-01',
+                calendar: 'ethiopic',
+                locale: 'en',
+                yearsCount: null,
+            })
+            expect(result[0]).toMatchObject({
+                id: '2014',
+                iso: '2014',
+                name: '2014',
+                displayName: '2014',
+            })
+        })
+    })
 })
