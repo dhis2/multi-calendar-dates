@@ -1,3 +1,15 @@
+## [1.3.1](https://github.com/dhis2/multi-calendar-dates/compare/v1.3.0...v1.3.1) (2024-09-26)
+
+
+### Bug Fixes
+
+* add back eslint-disable ([1e66fb5](https://github.com/dhis2/multi-calendar-dates/commit/1e66fb55e62bcce8e81e9b368750bb3eb4d3acbd))
+* add tests ([4bfaa7c](https://github.com/dhis2/multi-calendar-dates/commit/4bfaa7c7d0ba657c3e24ac30342274a9a8e3481f))
+* address merge issues [LIBS-684] ([6770573](https://github.com/dhis2/multi-calendar-dates/commit/67705737f7cc17ba61256070cbf0b8fc22160a34))
+* changes for data entry app [LIBS-684] ([ea7e8af](https://github.com/dhis2/multi-calendar-dates/commit/ea7e8af472886fb26d737ca1013e3e192dcbeb6a))
+* clean up for period generation in data entry app [LIBS-684] ([4cabc55](https://github.com/dhis2/multi-calendar-dates/commit/4cabc555f488407dca425eb7e92f67184f935600))
+* remove replaceAll, add locale check ([c8c2e8a](https://github.com/dhis2/multi-calendar-dates/commit/c8c2e8a174b051bca1a7e724f34cae9d6a026a43))
+
 # [1.3.0](https://github.com/dhis2/multi-calendar-dates/compare/v1.2.4...v1.3.0) (2024-09-24)
 
 
