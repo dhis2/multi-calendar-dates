@@ -1,6 +1,7 @@
 import i18n from '@dhis2/d2-i18n'
 import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
+import getValidLocale from '../../utils/getValidLocale'
 import { fromAnyDate, getCustomCalendarIfExists } from '../../utils/index'
 import { buildDailyFixedPeriod } from '../daily-periods/index'
 import { generateFixedPeriods } from '../generate-fixed-periods/index'
@@ -31,6 +32,8 @@ const createFixedPeriodFromPeriodId: ParseFixedPeriodId = ({
         dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
     ) as SupportedCalendar
 
+    const validLocale = getValidLocale(locale) ?? 'en'
+
     if (isAnyYearlyPeriodId(periodId)) {
         const year = parseInt(periodId.substring(0, 4), 10)
         const periodType = getYearlyFixedPeriodTypeForPeriodId(periodId)
@@ -45,7 +48,7 @@ const createFixedPeriodFromPeriodId: ParseFixedPeriodId = ({
             periodType,
             year,
             calendar,
-            locale,
+            locale: validLocale,
         })
 
         const foundThisYear = monthlyPeriodsForYear.find(
@@ -62,7 +65,7 @@ const createFixedPeriodFromPeriodId: ParseFixedPeriodId = ({
             year: year + 1,
             periodType,
             calendar,
-            locale,
+            locale: validLocale,
         }).slice(-1)
 
         const foundNextYear = monthlyPeriodsForNextYear.find(

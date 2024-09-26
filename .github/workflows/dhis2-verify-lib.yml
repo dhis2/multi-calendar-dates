@@ -97,7 +97,7 @@ jobs:
               with:
                   path: '**/node_modules'
                   key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-            
+
             - name: Build
               run: yarn build
 

@@ -210,4 +210,101 @@ describe('Nepali Calendar fixed period calculation', () => {
             expect(periods[periods.length - 1]).toEqual('2079-11-01/2079-12-30')
         })
     })
+
+    describe('periods calculated with endsBefore', () => {
+        it('should omit every period on/after the exclude date (daily)', () => {
+            const results = generateFixedPeriods({
+                periodType: 'DAILY',
+                year: 2076,
+                calendar: 'nepali',
+                locale: 'en',
+                endsBefore: '2076-03-03',
+            })
+
+            expect(results.length).toBe(65)
+            expect(results[0]).toMatchObject({
+                displayName: '2076-01-01',
+                endDate: '2076-01-01',
+                id: '20760101',
+                iso: '20760101',
+                name: '2076-01-01',
+                periodType: 'DAILY',
+                startDate: '2076-01-01',
+            })
+            expect(results[results.length - 1]).toMatchObject({
+                displayName: '2076-03-02',
+                endDate: '2076-03-02',
+                id: '20760302',
+                iso: '20760302',
+                name: '2076-03-02',
+                periodType: 'DAILY',
+                startDate: '2076-03-02',
+            })
+        })
+
+        it('should omit every period on/after the exclude date (monthly)', () => {
+            const results = generateFixedPeriods({
+                periodType: 'MONTHLY',
+                year: 2074,
+                calendar: 'nepali',
+                locale: 'en',
+                endsBefore: '2074-07-12',
+            })
+
+            expect(results.length).toBe(6)
+            expect(results[0]).toMatchObject({
+                periodType: 'MONTHLY',
+                id: '207401',
+                iso: '207401',
+                name: 'Baisakh 2074',
+                displayName: 'Baisakh 2074',
+                startDate: '2074-01-01',
+                endDate: '2074-01-31',
+            })
+            expect(results[results.length - 1]).toMatchObject({
+                periodType: 'MONTHLY',
+                id: '207406',
+                iso: '207406',
+                name: 'Ashwin 2074',
+                displayName: 'Ashwin 2074',
+                startDate: '2074-06-01',
+                endDate: '2074-06-31',
+            })
+        })
+
+        it('should omit every period on/after the exclude date (weekly)', () => {
+            const results = generateFixedPeriods({
+                periodType: 'WEEKLY',
+                year: 2014,
+                calendar: 'nepali',
+                locale: 'en',
+                endsBefore: '2014-07-12',
+                startingDay: 1,
+            })
+
+            expect(results[results.length - 1]).toMatchObject({
+                id: '2014W28',
+                iso: '2014W28',
+                name: 'Week 28 - 2014-07-05 - 2014-07-11',
+                displayName: 'Week 28 - 2014-07-05 - 2014-07-11',
+            })
+        })
+
+        it('should omit every period on/after the exclude date (yearly)', () => {
+            const result = generateFixedPeriods({
+                periodType: 'YEARLY',
+                year: 2075,
+                endsBefore: '2075-03-01',
+                calendar: 'nepali',
+                locale: 'en',
+                yearsCount: null,
+            })
+            expect(result[0]).toMatchObject({
+                id: '2074',
+                iso: '2074',
+                name: '2074',
+                displayName: '2074',
+            })
+        })
+    })
 })
