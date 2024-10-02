@@ -44,18 +44,12 @@ export type UseDatePickerReturn = UseNavigationReturnType & {
         isToday: boolean
         isInCurrentMonth: boolean
     }[][]
-    isValid: boolean
-    warningMessage: string
-    errorMessage: string
 }
 
 type UseDatePickerHookType = (options: DatePickerOptions) => UseDatePickerReturn
 type ValidatedDate = Temporal.YearOrEraAndEraYear &
     Temporal.MonthOrMonthCode & {
         day: number
-        isValid: boolean
-        warningMessage: string
-        errorMessage: string
         format?: string
     }
 
@@ -219,8 +213,5 @@ export const useDatePicker: UseDatePickerHookType = ({
         ),
         ...navigation,
         weekDayLabels,
-        isValid: date.isValid,
-        warningMessage: date.warningMessage,
-        errorMessage: date.errorMessage,
     }
 }

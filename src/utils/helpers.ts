@@ -14,9 +14,6 @@ export const padWithZeroes = (number: number, count = 2) =>
 type DayType = 'endOfMonth' | 'startOfMonth'
 
 type customDate = Temporal.PlainDateLike & {
-    isValid: boolean
-    warningMessage?: string
-    errorMessage?: string
     format?: string
 }
 
@@ -77,20 +74,16 @@ export const extractAndValidateDateString = (
         strictValidation?: boolean
         format?: 'YYYY-MM-DD' | 'DD-MM-YYYY'
     }
-): Temporal.PlainDateLike & {
-    isValid: boolean
-    warningMessage?: string
-    errorMessage?: string
-} => {
+): Temporal.PlainDateLike => {
     if (!date) {
         return getCurrentDateResult(options)
     }
 
     const validation = validateDateString(date, options)
     if (validation.isValid) {
-        return getValidDateResult(date, validation, options)
+        return getValidDateResult(date, options)
     } else {
-        return getInvalidDateResult(options, validation.errorMessage)
+        return getInvalidDateResult(options)
     }
 }
 
@@ -102,24 +95,13 @@ const getCurrentDateResult = (options: PickerOptions) => {
     return { year, month, day, isValid: true }
 }
 
-const getValidDateResult = (
-    date: string,
-    validation: {
-        isValid: boolean
-        warningMessage?: string
-        errorMessage?: string
-    },
-    options: PickerOptions
-) => {
+const getValidDateResult = (date: string, options: PickerOptions) => {
     const { year, month, day, format } = extractDatePartsFromDateString(date)
     let result: customDate = {
         year,
         month,
         day,
         format,
-        isValid: validation.isValid,
-        warningMessage: validation.warningMessage,
-        errorMessage: validation.errorMessage,
     }
 
     if (options.calendar === 'ethiopic') {
@@ -129,15 +111,12 @@ const getValidDateResult = (
     return result
 }
 
-const getInvalidDateResult = (
-    options: PickerOptions,
-    errorMessage?: string
-) => {
+const getInvalidDateResult = (options: PickerOptions) => {
     const { year, month, day } = getNowInCalendar(
         options.calendar,
         options.timeZone
     )
-    return { year, month, day, isValid: false, errorMessage }
+    return { year, month, day }
 }
 
 const adjustForEthiopicCalendar = (result: customDate) => {
