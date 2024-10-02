@@ -21,8 +21,8 @@ const getWeeklyFixedPeriodByDate: GetWeeklyFixedPeriodByDate = ({
         startingDay: 1,
     })
 
-    // if start date of first period of year is after current date get last
-    // period of last year
+    // if current date is before start date of first period of year
+    // get last period of previous year
     if (date < weeklyPeriods[0].startDate) {
         return generateFixedPeriodsWeekly({
             year: year - 1,
@@ -30,6 +30,17 @@ const getWeeklyFixedPeriodByDate: GetWeeklyFixedPeriodByDate = ({
             periodType,
             startingDay: 1,
         }).slice(-1)[0]
+    }
+
+    // if current date is after end date of last period of year
+    // get first period of following year
+    if (date > weeklyPeriods.slice(-1)[0].endDate) {
+        return generateFixedPeriodsWeekly({
+            year: year + 1,
+            calendar,
+            periodType,
+            startingDay: 1,
+        })[0]
     }
 
     const fixedPeriod = weeklyPeriods.find((currentPeriod) => {

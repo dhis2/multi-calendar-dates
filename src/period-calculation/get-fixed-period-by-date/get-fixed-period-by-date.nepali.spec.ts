@@ -37,6 +37,17 @@ describe('Nepali Calendar period by date calculation', () => {
             expect(actual.id).toBe('2078W1')
         })
 
+        it('should return "2083W1" for period type "WEEKLY" on "2082-12-30"', () => {
+            const actual = getFixedPeriodByDate({
+                periodType: 'WEEKLY',
+                date: '2082-12-30',
+                calendar: 'nepali',
+                locale: 'en',
+            })
+
+            expect(actual.id).toBe('2083W1')
+        })
+
         it('should return "2075WedW53" for period type "WEEKLYWED" on "2076-01-01"', () => {
             const actual = getFixedPeriodByDate({
                 periodType: 'WEEKLYWED',
@@ -79,6 +90,17 @@ describe('Nepali Calendar period by date calculation', () => {
             })
 
             expect(actual.id).toBe('2076ThuW1')
+        })
+
+        it('should return "2069ThuW1" for period type "WEEKLYTHU" on "2068-12-30"', () => {
+            const actual = getFixedPeriodByDate({
+                periodType: 'WEEKLYTHU',
+                date: '2068-12-30',
+                calendar: 'nepali',
+                locale: 'en',
+            })
+
+            expect(actual.id).toBe('2069ThuW1')
         })
 
         it('should return "2077SatW53" for period type "WEEKLYSAT" on "2078-01-01"', () => {
