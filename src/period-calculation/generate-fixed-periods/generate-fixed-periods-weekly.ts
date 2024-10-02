@@ -52,10 +52,11 @@ const generateFixedPeriodsWeekly: GenerateFixedPeriodsWeekly = ({
             endsBefore &&
             doesPeriodEndBefore({
                 period: {
-                    startDate: date.toString(),
-                    endDate: endofWeek.toString(),
+                    startDate: formatDate(date),
+                    endDate: formatDate(endofWeek),
                 },
                 date: endsBefore,
+                calendar,
             })
         ) {
             break

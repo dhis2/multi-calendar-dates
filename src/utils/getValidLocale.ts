@@ -12,7 +12,16 @@
 const getValidLocale = (requestedLocale = '') => {
     // this "replace" is to cater for DHIS2 locales using underscore as Java allows both hyphens and underscores
     // while JavaScript expects a hyphen (which is the correct way according to RFC-5646 that both rely on)
-    const locale = requestedLocale.replace('_', '-')
+    const [lng, region, script] = requestedLocale.replace(/_/g, '-').split('-')
+
+    let locale = lng
+    if (script) {
+        locale = `${locale}-${script}`
+    }
+    if (region) {
+        locale = `${locale}-${region}`
+    }
+
     try {
         const result = Intl.DateTimeFormat.supportedLocalesOf(locale)
         if (result && result.length === 1) {

@@ -65,7 +65,10 @@ const generateFixedPeriodsYearly: GenerateFixedPeriodsYearly = ({
             calendar,
         })
 
-        if (endsBefore && doesPeriodEndBefore({ period, date: endsBefore })) {
+        if (
+            endsBefore &&
+            doesPeriodEndBefore({ period, date: endsBefore, calendar })
+        ) {
             continue
         }
 

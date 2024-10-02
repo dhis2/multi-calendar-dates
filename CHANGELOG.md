@@ -1,3 +1,34 @@
+## [1.3.1](https://github.com/dhis2/multi-calendar-dates/compare/v1.3.0...v1.3.1) (2024-09-26)
+
+
+### Bug Fixes
+
+* add back eslint-disable ([1e66fb5](https://github.com/dhis2/multi-calendar-dates/commit/1e66fb55e62bcce8e81e9b368750bb3eb4d3acbd))
+* add tests ([4bfaa7c](https://github.com/dhis2/multi-calendar-dates/commit/4bfaa7c7d0ba657c3e24ac30342274a9a8e3481f))
+* address merge issues [LIBS-684] ([6770573](https://github.com/dhis2/multi-calendar-dates/commit/67705737f7cc17ba61256070cbf0b8fc22160a34))
+* changes for data entry app [LIBS-684] ([ea7e8af](https://github.com/dhis2/multi-calendar-dates/commit/ea7e8af472886fb26d737ca1013e3e192dcbeb6a))
+* clean up for period generation in data entry app [LIBS-684] ([4cabc55](https://github.com/dhis2/multi-calendar-dates/commit/4cabc555f488407dca425eb7e92f67184f935600))
+* remove replaceAll, add locale check ([c8c2e8a](https://github.com/dhis2/multi-calendar-dates/commit/c8c2e8a174b051bca1a7e724f34cae9d6a026a43))
+
+# [1.3.0](https://github.com/dhis2/multi-calendar-dates/compare/v1.2.4...v1.3.0) (2024-09-24)
+
+
+### Bug Fixes
+
+* format undefined when thers is a mismatch ([79b54fd](https://github.com/dhis2/multi-calendar-dates/commit/79b54fdbac8d8de1eab5e197dc65f2cb523e35cc))
+* localise validation message in multi calendar ([#61](https://github.com/dhis2/multi-calendar-dates/issues/61)) ([ead860b](https://github.com/dhis2/multi-calendar-dates/commit/ead860bb9513b6436f345ef36f374829240cefe5))
+* remove unnecessary console warn ([b2d795d](https://github.com/dhis2/multi-calendar-dates/commit/b2d795d39d4e5a6d936b10ef3f6bb46bd9ead798))
+
+
+### Features
+
+* expose function to convert dates ([622f0eb](https://github.com/dhis2/multi-calendar-dates/commit/622f0ebb5aa9952866127feb140a50639669975d))
+* expose function to convert dates ([9d42640](https://github.com/dhis2/multi-calendar-dates/commit/9d426408e06f7f2d04025edc267559edb8f73768))
+* expose methods for converting between iso8601 and calendars ([#37](https://github.com/dhis2/multi-calendar-dates/issues/37)) ([33fa25d](https://github.com/dhis2/multi-calendar-dates/commit/33fa25d30e9b0f5fe45e2174e18d41bc4cd7c058))
+* reararnge memorized variables so that we only recompute them when necessary ([b754dcc](https://github.com/dhis2/multi-calendar-dates/commit/b754dcc4c3c8f0aecb06836b0c3915af1b2af6d5))
+* support min & max date, DD-MM-YYYY date format  ([#36](https://github.com/dhis2/multi-calendar-dates/issues/36)) ([3b2e57e](https://github.com/dhis2/multi-calendar-dates/commit/3b2e57e7bc1bb3326ab83662c7eaac8e6447be41))
+* **validation:** add and expose validateDateString utility ([cb4c919](https://github.com/dhis2/multi-calendar-dates/commit/cb4c9191dd96ff0da3e05a73ac0149e9304f974d))
+
 # [1.3.0-alpha.2](https://github.com/dhis2/multi-calendar-dates/compare/v1.3.0-alpha.1...v1.3.0-alpha.2) (2024-08-28)
 
 
