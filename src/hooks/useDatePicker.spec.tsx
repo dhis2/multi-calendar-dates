@@ -1,8 +1,9 @@
-import { Intl } from '@js-temporal/polyfill'
+import { Intl, Temporal } from '@js-temporal/polyfill'
 import { render } from '@testing-library/react'
 import { renderHook } from '@testing-library/react-hooks'
 import React from 'react'
 import { SupportedCalendar } from '../types'
+import { formatDate } from '../utils'
 import localisationHelpers from '../utils/localisationHelpers'
 import { useDatePicker, UseDatePickerReturn } from './useDatePicker'
 
@@ -271,13 +272,21 @@ describe('useDatePicker hook', () => {
     })
     describe('highlighting today', () => {
         const getDayByDate: (
-            calendarWeekDays: { calendarDate: string; isToday: boolean }[][],
+            calendarWeekDays: {
+                isToday: boolean
+                zdt: Temporal.ZonedDateTime
+            }[][],
             dayToFind: string
         ) => { calendarDate: string; isToday: boolean }[] = (
             calendarWeekDays,
             dayToFind
         ) => {
-            const days = calendarWeekDays.flatMap((week) => week)
+            const days = calendarWeekDays
+                .flatMap((week) => week)
+                .map((day) => ({
+                    ...day,
+                    calendarDate: formatDate(day.zdt, undefined, 'YYYY-MM-DD'),
+                }))
 
             return days.filter((day) => day.calendarDate === dayToFind)
         }
@@ -485,7 +494,12 @@ describe('clicking a day', () => {
 
         // find and click the day passed to the calendar
         for (let i = 0; i < days.length; i++) {
-            if (days[i].calendarDate === date) {
+            const formattedDate = formatDate(
+                days[i].zdt,
+                undefined,
+                'YYYY-MM-DD'
+            )
+            if (formattedDate === date) {
                 days[i].onClick()
                 break
             }

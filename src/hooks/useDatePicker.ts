@@ -38,14 +38,12 @@ export type UseDatePickerReturn = UseNavigationReturnType & {
     calendarWeekDays: {
         zdt: Temporal.ZonedDateTime
         label: string | number
-        calendarDate: string
         onClick: () => void
         isSelected: boolean | undefined
         isToday: boolean
         isInCurrentMonth: boolean
     }[][]
 }
-
 type UseDatePickerHookType = (options: DatePickerOptions) => UseDatePickerReturn
 type ValidatedDate = Temporal.YearOrEraAndEraYear &
     Temporal.MonthOrMonthCode & {
@@ -194,7 +192,6 @@ export const useDatePicker: UseDatePickerHookType = ({
         calendarWeekDays: calendarWeekDaysZdts.map((week) =>
             week.map((weekDayZdt) => ({
                 zdt: weekDayZdt,
-                calendarDate: formatDate(weekDayZdt, undefined, date.format),
                 label: localisationHelpers.localiseWeekLabel(
                     weekDayZdt.withCalendar(localeOptions.calendar),
                     localeOptions
