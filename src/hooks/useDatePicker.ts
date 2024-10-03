@@ -21,10 +21,8 @@ type DatePickerOptions = {
     date: string
     options: PickerOptions
     onDateSelect: ({
-        calendarDate,
         calendarDateString,
     }: {
-        calendarDate: Temporal.ZonedDateTime
         calendarDateString: string
     }) => void
     minDate?: string
@@ -36,26 +34,18 @@ type DatePickerOptions = {
 export type UseDatePickerReturn = UseNavigationReturnType & {
     weekDayLabels: string[]
     calendarWeekDays: {
-        zdt: Temporal.ZonedDateTime
+        dateValue: string
         label: string | number
-        calendarDate: string
         onClick: () => void
         isSelected: boolean | undefined
         isToday: boolean
         isInCurrentMonth: boolean
     }[][]
-    isValid: boolean
-    warningMessage: string
-    errorMessage: string
 }
-
 type UseDatePickerHookType = (options: DatePickerOptions) => UseDatePickerReturn
 type ValidatedDate = Temporal.YearOrEraAndEraYear &
     Temporal.MonthOrMonthCode & {
         day: number
-        isValid: boolean
-        warningMessage: string
-        errorMessage: string
         format?: string
     }
 
@@ -158,7 +148,6 @@ export const useDatePicker: UseDatePickerHookType = ({
     const selectDate = useCallback(
         (zdt: Temporal.ZonedDateTime) => {
             onDateSelect({
-                calendarDate: zdt,
                 calendarDateString: formatDate(zdt, undefined, date.format),
             })
         },
@@ -196,11 +185,10 @@ export const useDatePicker: UseDatePickerHookType = ({
         temporalCalendar,
         temporalTimeZone,
     ])
-    return {
+    const result: UseDatePickerReturn = {
         calendarWeekDays: calendarWeekDaysZdts.map((week) =>
             week.map((weekDayZdt) => ({
-                zdt: weekDayZdt,
-                calendarDate: formatDate(weekDayZdt, undefined, date.format),
+                dateValue: formatDate(weekDayZdt, undefined, format),
                 label: localisationHelpers.localiseWeekLabel(
                     weekDayZdt.withCalendar(localeOptions.calendar),
                     localeOptions
@@ -219,8 +207,7 @@ export const useDatePicker: UseDatePickerHookType = ({
         ),
         ...navigation,
         weekDayLabels,
-        isValid: date.isValid,
-        warningMessage: date.warningMessage,
-        errorMessage: date.errorMessage,
     }
+
+    return result
 }

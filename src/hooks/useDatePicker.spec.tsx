@@ -3,6 +3,7 @@ import { render } from '@testing-library/react'
 import { renderHook } from '@testing-library/react-hooks'
 import React from 'react'
 import { SupportedCalendar } from '../types'
+import { convertToIso8601 } from '../utils'
 import localisationHelpers from '../utils/localisationHelpers'
 import { useDatePicker, UseDatePickerReturn } from './useDatePicker'
 
@@ -270,16 +271,16 @@ describe('useDatePicker hook', () => {
         })
     })
     describe('highlighting today', () => {
-        const getDayByDate: (
-            calendarWeekDays: { calendarDate: string; isToday: boolean }[][],
+        const getDayByDate = (
+            calendarWeekDays: {
+                isToday: boolean
+                dateValue: string
+            }[][],
             dayToFind: string
-        ) => { calendarDate: string; isToday: boolean }[] = (
-            calendarWeekDays,
-            dayToFind
         ) => {
             const days = calendarWeekDays.flatMap((week) => week)
 
-            return days.filter((day) => day.calendarDate === dayToFind)
+            return days.filter((day) => day.dateValue === dayToFind)
         }
 
         it('should highlight today date in a an ethiopic calendar', () => {
@@ -485,7 +486,8 @@ describe('clicking a day', () => {
 
         // find and click the day passed to the calendar
         for (let i = 0; i < days.length; i++) {
-            if (days[i].calendarDate === date) {
+            const formattedDate = days[i].dateValue
+            if (formattedDate === date) {
                 days[i].onClick()
                 break
             }
@@ -496,45 +498,36 @@ describe('clicking a day', () => {
     }
     it('should call the callback with correct info for Gregorian calendar', () => {
         const date = '2018-01-22'
-        const { calendarDate, calendarDateString } = renderForClick({
+        const { calendarDateString } = renderForClick({
             calendar: 'gregory',
             date,
         })
-        expect(calendarDate.toString()).toEqual(
-            '2018-01-22T00:00:00+02:00[Africa/Khartoum][u-ca=gregory]'
-        )
         expect(calendarDateString).toEqual('2018-01-22')
     })
     it('should call the callback with correct info for Ethiopic calendar', () => {
         const date = '2015-13-02'
-        const { calendarDate, calendarDateString } = renderForClick({
+        const { calendarDateString } = renderForClick({
             calendar: 'ethiopic',
             date,
         })
         expect(calendarDateString).toEqual('2015-13-02')
-        expect(
-            calendarDate.withCalendar('iso8601').toLocaleString('en-GB')
-        ).toMatch('07/09/2023')
-
-        expect(
-            calendarDate.toLocaleString('en-GB', {
-                month: 'long',
-                year: 'numeric',
-                day: 'numeric',
-                calendar: 'ethiopic',
-            })
-        ).toEqual('2 Pagumen 2015 ERA1')
+        const calendarDate = convertToIso8601(calendarDateString, 'ethiopic')
+        expect(calendarDate).toEqual({ day: 7, month: 9, year: 2023 })
     })
     it('should call the callback with correct info for a custom (Nepali) calendar', () => {
         const date = '2077-12-30'
-        const { calendarDate, calendarDateString } = renderForClick({
+        const { calendarDateString } = renderForClick({
             calendar: 'nepali',
             date,
         })
         expect(calendarDateString).toEqual('2077-12-30')
         expect(
             localisationHelpers.localiseMonth(
-                calendarDate,
+                {
+                    year: 20777,
+                    month: 12,
+                    day: 30,
+                },
                 {
                     locale: 'en-NP',
                     calendar: 'nepali',
