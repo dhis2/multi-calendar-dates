@@ -1,3 +1,27 @@
+# [2.0.0-alpha.1](https://github.com/dhis2/multi-calendar-dates/compare/v1.3.1...v2.0.0-alpha.1) (2024-10-03)
+
+
+### Bug Fixes
+
+* remove Temporal references from hook public API and clean up use date picker ([#75](https://github.com/dhis2/multi-calendar-dates/issues/75)) ([fb31512](https://github.com/dhis2/multi-calendar-dates/commit/fb31512f25973c46d9758c02f145dbfbb2616e6c))
+
+
+### BREAKING CHANGES
+
+* Remove Temporal references from hook public API
+
+* feat: remove validation details from result of useDatePicker
+
+as they are available in exposed validate date string function
+
+* feat: remove calendar date from use date picker
+
+* refactor: remove calendarDate from onDateSelect callback
+
+* refactor: remove zonedDateTime from week days array
+
+* refactor: fix linting issues
+
 ## [1.3.1](https://github.com/dhis2/multi-calendar-dates/compare/v1.3.0...v1.3.1) (2024-09-26)
 
 
