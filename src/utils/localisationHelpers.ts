@@ -131,7 +131,7 @@ const localiseMonth = (
     )
 
     return isCustom
-        ? customLocale?.monthNames[zdt.month - 1]
+        ? customLocale?.monthNames[zdt.month! - 1]
         : zdt.toLocaleString(localeOptions.locale, format)
 }
 

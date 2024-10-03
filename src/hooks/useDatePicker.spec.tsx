@@ -271,24 +271,16 @@ describe('useDatePicker hook', () => {
         })
     })
     describe('highlighting today', () => {
-        const getDayByDate: (
+        const getDayByDate = (
             calendarWeekDays: {
                 isToday: boolean
-                zdt: Temporal.ZonedDateTime
+                dateValue: string
             }[][],
             dayToFind: string
-        ) => { calendarDate: string; isToday: boolean }[] = (
-            calendarWeekDays,
-            dayToFind
         ) => {
-            const days = calendarWeekDays
-                .flatMap((week) => week)
-                .map((day) => ({
-                    ...day,
-                    calendarDate: formatDate(day.zdt, undefined, 'YYYY-MM-DD'),
-                }))
+            const days = calendarWeekDays.flatMap((week) => week)
 
-            return days.filter((day) => day.calendarDate === dayToFind)
+            return days.filter((day) => day.dateValue === dayToFind)
         }
 
         it('should highlight today date in a an ethiopic calendar', () => {
@@ -494,11 +486,7 @@ describe('clicking a day', () => {
 
         // find and click the day passed to the calendar
         for (let i = 0; i < days.length; i++) {
-            const formattedDate = formatDate(
-                days[i].zdt,
-                undefined,
-                'YYYY-MM-DD'
-            )
+            const formattedDate = days[i].dateValue
             if (formattedDate === date) {
                 days[i].onClick()
                 break
@@ -528,7 +516,7 @@ describe('clicking a day', () => {
     })
     it('should call the callback with correct info for a custom (Nepali) calendar', () => {
         const date = '2077-12-30'
-        const { calendarDate, calendarDateString } = renderForClick({
+        const { calendarDateString } = renderForClick({
             calendar: 'nepali',
             date,
         })
