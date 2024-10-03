@@ -1,9 +1,9 @@
-import { Intl, Temporal } from '@js-temporal/polyfill'
+import { Intl } from '@js-temporal/polyfill'
 import { render } from '@testing-library/react'
 import { renderHook } from '@testing-library/react-hooks'
 import React from 'react'
 import { SupportedCalendar } from '../types'
-import { convertToIso8601, formatDate } from '../utils'
+import { convertToIso8601 } from '../utils'
 import localisationHelpers from '../utils/localisationHelpers'
 import { useDatePicker, UseDatePickerReturn } from './useDatePicker'
 
