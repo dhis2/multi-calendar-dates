@@ -20,18 +20,19 @@ msgstr "Nepodařilo se najít měsíční období pro týdenní období id \"{{p
 
 msgid "Couldn't find a weekly period for weekly period id \"{{periodId}}\""
 msgstr ""
+"Nepodařilo se najít týdenní období pro ID týdenního období \"{{periodId}}\""
 
 msgid "Couldn't handle unknown period id \"{{periodId}}\""
-msgstr ""
+msgstr "Nelze zpracovat neznámé id období \"{{periodId}}\""
 
 msgid "Could not find a period type for period id \"{{periodId}}\""
-msgstr ""
+msgstr "Nepodařilo se najít typ období pro id období \"{{periodId}}\""
 
 msgid "Could not determine a period type for period id \"{{periodId}}\""
-msgstr ""
+msgstr "Nepodařilo se určit typ období pro id období \"{{periodId}}\""
 
 msgid "Couldn't find a period type for weekly period id \"{{periodId}}\""
-msgstr ""
+msgstr "Nepodařilo se najít typ období pro id týdenního období \"{{periodId}}\""
 
 msgid "Bi-Week"
 msgstr "Dvoutýden"
@@ -46,6 +47,8 @@ msgid ""
 "Date string format does not match the specified format. Expected {{format}} "
 "but got {{detectedFormat}}."
 msgstr ""
+"Formát řetězce datumu neodpovídá zadanému formátu. Očekáváno {{format}}, ale"
+" vráceno {{detectedFormat}}."
 
 msgid "Unrecognized date, received \"{{date}}\""
 msgstr "Neuznané datum, přijato \"{{date}}\""
@@ -54,7 +57,7 @@ msgid "Year {{year}} is out of range."
 msgstr "Rok {{year}} je mimo rozsah."
 
 msgid "Month {{month}} is out of range | 1 <= {{month}} <= 12."
-msgstr ""
+msgstr "Měsíc {{month}} je mimo rozsah | 1 <= {{month}} <= 12."
 
 msgid "Day {{day}} is out of range | 1 <= {{day}} <= {{daysInMonth}}."
 msgstr "Den {{day}} je mimo rozsah | 1 <= {{day}} <= {{daysInMonth}}."
@@ -65,8 +68,12 @@ msgstr "Datum není uvedeno"
 msgid ""
 "Date {{dateString}} is less than the minimum allowed date {{minDateString}}."
 msgstr ""
+"Datum {{dateString}} je menší než minimální povolené datum "
+"{{minDateString}}."
 
 msgid ""
 "Date {{dateString}} is greater than the maximum allowed date "
 "{{maxDateString}}."
 msgstr ""
+"Datum {{dateString}} je větší než maximální povolené datum "
+"{{maxDateString}}."
