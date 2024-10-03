@@ -21,10 +21,8 @@ type DatePickerOptions = {
     date: string
     options: PickerOptions
     onDateSelect: ({
-        calendarDate,
         calendarDateString,
     }: {
-        calendarDate: Temporal.ZonedDateTime
         calendarDateString: string
     }) => void
     minDate?: string
@@ -150,7 +148,6 @@ export const useDatePicker: UseDatePickerHookType = ({
     const selectDate = useCallback(
         (zdt: Temporal.ZonedDateTime) => {
             onDateSelect({
-                calendarDate: zdt,
                 calendarDateString: formatDate(zdt, undefined, date.format),
             })
         },

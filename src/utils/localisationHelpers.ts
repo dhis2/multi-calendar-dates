@@ -113,7 +113,11 @@ const localiseWeekLabel = (
 }
 
 const localiseMonth = (
-    zdt: Temporal.ZonedDateTime | Temporal.PlainYearMonth | Temporal.PlainDate,
+    zdt:
+        | Temporal.ZonedDateTime
+        | Temporal.PlainYearMonth
+        | Temporal.PlainDate
+        | Temporal.PlainDateLike,
     localeOptions: PickerOptions,
     format: Intl.DateTimeFormatOptions
 ) => {
