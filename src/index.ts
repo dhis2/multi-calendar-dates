@@ -6,6 +6,7 @@ export * from './period-calculation'
 export {
     getNowInCalendar,
     validateDateString,
+    DateValidationResult,
     convertFromIso8601,
     convertToIso8601,
 } from './utils'
