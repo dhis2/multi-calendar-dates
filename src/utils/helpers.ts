@@ -80,7 +80,7 @@ export const extractAndValidateDateString = (
     }
 
     const validation = validateDateString(date, options)
-    if (validation.isValid) {
+    if (!validation.error) {
         return getValidDateResult(date, options)
     } else {
         return getInvalidDateResult(options)
