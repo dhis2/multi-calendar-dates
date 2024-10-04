@@ -1,3 +1,10 @@
+# [2.0.0-alpha.2](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0-alpha.1...v2.0.0-alpha.2) (2024-10-04)
+
+
+### Bug Fixes
+
+* update validation logic to expose error code and mirror RFF format ([001d236](https://github.com/dhis2/multi-calendar-dates/commit/001d236efc92ad98e3b0b72bf562725f64960897))
+
 # [2.0.0-alpha.1](https://github.com/dhis2/multi-calendar-dates/compare/v1.3.1...v2.0.0-alpha.1) (2024-10-03)
 
 
