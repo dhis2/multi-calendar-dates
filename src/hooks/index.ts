@@ -1,2 +1,2 @@
 export { useResolvedDirection } from './useResolvedDirection'
-export { useDatePicker } from './useDatePicker'
+export { useDatePicker, DatePickerOptions, OnDateSelectPayload } from './useDatePicker'
