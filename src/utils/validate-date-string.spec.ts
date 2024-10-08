@@ -312,20 +312,20 @@ describe('validateDateString (nepali)', () => {
         expect(
             validateDateString('2080.04.33', { calendar: 'nepali' })
                 .validationText
-        ).toBe('Day 33 is out of range | 1 <= 33 <= 32.')
+        ).toBe('Invalid date in specified calendar')
     })
 
     it('should return an error message when month is out of range', () => {
         expect(
             validateDateString('2080.13.33', { calendar: 'nepali' })
                 .validationText
-        ).toBe('Month 13 is out of range | 1 <= 13 <= 12.')
+        ).toBe('Invalid date in specified calendar')
     })
 
     it('should return an error message when year is out of supported range', () => {
         expect(
             validateDateString('2101.04.33', { calendar: 'nepali' })
                 .validationText
-        ).toBe('Year 2101 is out of range.')
+        ).toBe('Invalid date in specified calendar')
     })
 })

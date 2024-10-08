@@ -1,7 +1,6 @@
 import i18n from '@dhis2/d2-i18n'
 import { Temporal } from '@js-temporal/polyfill'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
-import { NEPALI_CALENDAR_DATA } from '../custom-calendars/nepaliCalendarData'
 import type { SupportedCalendar } from '../types'
 import { extractDatePartsFromDateString } from './extract-date-parts-from-date-string'
 import { getCustomCalendarIfExists } from './helpers'
@@ -69,18 +68,21 @@ export enum DateValidationResult {
 
 type ValidationResult =
     | {
+          valid: boolean
           error: boolean
           warning?: never
           validationText: string
           validationCode: DateValidationResult
       }
     | {
+          valid: boolean
           warning: boolean
           error?: never
           validationText: string
           validationCode: DateValidationResult
       }
     | {
+          valid: true
           error: false
           warning: false
           validationText: undefined
@@ -107,13 +109,10 @@ export const validateDateString: ValidateDateStringFn = (
         dhis2CalendarsMap[calendar] ?? calendar
     )
 
-    const validationType = strictValidation
-        ? { error: true }
-        : { warning: true }
-
     // Will throw if the format of the date is incorrect
     if (!dateString) {
         return {
+            valid: false,
             error: true,
             validationCode: DateValidationResult.WRONG_FORMAT,
             validationText: i18n.t(`Date is not given`),
@@ -131,6 +130,7 @@ export const validateDateString: ValidateDateStringFn = (
         dateParts = extractDatePartsFromDateString(dateString, format)
     } catch (e: any) {
         return {
+            valid: false,
             error: true,
             validationCode: DateValidationResult.WRONG_FORMAT,
             validationText: e?.message,
@@ -150,16 +150,21 @@ export const validateDateString: ValidateDateStringFn = (
     // Will throw if the year, month or day is out of range
     try {
         date = Temporal.PlainDate.from(
-            { ...dateParts, calendar: resolvedCalendar },
-            { overflow: 'reject' }
-        )
+                  { ...dateParts, calendar: resolvedCalendar },
+                  { overflow: 'reject' }
+              )
     } catch (err) {
         return {
+            valid: false,
             error: true,
             validationCode: DateValidationResult.INVALID_DATE_IN_CALENDAR,
             validationText: i18n.t('Invalid date in specified calendar'),
         }
     }
+
+    const validationType = strictValidation
+        ? { error: true, valid: false }
+        : { warning: true, valid: true }
 
     if (minDateString) {
         const minDateParts = extractDatePartsFromDateString(minDateString)
@@ -203,6 +208,7 @@ export const validateDateString: ValidateDateStringFn = (
         }
     }
     return {
+        valid: true,
         error: false,
         warning: false,
     }
