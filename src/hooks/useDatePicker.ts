@@ -18,7 +18,6 @@ import { useResolvedLocaleOptions } from './internal/useResolvedLocaleOptions'
 import { useWeekDayLabels } from './internal/useWeekDayLabels'
 
 export type OnDateSelectPayload = {
-    calendarDate: Temporal.ZonedDateTime
     calendarDateString: string
 } | null
 
