@@ -64,12 +64,18 @@ class NepaliCalendar extends Temporal.Calendar {
      *
      * A custom implementation of these methods is used to convert the calendar-space arguments to the ISO calendar.
      */
-    dateFromFields(fields: CalendarYMD): Temporal.PlainDate {
-        const { year, day, month } = _nepaliToIso({
-            year: fields.year,
-            month: fields.month,
-            day: fields.day,
-        })
+    dateFromFields(
+        fields: CalendarYMD,
+        options: Temporal.AssignmentOptions
+    ): Temporal.PlainDate {
+        const { year, day, month } = _nepaliToIso(
+            {
+                year: fields.year,
+                month: fields.month,
+                day: fields.day,
+            },
+            options
+        )
         return new Temporal.PlainDate(year, month, day, this)
     }
     yearMonthFromFields(fields: CalendarYMD): Temporal.PlainYearMonth {
@@ -96,7 +102,10 @@ const lastSupportedNepaliYear = Number(
     supportedNepaliYears[supportedNepaliYears.length - 1]
 )
 
-const _nepaliToIso = (fields: { day: number; year: number; month: number }) => {
+const _nepaliToIso = (
+    fields: { day: number; year: number; month: number },
+    { overflow }: Temporal.AssignmentOptions = {}
+) => {
     let { year: nepaliYear } = fields
 
     if (
@@ -108,6 +117,15 @@ const _nepaliToIso = (fields: { day: number; year: number; month: number }) => {
         )
     }
     const { month: nepaliMonth, day: nepaliDay = 1 } = fields
+
+    if (
+        overflow === 'reject' &&
+        (nepaliMonth < 1 ||
+            nepaliMonth > 12 ||
+            nepaliDay > NEPALI_CALENDAR_DATA[nepaliYear][nepaliMonth])
+    ) {
+        throw new Error('Invalid date in Nepali calendar')
+    }
 
     let gregorianDayOfYear = 0
 

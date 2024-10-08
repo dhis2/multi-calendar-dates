@@ -3,53 +3,7 @@ import { Temporal } from '@js-temporal/polyfill'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
 import type { SupportedCalendar } from '../types'
 import { extractDatePartsFromDateString } from './extract-date-parts-from-date-string'
-import { getCustomCalendarIfExists } from './helpers'
-
-type ValidateNepaliDateFn = (
-    year: number,
-    month: number,
-    day: number
-) => ValidationResult
-
-const validateNepaliDate: ValidateNepaliDateFn = (year, month, day) => {
-    const nepaliYearData = NEPALI_CALENDAR_DATA[year]
-    if (!nepaliYearData) {
-        return {
-            error: true,
-            validationCode: DateValidationResult.INVALID_DATE_IN_CALENDAR,
-            validationText: i18n.t(`Year {{year}} is out of range.`, { year }),
-        }
-    }
-
-    if (month < 1 || month > 12) {
-        return {
-            error: true,
-            validationCode: DateValidationResult.INVALID_DATE_IN_CALENDAR,
-            validationText: i18n.t(
-                `Month {{month}} is out of range | 1 <= {{month}} <= 12.`,
-                { month }
-            ),
-        }
-    }
-
-    const daysInMonth = nepaliYearData[month]
-
-    if (day < 1 || day > daysInMonth) {
-        return {
-            error: true,
-            validationCode: DateValidationResult.INVALID_DATE_IN_CALENDAR,
-            validationText: i18n.t(
-                `Day {{day}} is out of range | 1 <= {{day}} <= {{daysInMonth}}.`,
-                { day, daysInMonth }
-            ),
-        }
-    }
-
-    return {
-        error: false,
-        warning: false,
-    }
-}
+import { getCustomCalendarIfExists, isCustomCalendar } from './helpers'
 
 type ValidationOptions = {
     calendar?: SupportedCalendar
@@ -136,20 +90,17 @@ export const validateDateString: ValidateDateStringFn = (
             validationText: e?.message,
         }
     }
-    if (resolvedCalendar.toString() === 'nepali') {
-        // ToDo: double check why nepali can't just be handle with Temporal.PlainDate.from
-        return validateNepaliDate(
-            dateParts.year,
-            dateParts.month,
-            dateParts.day
-        )
-    }
 
     let date: Temporal.PlainDate
 
     // Will throw if the year, month or day is out of range
     try {
-        date = Temporal.PlainDate.from(
+        date = isCustomCalendar(resolvedCalendar)
+            ? Temporal.Calendar.from(resolvedCalendar).dateFromFields(
+                  dateParts,
+                  { overflow: 'reject' }
+              ) // need to be handled separately for custom calendars
+            : Temporal.PlainDate.from(
                   { ...dateParts, calendar: resolvedCalendar },
                   { overflow: 'reject' }
               )
