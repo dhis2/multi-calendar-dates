@@ -17,14 +17,14 @@ import {
 import { useResolvedLocaleOptions } from './internal/useResolvedLocaleOptions'
 import { useWeekDayLabels } from './internal/useWeekDayLabels'
 
-type DatePickerOptions = {
+export type OnDateSelectPayload = {
+    calendarDateString: string
+} | null
+
+export type DatePickerOptions = {
     date: string
     options: PickerOptions
-    onDateSelect: ({
-        calendarDateString,
-    }: {
-        calendarDateString: string
-    }) => void
+    onDateSelect: (payload: OnDateSelectPayload) => void
     minDate?: string
     maxDate?: string
     format?: 'YYYY-MM-DD' | 'DD-MM-YYYY'
