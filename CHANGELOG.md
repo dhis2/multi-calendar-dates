@@ -1,3 +1,11 @@
+# [2.0.0-alpha.3](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0-alpha.2...v2.0.0-alpha.3) (2024-10-09)
+
+
+### Bug Fixes
+
+* add 'valid' property to validation result ([894e181](https://github.com/dhis2/multi-calendar-dates/commit/894e1818b261652542e6141b8bd6408c3dcc7a5e))
+* use NepaliCalendar instance to validate dates ([9fb353a](https://github.com/dhis2/multi-calendar-dates/commit/9fb353a73b12b4fccc32dd48c2775fd57270f180))
+
 # [2.0.0-alpha.2](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0-alpha.1...v2.0.0-alpha.2) (2024-10-04)
 
 
