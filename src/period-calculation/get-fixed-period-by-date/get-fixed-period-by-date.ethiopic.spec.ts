@@ -37,6 +37,17 @@ describe('Ethiopic Calendar period by date calculation', () => {
             expect(actual?.id).toBe('2014W1')
         })
 
+        it('should return "2018W1" for period type "WEEKLY" on "2017-13-04"', () => {
+            const actual = getFixedPeriodByDate({
+                periodType: 'WEEKLY',
+                date: '2017-13-04',
+                calendar: 'ethiopic',
+                locale: 'en',
+            })
+
+            expect(actual?.id).toBe('2018W1')
+        })
+
         it('should return "2010WedW52" for period type "WEEKLYWED" on "2011-01-01"', () => {
             const actual = getFixedPeriodByDate({
                 periodType: 'WEEKLYWED',
@@ -136,7 +147,7 @@ describe('Ethiopic Calendar period by date calculation', () => {
             expect(actual?.id).toBe('2014BiW26')
         })
 
-        it('should return "2012SunW1" for period type "BIWEEKLY" on "2012-01-01"', () => {
+        it('should return "2012BiW1" for period type "BIWEEKLY" on "2012-01-01"', () => {
             const actual = getFixedPeriodByDate({
                 periodType: 'BIWEEKLY',
                 date: '2012-01-01',
@@ -145,6 +156,17 @@ describe('Ethiopic Calendar period by date calculation', () => {
             })
 
             expect(actual?.id).toBe('2012BiW1')
+        })
+
+        it('should return "2018BiW1" for period type "BIWEEKLY" on "2017-13-04"', () => {
+            const actual = getFixedPeriodByDate({
+                periodType: 'BIWEEKLY',
+                date: '2017-13-04',
+                calendar: 'ethiopic',
+                locale: 'en',
+            })
+
+            expect(actual?.id).toBe('2018BiW1')
         })
     })
 
