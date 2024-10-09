@@ -1,3 +1,10 @@
+# [2.0.0-alpha.4](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0-alpha.3...v2.0.0-alpha.4) (2024-10-09)
+
+
+### Bug Fixes
+
+* **useDatePicker:** fix onDateSelect type, export types ([#79](https://github.com/dhis2/multi-calendar-dates/issues/79)) ([94358d2](https://github.com/dhis2/multi-calendar-dates/commit/94358d242f5130b8e0c89fba7b89584fea144d30))
+
 # [2.0.0-alpha.3](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0-alpha.2...v2.0.0-alpha.3) (2024-10-09)
 
 
