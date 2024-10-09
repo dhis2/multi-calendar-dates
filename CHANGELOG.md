@@ -1,3 +1,10 @@
+# [2.0.0-alpha.5](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0-alpha.4...v2.0.0-alpha.5) (2024-10-09)
+
+
+### Bug Fixes
+
+* use export type ([#81](https://github.com/dhis2/multi-calendar-dates/issues/81)) ([eaa8cdb](https://github.com/dhis2/multi-calendar-dates/commit/eaa8cdb0416407ab45d0a683aae6ff97f1b55f3c))
+
 # [2.0.0-alpha.4](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0-alpha.3...v2.0.0-alpha.4) (2024-10-09)
 
 
