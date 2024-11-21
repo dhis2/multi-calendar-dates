@@ -1,3 +1,10 @@
+# [2.0.0-alpha.6](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0-alpha.5...v2.0.0-alpha.6) (2024-11-21)
+
+
+### Bug Fixes
+
+* check first week of subsequent year when geting period by date [LIBS-688] ([#74](https://github.com/dhis2/multi-calendar-dates/issues/74)) ([8662fe0](https://github.com/dhis2/multi-calendar-dates/commit/8662fe0e4f263c1abde1b813097e30b9b65ee31e))
+
 ## [1.3.2](https://github.com/dhis2/multi-calendar-dates/compare/v1.3.1...v1.3.2) (2024-10-09)
 
 
