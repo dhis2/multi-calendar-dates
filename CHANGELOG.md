@@ -1,55 +1,9 @@
-# [2.0.0-alpha.5](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0-alpha.4...v2.0.0-alpha.5) (2024-10-09)
+## [1.3.2](https://github.com/dhis2/multi-calendar-dates/compare/v1.3.1...v1.3.2) (2024-10-09)
 
 
 ### Bug Fixes
 
-* use export type ([#81](https://github.com/dhis2/multi-calendar-dates/issues/81)) ([eaa8cdb](https://github.com/dhis2/multi-calendar-dates/commit/eaa8cdb0416407ab45d0a683aae6ff97f1b55f3c))
-
-# [2.0.0-alpha.4](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0-alpha.3...v2.0.0-alpha.4) (2024-10-09)
-
-
-### Bug Fixes
-
-* **useDatePicker:** fix onDateSelect type, export types ([#79](https://github.com/dhis2/multi-calendar-dates/issues/79)) ([94358d2](https://github.com/dhis2/multi-calendar-dates/commit/94358d242f5130b8e0c89fba7b89584fea144d30))
-
-# [2.0.0-alpha.3](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0-alpha.2...v2.0.0-alpha.3) (2024-10-09)
-
-
-### Bug Fixes
-
-* add 'valid' property to validation result ([894e181](https://github.com/dhis2/multi-calendar-dates/commit/894e1818b261652542e6141b8bd6408c3dcc7a5e))
-* use NepaliCalendar instance to validate dates ([9fb353a](https://github.com/dhis2/multi-calendar-dates/commit/9fb353a73b12b4fccc32dd48c2775fd57270f180))
-
-# [2.0.0-alpha.2](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0-alpha.1...v2.0.0-alpha.2) (2024-10-04)
-
-
-### Bug Fixes
-
-* update validation logic to expose error code and mirror RFF format ([001d236](https://github.com/dhis2/multi-calendar-dates/commit/001d236efc92ad98e3b0b72bf562725f64960897))
-
-# [2.0.0-alpha.1](https://github.com/dhis2/multi-calendar-dates/compare/v1.3.1...v2.0.0-alpha.1) (2024-10-03)
-
-
-### Bug Fixes
-
-* remove Temporal references from hook public API and clean up use date picker ([#75](https://github.com/dhis2/multi-calendar-dates/issues/75)) ([fb31512](https://github.com/dhis2/multi-calendar-dates/commit/fb31512f25973c46d9758c02f145dbfbb2616e6c))
-
-
-### BREAKING CHANGES
-
-* Remove Temporal references from hook public API
-
-* feat: remove validation details from result of useDatePicker
-
-as they are available in exposed validate date string function
-
-* feat: remove calendar date from use date picker
-
-* refactor: remove calendarDate from onDateSelect callback
-
-* refactor: remove zonedDateTime from week days array
-
-* refactor: fix linting issues
+* check first week of subsequent year when geting period by date [LIBS-688] ([#74](https://github.com/dhis2/multi-calendar-dates/issues/74)) ([8662fe0](https://github.com/dhis2/multi-calendar-dates/commit/8662fe0e4f263c1abde1b813097e30b9b65ee31e))
 
 ## [1.3.1](https://github.com/dhis2/multi-calendar-dates/compare/v1.3.0...v1.3.1) (2024-09-26)
 

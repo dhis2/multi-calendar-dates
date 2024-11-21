@@ -30,6 +30,14 @@ describe('Gregorian Calendar period by date calculation', () => {
             expect(actual?.id).toBe('2022W1')
         })
 
+        it('should return "2025W1" for period type "WEEKLY" on "2024-12-31"', () => {
+            const periodType = 'WEEKLY'
+            const date = '2024-12-31'
+            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('2025W1')
+        })
+
         it('should return "2018WedW52" for period type "WEEKLYWED" on "2019-01-01"', () => {
             const periodType = 'WEEKLYWED'
             const date = '2019-01-01'
@@ -94,6 +102,14 @@ describe('Gregorian Calendar period by date calculation', () => {
             expect(actual?.id).toBe('2023SunW1')
         })
 
+        it('should return "2025SunW1" for period type "WEEKLYSUN" on "2024-12-31"', () => {
+            const periodType = 'WEEKLYSUN'
+            const date = '2024-12-31'
+            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('2025SunW1')
+        })
+
         it('should return "2020BiW26" for period type "BIWEEKLY" on "2021-01-01"', () => {
             const periodType = 'BIWEEKLY'
             const date = '2021-01-01'
@@ -102,12 +118,20 @@ describe('Gregorian Calendar period by date calculation', () => {
             expect(actual?.id).toBe('2020BiW26')
         })
 
-        it('should return "2020SunW1" for period type "BIWEEKLY" on "2020-01-01"', () => {
+        it('should return "2020BiW1" for period type "BIWEEKLY" on "2020-01-01"', () => {
             const periodType = 'BIWEEKLY'
             const date = '2020-01-01'
             const actual = getFixedPeriodByDate({ periodType, date, calendar })
 
             expect(actual?.id).toBe('2020BiW1')
+        })
+
+        it('should return "2025BiW1" for period type "BIWEEKLY" on "2024-12-31"', () => {
+            const periodType = 'BIWEEKLY'
+            const date = '2024-12-31'
+            const actual = getFixedPeriodByDate({ periodType, date, calendar })
+
+            expect(actual?.id).toBe('2025BiW1')
         })
     })
 
