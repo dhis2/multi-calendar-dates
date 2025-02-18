@@ -4,6 +4,7 @@ import {
     PickerOptionsWithResolvedCalendar,
     SupportedCalendar,
 } from '../../types'
+import { isCustomCalendar, getMonthsForCalendar } from '../../utils/helpers'
 import localisationHelpers from '../../utils/localisationHelpers'
 
 export type UseNavigationReturnType = {
@@ -30,55 +31,16 @@ export type UseNavigationReturnType = {
         label: string | undefined
         navigateTo: () => void
     }
-    months: Array<{
+    months?: Array<{
         label: string
         value: number
     }>
-    navigateToMonth: (month: number) => void
-    navigateToYear: (year: number) => void
-}
-
-type Month = {
-    value: number
-    dateForLabel?: Temporal.PlainDate
-}
-
-const getAvailableMonths = (calendarSystem = 'iso8601'): Month[] => {
-    try {
-        const calendar = new Temporal.Calendar(calendarSystem)
-        const referenceDate = calendar.dateFromFields({
-            year: 2000,
-            month: 1,
-            day: 1,
-        })
-
-        const months: Month[] = []
-        let monthIndex = 1
-
-        while (monthIndex <= 13) {
-            try {
-                const date = calendar.dateFromFields({
-                    year: referenceDate.year,
-                    month: monthIndex,
-                    day: 1,
-                })
-                const monthInfo = calendar.monthsInYear(date)
-                if (monthIndex > monthInfo) {
-                    break
-                }
-                months.push({
-                    value: monthIndex,
-                    dateForLabel: date,
-                })
-                monthIndex++
-            } catch (e) {
-                break
-            }
-        }
-        return months
-    } catch (e) {
-        return getAvailableMonths('iso8601')
-    }
+    years?: Array<{
+        label: string
+        value: number
+    }>
+    navigateToMonth?: (month: number) => void
+    navigateToYear?: (year: number) => void
 }
 
 type UseNavigationHook = (
@@ -116,9 +78,7 @@ export const useNavigation: UseNavigationHook = (
 
         const options = {
             locale: localeOptions.locale,
-            calendar: localeOptions.calendar.id as
-                | SupportedCalendar
-                | undefined,
+            calendar: localeOptions.calendar.id as SupportedCalendar,
             numberingSystem: localeOptions.numberingSystem,
         }
 
@@ -127,30 +87,115 @@ export const useNavigation: UseNavigationHook = (
             year: 'numeric' as const,
         }
 
+        const getYearOptions = (
+            currentYear: number | string,
+            pastOnly = false
+        ) => {
+            if (!currentYear) {
+                return []
+            }
+
+            const currentYearValue = parseInt(String(currentYear))
+            if (isNaN(currentYearValue)) {
+                return []
+            }
+
+            const years = []
+            let startYear, endYear
+
+            if (options.calendar === 'nepali') {
+                startYear = Math.max(
+                    1971,
+                    currentYearValue - (pastOnly ? 125 : 100)
+                )
+                endYear = Math.min(
+                    2100,
+                    pastOnly ? currentYearValue : currentYearValue + 25
+                )
+            } else {
+                startYear = currentYearValue - (pastOnly ? 125 : 100)
+                endYear = pastOnly ? currentYearValue : currentYearValue + 25
+            }
+
+            for (let year = startYear; year <= endYear; year++) {
+                const yearDate = firstZdtOfVisibleMonth.with({
+                    year,
+                    month: 1,
+                    day: 1,
+                })
+
+                years.push({
+                    label: localisationHelpers
+                        .localiseYear(
+                            yearDate,
+                            { ...localeOptions, calendar: options.calendar },
+                            yearNumericFormat
+                        )
+                        .toString(),
+                    value: year,
+                })
+            }
+            return years
+        }
+
+        const currentYearValue =
+            // Ethiopic years - when localised to English - add the era (i.e. 2015 ERA1)
+            options.calendar === 'ethiopic'
+                ? firstZdtOfVisibleMonth.eraYear ??
+                  String(
+                      localisationHelpers.localiseYear(
+                          firstZdtOfVisibleMonth,
+                          {
+                              ...localeOptions,
+                              calendar: options.calendar,
+                          },
+                          yearNumericFormat
+                      )
+                  ).split(' ')[0]
+                : firstZdtOfVisibleMonth.year
+
+        const years = getYearOptions(currentYearValue, localeOptions.pastOnly)
+
         const monthFormat: Intl.DateTimeFormatOptions = {
             ...options,
             month: 'long' as const,
         }
 
-        const monthsData = getAvailableMonths(options.calendar)
-        const months = monthsData
-            .map((month) => ({
-                value: month.value,
-                label:
-                    (month.dateForLabel &&
-                        localisationHelpers.localiseMonth(
-                            month.dateForLabel.toZonedDateTime({
-                                timeZone: firstZdtOfVisibleMonth.timeZone,
-                            }),
-                            { ...localeOptions, calendar: options.calendar },
-                            monthFormat
-                        )) ||
-                    '',
-            }))
-            .filter((month): month is { label: string; value: number } =>
-                Boolean(month.label)
-            )
+        const isCustom = isCustomCalendar(options.calendar)
+        const months =
+            !isCustom && options.locale?.toLowerCase().startsWith('en')
+                ? getMonthsForCalendar(options.calendar)
+                : getMonthsForCalendar(
+                      isCustom ? 'gregory' : options.calendar
+                  ).map((month) => {
+                      const calendar = new Temporal.Calendar(
+                          isCustom ? 'gregory' : options.calendar
+                      )
+                      const referenceDate = calendar.dateFromFields({
+                          year: 2000,
+                          month: 1,
+                          day: 1,
+                      })
 
+                      const date = calendar.dateFromFields({
+                          year: referenceDate.year,
+                          month: month.value,
+                          day: 1,
+                      })
+
+                      return {
+                          value: month.value,
+                          label:
+                              localisationHelpers.localiseMonth(
+                                  date,
+                                  {
+                                      ...localeOptions,
+                                      calendar: options.calendar,
+                                  },
+                                  monthFormat
+                              ) || month.label,
+                      }
+                  })
         const navigateToMonth = (monthNum: number) => {
             try {
                 setFirstZdtOfVisibleMonth(
@@ -184,21 +229,7 @@ export const useNavigation: UseNavigationHook = (
                     { ...localeOptions, calendar: options.calendar },
                     yearNumericFormat
                 ),
-                value:
-                    options.calendar === 'ethiopic'
-                        ? firstZdtOfVisibleMonth.eraYear ??
-                          String(
-                              localisationHelpers.localiseYear(
-                                  firstZdtOfVisibleMonth,
-                                  {
-                                      ...localeOptions,
-                                      calendar: options.calendar,
-                                  },
-                                  yearNumericFormat
-                              )
-                              // Ethiopic years - when localised to English - add the era (i.e. 2015 ERA1)
-                          ).split(' ')[0]
-                        : firstZdtOfVisibleMonth.year,
+                value: currentYearValue,
             },
             nextYear: {
                 label: localisationHelpers.localiseYear(
@@ -232,6 +263,7 @@ export const useNavigation: UseNavigationHook = (
                 navigateTo: () => setFirstZdtOfVisibleMonth(nextMonth),
             },
             months,
+            years,
             navigateToMonth,
             navigateToYear,
         }

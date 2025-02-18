@@ -1,4 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill'
+import { months, Month } from '../constants/months'
 import { customCalendars, CustomCalendarTypes } from '../custom-calendars'
 import { PickerOptions } from '../types'
 import { extractDatePartsFromDateString } from './extract-date-parts-from-date-string'
@@ -124,4 +125,8 @@ const adjustForEthiopicCalendar = (result: customDate) => {
     result.eraYear = result.year
     delete result.year
     return result
+}
+
+export const getMonthsForCalendar = (calendarType: string): Month[] => {
+    return months[calendarType.toLowerCase()] || months.gregory
 }
