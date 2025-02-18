@@ -31,16 +31,16 @@ export type UseNavigationReturnType = {
         label: string | undefined
         navigateTo: () => void
     }
-    months?: Array<{
+    months: Array<{
         label: string
         value: number
     }>
-    years?: Array<{
+    years: Array<{
         label: string
         value: number
     }>
-    navigateToMonth?: (month: number) => void
-    navigateToYear?: (year: number) => void
+    navigateToMonth: (month: number) => void
+    navigateToYear: (year: number) => void
 }
 
 type UseNavigationHook = (
