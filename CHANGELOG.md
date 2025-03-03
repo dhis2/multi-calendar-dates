@@ -1,3 +1,10 @@
+# [2.1.0](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0...v2.1.0) (2025-03-03)
+
+
+### Features
+
+* add year month selector to calendar component ([#84](https://github.com/dhis2/multi-calendar-dates/issues/84)) ([73a36f7](https://github.com/dhis2/multi-calendar-dates/commit/73a36f7aaaa47aca8032c36cff4705f856fc0474))
+
 # [2.0.0](https://github.com/dhis2/multi-calendar-dates/compare/v1.3.2...v2.0.0) (2024-11-21)
 
 
