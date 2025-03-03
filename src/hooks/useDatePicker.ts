@@ -130,7 +130,7 @@ export const useDatePicker: UseDatePickerHookType = ({
     const localeOptions = useMemo(
         () => ({
             locale: resolvedOptions.locale,
-            calendar: temporalCalendar as unknown as SupportedCalendar,
+            calendar: temporalCalendar,
             timeZone: temporalTimeZone,
             weekDayFormat: resolvedOptions.weekDayFormat,
             numberingSystem: resolvedOptions.numberingSystem,
@@ -143,7 +143,7 @@ export const useDatePicker: UseDatePickerHookType = ({
     const navigation = useNavigation(
         firstZdtOfVisibleMonth.withCalendar(localeOptions.calendar),
         setFirstZdtOfVisibleMonth,
-        localeOptions
+        { ...localeOptions, pastOnly: options?.pastOnly }
     )
     const selectDate = useCallback(
         (zdt: Temporal.ZonedDateTime) => {
@@ -191,7 +191,7 @@ export const useDatePicker: UseDatePickerHookType = ({
                 dateValue: formatDate(weekDayZdt, undefined, format),
                 label: localisationHelpers.localiseWeekLabel(
                     weekDayZdt.withCalendar(localeOptions.calendar),
-                    localeOptions
+                    { ...localeOptions, calendar: resolvedOptions.calendar }
                 ),
                 onClick: () => selectDate(weekDayZdt),
                 isSelected: selectedDateZdt

@@ -9,10 +9,21 @@ export type WeekDayFormat = 'narrow' | 'short' | 'long'
 
 export type PickerOptions = Partial<ResolvedLocaleOptions>
 
+export type PickerOptionsWithResolvedCalendar = Omit<
+    PickerOptions,
+    'calendar'
+> & {
+    calendar: Temporal.CalendarProtocol
+    pastOnly?: boolean
+}
+
 export type ResolvedLocaleOptions = {
     calendar: SupportedCalendar
     locale: string
     timeZone: Temporal.TimeZoneLike
     numberingSystem: string
     weekDayFormat: WeekDayFormat
+    maxDate?: string | undefined
+    minDate?: string | undefined
+    pastOnly?: boolean
 }

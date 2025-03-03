@@ -55,7 +55,7 @@ jobs:
             - name: Build
               run: yarn build
 
-            - uses: actions/upload-artifact@v3
+            - uses: actions/upload-artifact@v4
               with:
                   name: lib-build
                   path: |
@@ -127,7 +127,7 @@ jobs:
               with:
                   node-version: 14.x
 
-            - uses: actions/download-artifact@v3
+            - uses: actions/download-artifact@v4
               with:
                   name: lib-build
 
