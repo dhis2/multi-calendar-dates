@@ -1,3 +1,10 @@
+## [2.1.1](https://github.com/dhis2/multi-calendar-dates/compare/v2.1.0...v2.1.1) (2025-04-28)
+
+
+### Bug Fixes
+
+* **package:** export type declarations, peer dep above react 16.8 ([#85](https://github.com/dhis2/multi-calendar-dates/issues/85)) ([6f896c6](https://github.com/dhis2/multi-calendar-dates/commit/6f896c6296e23710f744d1a392540df70875bb4b))
+
 # [2.1.0](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0...v2.1.0) (2025-03-03)
 
 
