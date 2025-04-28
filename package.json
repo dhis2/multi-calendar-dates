@@ -44,7 +44,8 @@
     "types": "./build/types/index.d.ts",
     "exports": {
         "import": "./build/es/index.js",
-        "require": "./build/cjs/index.js"
+        "require": "./build/cjs/index.js",
+        "types": "./build/types/index.d.ts"
     },
     "jest": {
         "transformIgnorePatterns": [
@@ -71,8 +72,8 @@
         "classnames": "^2.3.2"
     },
     "peerDependencies": {
-        "react": "^16.8",
-        "react-dom": "^16.8"
+        "react": ">=16.8",
+        "react-dom": ">=16.8"
     },
     "devDependencies": {
         "@cucumber/cucumber": "^8.9.0",
