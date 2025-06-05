@@ -1,3 +1,10 @@
+## [2.1.2](https://github.com/dhis2/multi-calendar-dates/compare/v2.1.1...v2.1.2) (2025-06-05)
+
+
+### Bug Fixes
+
+* corrected nepali month days mapping of 2082 ([#86](https://github.com/dhis2/multi-calendar-dates/issues/86)) ([8b0e8ba](https://github.com/dhis2/multi-calendar-dates/commit/8b0e8baa376f56d4dd948bcfa3f5fec359c05147))
+
 ## [2.1.1](https://github.com/dhis2/multi-calendar-dates/compare/v2.1.0...v2.1.1) (2025-04-28)
 
 
