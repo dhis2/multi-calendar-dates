@@ -1,3 +1,11 @@
+# [2.0.0-alpha.7](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0-alpha.6...v2.0.0-alpha.7) (2025-11-04)
+
+
+### Bug Fixes
+
+* force a build from alpha ([268d7c3](https://github.com/dhis2/multi-calendar-dates/commit/268d7c31bab0489982b5f428f9027097d8dedca9))
+* point to cli-utils@alpha ([4b0a15a](https://github.com/dhis2/multi-calendar-dates/commit/4b0a15a1140f9736341671fe6ab70a58a0166118))
+
 # [2.0.0-alpha.6](https://github.com/dhis2/multi-calendar-dates/compare/v2.0.0-alpha.5...v2.0.0-alpha.6) (2024-11-21)
 
 
