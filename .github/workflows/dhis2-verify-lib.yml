@@ -132,4 +132,4 @@ jobs:
                   name: lib-build
 
             - name: Publish to NPM
-              run: npx @dhis2/cli-utils release --publish npm
+              run: npx @dhis2/cli-utils@alpha release --publish npm
