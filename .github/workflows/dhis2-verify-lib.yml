@@ -55,7 +55,7 @@ jobs:
             - name: Build
               run: yarn build
 
-            - uses: actions/upload-artifact@v3
+            - uses: actions/upload-artifact@v5
               with:
                   name: lib-build
                   path: |
