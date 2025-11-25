@@ -11,3 +11,5 @@ export type FixedPeriod = {
     startDate: string
     endDate: string
 }
+
+export type RelativePeriod = FixedPeriod
