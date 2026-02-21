@@ -5,18 +5,68 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: i18next-conv\n"
-"POT-Creation-Date: 2024-06-24T08:00:25.810Z\n"
+"POT-Creation-Date: 2024-08-27T05:56:11.774Z\n"
 "PO-Revision-Date: 2024-06-24 10:02+0000\n"
 "Last-Translator: Philip Larsen Donnelly, 2024\n"
 "Language-Team: French (https://app.transifex.com/hisp-uio/teams/100509/fr/)\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Language: fr\n"
 "Plural-Forms: nplurals=3; plural=(n == 0 || n == 1) ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;\n"
+
+msgid "Couldn't find a monthly period for weekly period id \"{{periodId}}\""
+msgstr ""
+
+msgid "Couldn't find a weekly period for weekly period id \"{{periodId}}\""
+msgstr ""
+
+msgid "Couldn't handle unknown period id \"{{periodId}}\""
+msgstr ""
+
+msgid "Could not find a period type for period id \"{{periodId}}\""
+msgstr ""
+
+msgid "Could not determine a period type for period id \"{{periodId}}\""
+msgstr ""
+
+msgid "Couldn't find a period type for weekly period id \"{{periodId}}\""
+msgstr ""
 
 msgid "Bi-Week"
 msgstr "Bi-hebdomadaire"
 
 msgid "Week"
 msgstr "Semaine"
+
+msgid "Date string is invalid, received \"{{dateString}}\""
+msgstr ""
+
+msgid ""
+"Date string format does not match the specified format. Expected {{format}} "
+"but got {{detectedFormat}}."
+msgstr ""
+
+msgid "Unrecognized date, received \"{{date}}\""
+msgstr ""
+
+msgid "Year {{year}} is out of range."
+msgstr ""
+
+msgid "Month {{month}} is out of range | 1 <= {{month}} <= 12."
+msgstr ""
+
+msgid "Day {{day}} is out of range | 1 <= {{day}} <= {{daysInMonth}}."
+msgstr ""
+
+msgid "Date is not given"
+msgstr ""
+
+msgid ""
+"Date {{dateString}} is less than the minimum allowed date {{minDateString}}."
+msgstr ""
+
+msgid ""
+"Date {{dateString}} is greater than the maximum allowed date "
+"{{maxDateString}}."
+msgstr ""
