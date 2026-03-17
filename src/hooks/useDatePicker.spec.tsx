@@ -636,3 +636,192 @@ it('should generate the correct calendar weeks when passed "Ethiopian" rather th
         ['27', '28', '29', '30', '1', '2', '3'],
     ])
 })
+
+describe('month labels in useDatePicker hook', () => {
+    describe('gregorian months', () => {
+        it('should return English month labels for English locale', () => {
+            const onDateSelect = jest.fn()
+            const date = '2018-01-22'
+            const options = {
+                locale: 'en-GB',
+                calendar: 'gregory' as SupportedCalendar,
+                timeZone: 'UTC',
+            }
+            const { result } = renderHook(() =>
+                useDatePicker({ onDateSelect, date, options })
+            )
+
+            expect(result.current.months).toEqual([
+                { value: 1, label: 'January' },
+                { value: 2, label: 'February' },
+                { value: 3, label: 'March' },
+                { value: 4, label: 'April' },
+                { value: 5, label: 'May' },
+                { value: 6, label: 'June' },
+                { value: 7, label: 'July' },
+                { value: 8, label: 'August' },
+                { value: 9, label: 'September' },
+                { value: 10, label: 'October' },
+                { value: 11, label: 'November' },
+                { value: 12, label: 'December' },
+            ])
+        })
+
+        it('should return localized month labels for Arabic locale', () => {
+            const onDateSelect = jest.fn()
+            const date = '2018-01-22'
+            const options = {
+                locale: 'ar-EG',
+                calendar: 'gregory' as SupportedCalendar,
+                timeZone: 'UTC',
+            }
+            const { result } = renderHook(() =>
+                useDatePicker({ onDateSelect, date, options })
+            )
+
+            const arabicMonths = result.current.months
+            expect(arabicMonths).toHaveLength(12)
+            expect(arabicMonths[0]).toEqual({ value: 1, label: 'يناير' })
+            expect(arabicMonths[11]).toEqual({ value: 12, label: 'ديسمبر' })
+        })
+    })
+
+    describe('islamic months', () => {
+        it('should return English month labels for English locale', () => {
+            const onDateSelect = jest.fn()
+            const date = '1439-01-22'
+            const options = {
+                locale: 'en-GB',
+                calendar: 'islamic-civil' as SupportedCalendar,
+                timeZone: 'UTC',
+            }
+            const { result } = renderHook(() =>
+                useDatePicker({ onDateSelect, date, options })
+            )
+
+            expect(result.current.months).toEqual([
+                { value: 1, label: 'Muharram' },
+                { value: 2, label: 'Safar' },
+                { value: 3, label: 'Rabiʻ I' },
+                { value: 4, label: 'Rabiʻ II' },
+                { value: 5, label: 'Jumada I' },
+                { value: 6, label: 'Jumada II' },
+                { value: 7, label: 'Rajab' },
+                { value: 8, label: 'Shaʻban' },
+                { value: 9, label: 'Ramadan' },
+                { value: 10, label: 'Shawwal' },
+                { value: 11, label: 'Dhuʻl-Qiʻdah' },
+                { value: 12, label: 'Dhuʻl-Hijjah' },
+            ])
+        })
+
+        it('should return localized month labels for Arabic locale', () => {
+            const onDateSelect = jest.fn()
+            const date = '1439-01-22'
+            const options = {
+                locale: 'ar-EG',
+                calendar: 'islamic-civil' as SupportedCalendar,
+                timeZone: 'UTC',
+            }
+            const { result } = renderHook(() =>
+                useDatePicker({ onDateSelect, date, options })
+            )
+
+            const arabicMonths = result.current.months
+            expect(arabicMonths).toHaveLength(12)
+            expect(arabicMonths[0]).toEqual({ value: 1, label: 'محرم' })
+            expect(arabicMonths[8]).toEqual({ value: 9, label: 'رمضان' })
+        })
+    })
+
+    describe('ethiopic months', () => {
+        it('should return English month labels for English locale', () => {
+            const onDateSelect = jest.fn()
+            const date = '2015-01-22'
+            const options = {
+                locale: 'en-GB',
+                calendar: 'ethiopic' as SupportedCalendar,
+                timeZone: 'UTC',
+            }
+            const { result } = renderHook(() =>
+                useDatePicker({ onDateSelect, date, options })
+            )
+
+            expect(result.current.months[0]).toEqual({
+                value: 1,
+                label: 'Meskerem',
+            })
+            expect(result.current.months[12]).toEqual({
+                value: 13,
+                label: 'Pagumen',
+            })
+            expect(result.current.months).toHaveLength(13)
+        })
+
+        it('should return localized month labels for Amharic locale', () => {
+            const onDateSelect = jest.fn()
+            const date = '2015-01-22'
+            const options = {
+                locale: 'am-ET',
+                calendar: 'ethiopic' as SupportedCalendar,
+                timeZone: 'UTC',
+            }
+            const { result } = renderHook(() =>
+                useDatePicker({ onDateSelect, date, options })
+            )
+
+            const amharicMonths = result.current.months
+            expect(amharicMonths).toHaveLength(13)
+            expect(amharicMonths[0]).toEqual({ value: 1, label: 'መስከረም' })
+            expect(amharicMonths[12]).toEqual({ value: 13, label: 'ጳጉሜን' })
+        })
+    })
+
+    describe('nepali months', () => {
+        it('should return English month labels for English locale', () => {
+            const onDateSelect = jest.fn()
+            const date = '2079-01-12'
+            const options = {
+                locale: 'en-NP',
+                calendar: 'nepali' as SupportedCalendar,
+                timeZone: 'UTC',
+            }
+            const { result } = renderHook(() =>
+                useDatePicker({ onDateSelect, date, options })
+            )
+
+            expect(result.current.months).toEqual([
+                { value: 1, label: 'Baisakh' },
+                { value: 2, label: 'Jestha' },
+                { value: 3, label: 'Ashadh' },
+                { value: 4, label: 'Shrawan' },
+                { value: 5, label: 'Bhadra' },
+                { value: 6, label: 'Ashwin' },
+                { value: 7, label: 'Kartik' },
+                { value: 8, label: 'Mangsir' },
+                { value: 9, label: 'Paush' },
+                { value: 10, label: 'Mangh' },
+                { value: 11, label: 'Falgun' },
+                { value: 12, label: 'Chaitra' },
+            ])
+        })
+
+        it('should return localized month labels for Nepali locale', () => {
+            const onDateSelect = jest.fn()
+            const date = '2079-01-12'
+            const options = {
+                locale: 'ne-NP',
+                calendar: 'nepali' as SupportedCalendar,
+                timeZone: 'UTC',
+            }
+            const { result } = renderHook(() =>
+                useDatePicker({ onDateSelect, date, options })
+            )
+
+            const nepaliMonths = result.current.months
+            expect(nepaliMonths).toHaveLength(12)
+            expect(nepaliMonths[0]).toEqual({ value: 1, label: 'बैशाख' })
+            expect(nepaliMonths[11]).toEqual({ value: 12, label: 'चैत' })
+        })
+    })
+})
