@@ -1,7 +1,7 @@
 import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
 import getValidLocale from '../../utils/getValidLocale'
-import { fromAnyDate, getCustomCalendarIfExists } from '../../utils/index'
+import { fromAnyDate } from '../../utils/index'
 import {
     monthlyFixedPeriodTypes,
     weeklyFixedPeriodTypes,
@@ -50,9 +50,7 @@ const generateFixedPeriods: GenerateFixedPeriods = ({
         }
     }
 
-    const calendar = getCustomCalendarIfExists(
-        dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
-    ) as SupportedCalendar
+    const calendar = dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
 
     const validLocale = getValidLocale(locale) ?? 'en'
 

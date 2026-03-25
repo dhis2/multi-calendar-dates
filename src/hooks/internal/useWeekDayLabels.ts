@@ -2,6 +2,7 @@ import { Temporal } from '@js-temporal/polyfill'
 import { useMemo } from 'react'
 import { PickerOptionsWithResolvedCalendar } from '../../types'
 import localisationHelpers from '../../utils/localisationHelpers'
+import { getNowInCalendar } from '../../utils'
 
 export const useWeekDayLabels = (
     localeOptions: PickerOptionsWithResolvedCalendar
@@ -10,9 +11,7 @@ export const useWeekDayLabels = (
         if (!localeOptions.calendar) {
             throw new Error('a calendar must be provided to useWeekDayLabels')
         }
-        const today = Temporal.Now.zonedDateTime(
-            localeOptions.calendar
-        ).startOfDay()
+        const today = getNowInCalendar(localeOptions.calendar)
 
         const startOfWeek = today.subtract({ days: today.dayOfWeek - 1 }) // dayOfWeek is 1-based, where 1 is Monday
 
@@ -30,7 +29,7 @@ export const useWeekDayLabels = (
     }, [localeOptions])
 
 const getWeekDayString: (
-    date: Temporal.ZonedDateTime,
+    date: Temporal.PlainDate,
     localeOptions: PickerOptionsWithResolvedCalendar
 ) => string = (date, localeOptions) => {
     return localisationHelpers.localiseWeekDayLabel(date, localeOptions)

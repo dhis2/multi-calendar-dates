@@ -6,6 +6,7 @@ import {
     getYearlyStartMonthByPeriodType,
 } from '../yearly-periods/index'
 import doesPeriodEndBefore from './does-period-end-before'
+import { convertFromIso8601, getCustomPlainDate } from '../../utils'
 
 type GenerateFixedPeriodsYearly = (options: {
     year: number
@@ -25,7 +26,9 @@ const generateFixedPeriodsYearly: GenerateFixedPeriodsYearly = ({
     locale,
 }) => {
     const month = getYearlyStartMonthByPeriodType(periodType)
-    const currentYear = Temporal.PlainDate.from({
+    const PlainDateObject = getCustomPlainDate(calendar)
+
+    const currentYear = PlainDateObject.from({
         year,
         month,
         // this should really just be 1 but have to set it to 14th because of a
@@ -38,12 +41,7 @@ const generateFixedPeriodsYearly: GenerateFixedPeriodsYearly = ({
     // Timestamp "0" is gregorian 1970-01-01, so creating that date in the
     // gregorian calendar and then use the provided, correct calendar to
     // determine the year we need to go back to
-    const startYearDate = Temporal.PlainDate.from({
-        day: 1,
-        month: 1,
-        year: 1970,
-        calendar: 'gregory',
-    }).withCalendar(calendar)
+    const startYearDate = convertFromIso8601('1970-01-01', calendar)
 
     // we need to use eraYear because ethiopic calendar having the "correct"
     // year (as in what users expect to see) as eraYear, while iso8601 (which

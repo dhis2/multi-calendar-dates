@@ -4,6 +4,7 @@ import {
     PickerOptionsWithResolvedCalendar,
     SupportedCalendar,
 } from '../../types'
+import { convertFromIso8601 } from '../../utils'
 import { isCustomCalendar, getMonthsForCalendar } from '../../utils/helpers'
 import localisationHelpers from '../../utils/localisationHelpers'
 
@@ -44,8 +45,8 @@ export type UseNavigationReturnType = {
 }
 
 type UseNavigationHook = (
-    firstZdtOfVisibleMonth: Temporal.ZonedDateTime,
-    setFirstZdtOfVisibleMonth: Dispatch<SetStateAction<Temporal.ZonedDateTime>>,
+    firstZdtOfVisibleMonth: Temporal.PlainDate,
+    setFirstZdtOfVisibleMonth: Dispatch<SetStateAction<Temporal.PlainDate>>,
     localeOptions: PickerOptionsWithResolvedCalendar
 ) => UseNavigationReturnType
 /**
@@ -72,13 +73,14 @@ export const useNavigation: UseNavigationHook = (
         const prevMonth = firstZdtOfVisibleMonth
             .with({ day: 14 })
             .subtract({ months: 1 })
+
         const nextMonth = firstZdtOfVisibleMonth
             .with({ day: 14 })
             .add({ months: 1 })
 
         const options = {
             locale: localeOptions.locale,
-            calendar: localeOptions.calendar.id as SupportedCalendar,
+            calendar: localeOptions.calendar as SupportedCalendar,
             numberingSystem: localeOptions.numberingSystem,
         }
 
@@ -162,25 +164,37 @@ export const useNavigation: UseNavigationHook = (
         }
 
         const isCustom = isCustomCalendar(options.calendar)
+        const referenceDate = convertFromIso8601(
+            {
+                year: 2000,
+                month: 1,
+                day: 1,
+            },
+            options.calendar
+        )
         const months =
             !isCustom && options.locale?.toLowerCase().startsWith('en')
                 ? getMonthsForCalendar(options.calendar)
                 : getMonthsForCalendar(
                       isCustom ? 'gregory' : options.calendar
                   ).map((month) => {
-                      const calendar = new Temporal.Calendar(
-                          isCustom ? 'gregory' : options.calendar
-                      )
-                      const referenceDate = calendar.dateFromFields({
-                          year: 2000,
-                          month: 1,
-                          day: 1,
-                      })
+                      const { calendar } = options
 
-                      const date = calendar.dateFromFields({
-                          year: referenceDate.year,
+                      //   const PlainDateObject = getCustomPlainDate(calendar)
+
+                      //   const referenceDate = convertFromIso8601(
+                      //       {
+                      //           year: 2000,
+                      //           month: 1,
+                      //           day: 1,
+                      //       },
+                      //       calendar
+                      //   )
+
+                      const date = referenceDate.with({
                           month: month.value,
                           day: 1,
+                          //   calendar,
                       })
 
                       return {

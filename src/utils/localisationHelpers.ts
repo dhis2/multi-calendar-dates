@@ -105,7 +105,7 @@ const localiseWeekLabel = (
 
     return isCustom
         ? customLocale?.numbers?.[zdt.day] || zdt.day
-        : zdt.toPlainDate().toLocaleString(localeOptions.locale, {
+        : zdt.toLocaleString(localeOptions.locale, {
               calendar: localeOptions.calendar,
               numberingSystem: numberingSystems.includes(
                   localeOptions.numberingSystem as typeof numberingSystems[number]
@@ -117,11 +117,7 @@ const localiseWeekLabel = (
 }
 
 const localiseMonth = (
-    zdt:
-        | Temporal.ZonedDateTime
-        | Temporal.PlainYearMonth
-        | Temporal.PlainDate
-        | Temporal.PlainDateLike,
+    zdt: Temporal.PlainDate,
     localeOptions: PickerOptions,
     format: Intl.DateTimeFormatOptions
 ) => {
@@ -129,6 +125,7 @@ const localiseMonth = (
         throw new Error('no calendar provided to localise function')
     }
     const isCustom = isCustomCalendar(localeOptions.calendar)
+
     const customLocale = getCustomCalendarLocale(
         localeOptions.calendar,
         localeOptions.locale
@@ -140,7 +137,7 @@ const localiseMonth = (
 }
 
 export const localiseWeekDayLabel = (
-    zdt: Temporal.ZonedDateTime,
+    zdt: Temporal.PlainDate,
     localeOptions: PickerOptionsWithResolvedCalendar
 ) => {
     if (!localeOptions.calendar) {
@@ -156,14 +153,14 @@ export const localiseWeekDayLabel = (
 
     return isCustom && customDayString
         ? customDayString
-        : zdt.toPlainDate().toLocaleString(localeOptions.locale, {
+        : zdt.toLocaleString(localeOptions.locale, {
               weekday: localeOptions.weekDayFormat,
               calendar: localeOptions.calendar,
           })
 }
 
 export const localiseYear = (
-    zdt: Temporal.ZonedDateTime,
+    zdt: Temporal.PlainDate,
     localeOptions: PickerOptions,
     format: Intl.DateTimeFormatOptions
 ) => {
@@ -174,7 +171,7 @@ export const localiseYear = (
 
     return isCustom
         ? zdt.year
-        : zdt.toPlainYearMonth().toLocaleString(localeOptions.locale, format)
+        : zdt.toLocaleString(localeOptions.locale, format)
 }
 const localisationHelpers = {
     localiseYear,

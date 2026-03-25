@@ -3,7 +3,11 @@ import { Temporal } from '@js-temporal/polyfill'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
 import type { SupportedCalendar } from '../types'
 import { extractDatePartsFromDateString } from './extract-date-parts-from-date-string'
-import { getCustomCalendarIfExists, isCustomCalendar } from './helpers'
+import {
+    getCustomCalendarIfExists,
+    getCustomPlainDate,
+    isCustomCalendar,
+} from './helpers'
 
 type ValidationOptions = {
     calendar?: SupportedCalendar
@@ -59,9 +63,7 @@ export const validateDateString: ValidateDateStringFn = (
         strictValidation = true,
         format,
     } = options
-    const resolvedCalendar = getCustomCalendarIfExists(
-        dhis2CalendarsMap[calendar] ?? calendar
-    )
+    const resolvedCalendar = dhis2CalendarsMap[calendar] ?? calendar
 
     // Will throw if the format of the date is incorrect
     if (!dateString) {
@@ -95,15 +97,12 @@ export const validateDateString: ValidateDateStringFn = (
 
     // Will throw if the year, month or day is out of range
     try {
-        date = isCustomCalendar(resolvedCalendar)
-            ? Temporal.Calendar.from(resolvedCalendar).dateFromFields(
-                  dateParts,
-                  { overflow: 'reject' }
-              ) // need to be handled separately for custom calendars
-            : Temporal.PlainDate.from(
-                  { ...dateParts, calendar: resolvedCalendar },
-                  { overflow: 'reject' }
-              )
+        const PlainDateObject = getCustomPlainDate(resolvedCalendar)
+
+        date = PlainDateObject.from(
+            { ...dateParts, calendar: resolvedCalendar },
+            { overflow: 'reject' }
+        )
     } catch (err) {
         return {
             valid: false,
@@ -116,15 +115,16 @@ export const validateDateString: ValidateDateStringFn = (
     const validationType = strictValidation
         ? { error: true, valid: false }
         : { warning: true, valid: true }
+    const PlainDateObject = getCustomPlainDate(calendar)
 
     if (minDateString) {
         const minDateParts = extractDatePartsFromDateString(minDateString)
-        const minDate = Temporal.PlainDate.from({
+        const minDate = PlainDateObject.from({
             ...minDateParts,
             calendar: resolvedCalendar,
         })
 
-        if (Temporal.PlainDate.compare(date, minDate) < 0) {
+        if (PlainDateObject.compare(date, minDate) < 0) {
             const result: ValidationResult = {
                 ...validationType,
                 validationCode: DateValidationResult.LESS_THAN_MIN,
@@ -140,12 +140,12 @@ export const validateDateString: ValidateDateStringFn = (
 
     if (maxDateString) {
         const maxDateParts = extractDatePartsFromDateString(maxDateString)
-        const maxDate = Temporal.PlainDate.from({
+        const maxDate = PlainDateObject.from({
             ...maxDateParts,
             calendar: resolvedCalendar,
         })
 
-        if (Temporal.PlainDate.compare(date, maxDate) > 0) {
+        if (PlainDateObject.compare(date, maxDate) > 0) {
             const result: ValidationResult = {
                 ...validationType,
                 validationCode: DateValidationResult.MORE_THAN_MAX,

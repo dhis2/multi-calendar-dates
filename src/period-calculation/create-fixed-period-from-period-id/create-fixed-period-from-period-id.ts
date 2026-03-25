@@ -2,7 +2,7 @@ import i18n from '@dhis2/d2-i18n'
 import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
 import getValidLocale from '../../utils/getValidLocale'
-import { fromAnyDate, getCustomCalendarIfExists } from '../../utils/index'
+import { fromAnyDate } from '../../utils/index'
 import { buildDailyFixedPeriod } from '../daily-periods/index'
 import { generateFixedPeriods } from '../generate-fixed-periods/index'
 import {
@@ -28,9 +28,7 @@ const createFixedPeriodFromPeriodId: ParseFixedPeriodId = ({
     calendar: requestedCalendar,
     locale = 'en',
 }) => {
-    const calendar = getCustomCalendarIfExists(
-        dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
-    ) as SupportedCalendar
+    const calendar = dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
 
     const validLocale = getValidLocale(locale) ?? 'en'
 

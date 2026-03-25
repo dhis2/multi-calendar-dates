@@ -1,7 +1,12 @@
 import i18n from '@dhis2/d2-i18n'
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
-import { fromAnyDate, formatDate, padWithZeroes } from '../../utils/index'
+import {
+    fromAnyDate,
+    formatDate,
+    padWithZeroes,
+    getCustomPlainDate,
+} from '../../utils/index'
 import { FixedPeriod, PeriodType } from '../types'
 import doesPeriodEndBefore from './does-period-end-before'
 
@@ -127,7 +132,8 @@ const getStartingDate = (options: {
     const { year, calendar, startingDay } = options
 
     // first week in every year has the 4th in the first month
-    const fourthOfFirstMonth = Temporal.PlainDate.from({
+    const PlainDateObject = getCustomPlainDate(calendar)
+    const fourthOfFirstMonth = PlainDateObject.from({
         year,
         month: 1,
         day: 4,

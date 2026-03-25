@@ -2,6 +2,7 @@ import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
 import {
     formatDate,
+    getCustomPlainDate,
     isCustomCalendar,
     padWithZeroes,
 } from '../../utils/helpers'
@@ -54,11 +55,13 @@ const buildMonthlyFixedPeriod: BuildMonthlyFixedPeriod = ({
         )
     }
 
-    const endDate = Temporal.PlainDate.from({
+    const PlainDateObject = getCustomPlainDate(calendar)
+
+    const endDate = PlainDateObject.from({
         year: nextMonth.year,
         month: nextMonth.month,
         day: 1,
-        calendar: nextMonth.calendar,
+        calendar: nextMonth.calendarId,
     }).subtract({ days: 1 })
 
     const name = buildLabel({

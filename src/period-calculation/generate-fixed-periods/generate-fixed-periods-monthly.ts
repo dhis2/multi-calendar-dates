@@ -1,6 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
-import { fromAnyDate } from '../../utils/index'
+import { fromAnyDate, getCustomPlainDate } from '../../utils/index'
 import { getStartingMonthByPeriodType } from '../get-starting-month-for-period-type'
 import monthNumbers from '../month-numbers'
 import { buildMonthlyFixedPeriod } from '../monthly-periods/index'
@@ -11,6 +11,7 @@ import {
 } from '../period-type-groups'
 import { FixedPeriod, PeriodType } from '../types'
 import doesPeriodEndBefore from './does-period-end-before'
+import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 
 type GenerateFixedPeriodsMonthly = (options: {
     year: number
@@ -22,25 +23,37 @@ type GenerateFixedPeriodsMonthly = (options: {
 
 const generateFixedPeriodsMonthly: GenerateFixedPeriodsMonthly = ({
     year,
-    calendar,
+    calendar: userCalendar,
     periodType,
     endsBefore,
     locale,
 }) => {
-    let currentMonth = Temporal.PlainDate.from({
+    const calendar = dhis2CalendarsMap[userCalendar] ?? userCalendar
+    const dateParts: Temporal.PlainDateLike = {
         year,
         month: getStartingMonth(periodType),
         // this should really just be 1 but have to set it to 14th because of a
         // quirk in custom calendars
         // @TODO: discuss this with the Temporal team
         day: calendar.toString() === 'nepali' ? 14 : 1,
-        calendar,
-    })
+        calendar: calendar,
+    }
+    if (calendar === 'ethiopic') {
+        dateParts.era = 'ethiopic'
+        dateParts.eraYear = year
+        delete dateParts.year
+    }
+
+    const PlainDateObject = getCustomPlainDate(calendar)
+
+    let currentMonth = PlainDateObject.from(dateParts)
 
     const months: FixedPeriod[] = []
 
+    const yearProperty = calendar === 'ethiopic' ? 'eraYear' : 'year'
+
     while (
-        currentMonth.year === year ||
+        currentMonth[yearProperty] === year ||
         needsExtraMonth(periodType, months.length)
     ) {
         const monthToAdd = getMonthsToAdd({
