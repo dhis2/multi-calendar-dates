@@ -1,6 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
-import { fromAnyDate } from '../../utils/index'
+import { fromAnyDate, getCustomPlainDate } from '../../utils/index'
 import { buildDailyFixedPeriod } from '../daily-periods/index'
 import { FixedPeriod } from '../types'
 
@@ -20,7 +20,10 @@ const generateFixedPeriodsDaily: GenerateFixedPeriodsDaily = ({
     const endsBefore = _endsBefore
         ? fromAnyDate({ calendar, date: _endsBefore })
         : null
-    const day = Temporal.PlainDate.from({
+
+    const PlainDateObject = getCustomPlainDate(calendar)
+
+    const day = PlainDateObject.from({
         year,
         month: 1,
         day: 1,

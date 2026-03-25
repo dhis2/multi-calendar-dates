@@ -1,6 +1,5 @@
 import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
-import { getCustomCalendarIfExists } from '../../utils/index'
 import {
     monthlyFixedPeriodTypes,
     weeklyFixedPeriodTypes,
@@ -25,9 +24,7 @@ const getFixedPeriodByDate: GetFixedPeriodByDate = ({
     calendar: requestedCalendar,
     locale = 'en',
 }) => {
-    const calendar = getCustomCalendarIfExists(
-        dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
-    ) as SupportedCalendar
+    const calendar = dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
 
     // const date = fromAnyDate({ date: dateInput, calendar })
     const payload = { periodType, date, calendar, locale }

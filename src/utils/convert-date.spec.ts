@@ -40,12 +40,9 @@ describe('date conversion from gregorian', () => {
     describe('to nepali', () => {
         it('should convert a date', () => {
             const result = convertFromIso8601('2024-05-23', 'nepali')
-            expect(result).toMatchObject({
-                eraYear: 2081,
-                year: 2081,
-                month: 2,
-                day: 10,
-            })
+            expect(result.year).toEqual(2081)
+            expect(result.month).toEqual(2)
+            expect(result.day).toEqual(10)
         })
 
         it('should convert a date object', () => {
@@ -57,18 +54,14 @@ describe('date conversion from gregorian', () => {
                 },
                 'nepali'
             )
-            expect(result).toMatchObject({
-                eraYear: 2081,
-                year: 2081,
-                month: 2,
-                day: 10,
-            })
+            expect(result.year).toEqual(2081)
+            expect(result.month).toEqual(2)
+            expect(result.day).toEqual(10)
         })
     })
     it('should convert to islamic date', () => {
         const result = convertFromIso8601('2024-05-23', 'islamic')
         expect(result).toMatchObject({
-            eraYear: 1445,
             year: 1445,
             month: 11,
             day: 15,

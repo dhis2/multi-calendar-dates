@@ -5,8 +5,8 @@ import { getNowInCalendar } from '../index'
 import { PickerOptions, SupportedCalendar } from '../types'
 import {
     formatDate,
-    getCustomCalendarIfExists,
     extractAndValidateDateString,
+    getCustomPlainDate,
 } from '../utils/helpers'
 import localisationHelpers from '../utils/localisationHelpers'
 import { useCalendarWeekDays } from './internal/useCalendarWeekDays'
@@ -59,10 +59,9 @@ export const useDatePicker: UseDatePickerHookType = ({
     options,
 }) => {
     const optionsWithCustomerCalendar = useMemo(() => {
-        const calendar = getCustomCalendarIfExists(
+        const calendar =
             dhis2CalendarsMap[options.calendar ?? 'gregorian'] ??
-                options.calendar
-        ) as SupportedCalendar
+            options.calendar
         return {
             ...options,
             calendar,
@@ -76,11 +75,7 @@ export const useDatePicker: UseDatePickerHookType = ({
     const prevDateStringRef = useRef(dateString)
 
     const todayZdt = useMemo(
-        () =>
-            getNowInCalendar(
-                resolvedOptions.calendar,
-                resolvedOptions.timeZone
-            ).startOfDay(),
+        () => getNowInCalendar(resolvedOptions.calendar),
         [resolvedOptions]
     )
 
@@ -105,22 +100,28 @@ export const useDatePicker: UseDatePickerHookType = ({
 
     date.format = !date.format ? format : date.format
 
-    const temporalCalendar = useMemo(
-        () => Temporal.Calendar.from(resolvedOptions.calendar),
-        [resolvedOptions.calendar]
-    )
-    const temporalTimeZone = useMemo(
-        () => Temporal.TimeZone.from(resolvedOptions.timeZone),
-        [resolvedOptions.timeZone]
+    // const temporalCalendar = useMemo(
+    //     () => Temporal.Calendar.from(resolvedOptions.calendar),
+    //     [resolvedOptions.calendar]
+    // )
+    // const temporalTimeZone = useMemo(
+    //     () => Temporal.TimeZone.from(resolvedOptions.timeZone),
+    //     [resolvedOptions.timeZone]
+    // )
+
+    const PlainDateObject = useMemo(
+        () => getCustomPlainDate(optionsWithCustomerCalendar.calendar),
+        [optionsWithCustomerCalendar.calendar]
     )
 
-    const selectedDateZdt = dateString
-        ? Temporal.Calendar.from(temporalCalendar)
-              .dateFromFields(date)
-              .toZonedDateTime({
-                  timeZone: temporalTimeZone,
-              })
-        : null
+    const selectedDateZdt = useMemo(
+        () =>
+            PlainDateObject.from({
+                ...date,
+                calendar: resolvedOptions.calendar,
+            }),
+        [PlainDateObject, date, resolvedOptions.calendar]
+    )
 
     const [firstZdtOfVisibleMonth, setFirstZdtOfVisibleMonth] = useState(() => {
         const zdt = selectedDateZdt || todayZdt
@@ -130,18 +131,17 @@ export const useDatePicker: UseDatePickerHookType = ({
     const localeOptions = useMemo(
         () => ({
             locale: resolvedOptions.locale,
-            calendar: temporalCalendar,
-            timeZone: temporalTimeZone,
+            calendar: resolvedOptions.calendar,
             weekDayFormat: resolvedOptions.weekDayFormat,
             numberingSystem: resolvedOptions.numberingSystem,
         }),
-        [resolvedOptions, temporalCalendar, temporalTimeZone]
+        [resolvedOptions]
     )
 
     const weekDayLabels = useWeekDayLabels(localeOptions)
 
     const navigation = useNavigation(
-        firstZdtOfVisibleMonth.withCalendar(localeOptions.calendar),
+        firstZdtOfVisibleMonth,
         setFirstZdtOfVisibleMonth,
         { ...localeOptions, pastOnly: options?.pastOnly }
     )
@@ -162,11 +162,14 @@ export const useDatePicker: UseDatePickerHookType = ({
 
         prevDateStringRef.current = dateString
 
-        const zdt = Temporal.Calendar.from(temporalCalendar)
-            .dateFromFields(date)
-            .toZonedDateTime({
-                timeZone: temporalTimeZone,
-            })
+        const PlainDateObject = getCustomPlainDate(
+            optionsWithCustomerCalendar.calendar
+        )
+
+        const zdt = PlainDateObject.from({
+            ...date,
+            calendar: optionsWithCustomerCalendar.calendar,
+        })
 
         if (
             (firstZdtOfVisibleMonth.year !== zdt.year ||
@@ -182,17 +185,16 @@ export const useDatePicker: UseDatePickerHookType = ({
         dateString,
         firstZdtOfVisibleMonth,
         calendarWeekDaysZdts,
-        temporalCalendar,
-        temporalTimeZone,
+        optionsWithCustomerCalendar.calendar,
     ])
     const result: UseDatePickerReturn = {
         calendarWeekDays: calendarWeekDaysZdts.map((week) =>
             week.map((weekDayZdt) => ({
                 dateValue: formatDate(weekDayZdt, undefined, format),
-                label: localisationHelpers.localiseWeekLabel(
-                    weekDayZdt.withCalendar(localeOptions.calendar),
-                    { ...localeOptions, calendar: resolvedOptions.calendar }
-                ),
+                label: localisationHelpers.localiseWeekLabel(weekDayZdt, {
+                    ...localeOptions,
+                    calendar: resolvedOptions.calendar,
+                }),
                 onClick: () => selectDate(weekDayZdt),
                 isSelected: selectedDateZdt
                     ? selectedDateZdt

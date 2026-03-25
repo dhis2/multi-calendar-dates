@@ -16,6 +16,7 @@ const getMonthlyFixedPeriodByDate: GetMonthlyFixedPeriodByDate = ({
     calendar,
 }) => {
     const year = parseInt(date.substring(0, 4), 10)
+
     const monthlyPeriods = generateFixedPeriodsMonthly({
         year,
         calendar,

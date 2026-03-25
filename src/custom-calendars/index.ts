@@ -16,13 +16,13 @@ export type CalendarCustomLocale = {
 
 export const customCalendars: Partial<{
     [key in SupportedCalendar]: {
-        calendar: Temporal.CalendarProtocol
+        // calendar: Temporal.CalendarProtocol
         locales: Record<string, CalendarCustomLocale>
         defaultLocale: string
     }
 }> = {
     nepali: {
-        calendar: new NepaliCalendar(),
+        // calendar: new NepaliCalendar(),
         locales: calendarLocalisations.nepali,
         defaultLocale: 'en-NP',
     },

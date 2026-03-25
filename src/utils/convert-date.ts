@@ -1,21 +1,14 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
+import { NepaliPlainDate } from '../custom-calendars/nepaliCalendar'
 import { SupportedCalendar } from '../types'
 import { extractDatePartsFromDateString } from './extract-date-parts-from-date-string'
-import { getCustomCalendarIfExists } from './helpers'
-
-type PlainDate = {
-    year: number
-    month: number
-    day: number
-    // keeping eraYear to be consistent with the default behaviour of Temporal (check method documentation for more info)
-    eraYear?: number
-}
+import { getCustomPlainDate, isCustomCalendar } from './helpers'
 
 type ConvertDateFn = (
     date: string | Temporal.PlainDateLike,
     calendar: SupportedCalendar
-) => PlainDate
+) => Temporal.PlainDate
 
 /**
  * converts from an iso8601 (gregorian) date to a specific calendar
@@ -32,19 +25,24 @@ type ConvertDateFn = (
  * @see https://github.com/tc39/ecma402/issues/534 for more details
  */
 export const convertFromIso8601: ConvertDateFn = (date, userCalendar) => {
-    const calendar = getCustomCalendarIfExists(
-        dhis2CalendarsMap[userCalendar] ?? userCalendar
-    ) as SupportedCalendar
+    const calendar = dhis2CalendarsMap[userCalendar] ?? userCalendar
 
-    const { eraYear, year, month, day } =
-        Temporal.PlainDate.from(date).withCalendar(calendar)
+    if (isCustomCalendar(calendar)) {
+        const PlainDateObject = getCustomPlainDate(calendar)
+        const dateParts: Temporal.PlainDateLike =
+            typeof date === 'string'
+                ? extractDatePartsFromDateString(date)
+                : date
 
-    return {
-        eraYear,
-        year,
-        month,
-        day,
+        const isoDate = new PlainDateObject(
+            dateParts.year!,
+            dateParts.month!,
+            dateParts.day!
+        )
+        return isoDate
     }
+
+    return Temporal.PlainDate.from(date).withCalendar(calendar)
 }
 
 /**
@@ -55,9 +53,7 @@ export const convertFromIso8601: ConvertDateFn = (date, userCalendar) => {
  * @returns an object representing the iso8601 date
  */
 export const convertToIso8601: ConvertDateFn = (date, userCalendar) => {
-    const calendar = getCustomCalendarIfExists(
-        dhis2CalendarsMap[userCalendar] ?? userCalendar
-    ) as SupportedCalendar
+    const calendar = dhis2CalendarsMap[userCalendar] ?? userCalendar
 
     const dateParts: Temporal.PlainDateLike =
         typeof date === 'string' ? extractDatePartsFromDateString(date) : date
@@ -68,14 +64,27 @@ export const convertToIso8601: ConvertDateFn = (date, userCalendar) => {
     // https://github.com/js-temporal/temporal-polyfill/blob/8fd0dead40de7c31398f4d2d41e145466ca57a16/lib/calendar.ts#L2010
     if (calendar === 'ethiopic') {
         dateParts.eraYear = dateParts.year
-        dateParts.era = 'era1'
+        dateParts.era = 'ethiopic'
         delete dateParts.year
     }
 
     dateParts.calendar = calendar
 
-    const { year, month, day } =
-        Temporal.PlainDate.from(dateParts).withCalendar('iso8601')
+    // console.log('....', {
+    //     ...dateParts,
+    //     calendarId: calendar,
+    // })
+    // let calendarDate: Temporal.PlainDate
 
-    return { year, month, day }
+    const PlainDateObject = getCustomPlainDate(calendar)
+
+    const calendarDate: Temporal.PlainDate = PlainDateObject.from({
+        ...dateParts,
+
+        calendar,
+    }) // .withCalendar('iso8601')
+
+    return calendarDate.withCalendar('iso8601')
+
+    // return { year, month, day }
 }

@@ -5,6 +5,7 @@ import { PickerOptions } from '../types'
 import { extractDatePartsFromDateString } from './extract-date-parts-from-date-string'
 import getNowInCalendar from './getNowInCalendar'
 import { validateDateString } from './validate-date-string'
+import { NepaliPlainDate } from '../custom-calendars/nepaliCalendar'
 
 export const isCustomCalendar = (calendar: Temporal.CalendarLike) =>
     !!customCalendars[calendar as CustomCalendarTypes]
@@ -46,27 +47,13 @@ export const capitalize = (
     locale = 'en'
 ) => [firstLetter.toLocaleUpperCase(locale), ...rest].join('')
 
-export const getCustomCalendarIfExists = (
-    calendar: Temporal.CalendarLike
-): Temporal.CalendarProtocol | Temporal.CalendarLike => {
-    const isCustom = isCustomCalendar(calendar)
-    if (!isCustom) {
-        return calendar
+export const getCustomPlainDate = (calendar: string) => {
+    if (calendar === 'nepali') {
+        return NepaliPlainDate
+    } else {
+        return Temporal.PlainDate
     }
-
-    const customCalendar = customCalendars[
-        calendar as keyof typeof customCalendars
-    ]?.calendar as Temporal.CalendarProtocol
-
-    if (!customCalendar) {
-        throw new Error(
-            `No implemenation found for custom calendar ${calendar}`
-        )
-    }
-
-    return customCalendar
 }
-
 export const extractAndValidateDateString = (
     date: string,
     options: PickerOptions & {
@@ -121,7 +108,7 @@ const getInvalidDateResult = (options: PickerOptions) => {
 }
 
 const adjustForEthiopicCalendar = (result: customDate) => {
-    result.era = 'era1'
+    result.era = 'ethiopic'
     result.eraYear = result.year
     delete result.year
     return result

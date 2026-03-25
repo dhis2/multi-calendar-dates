@@ -25,9 +25,7 @@ const getAdjacentFixedPeriods: GetAdjacentFixedPeriods = ({
     steps = 1,
     locale = 'en',
 }) => {
-    const calendar = getCustomCalendarIfExists(
-        dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
-    ) as SupportedCalendar
+    const calendar = dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
 
     const { periodType } = period
     const payload = { period, calendar, steps, locale }
