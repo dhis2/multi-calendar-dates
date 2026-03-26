@@ -68,7 +68,7 @@ export const convertToIso8601: ConvertDateFn = (date, userCalendar) => {
     // https://github.com/js-temporal/temporal-polyfill/blob/8fd0dead40de7c31398f4d2d41e145466ca57a16/lib/calendar.ts#L2010
     if (calendar === 'ethiopic') {
         dateParts.eraYear = dateParts.year
-        dateParts.era = 'era1'
+        dateParts.era = 'am'
         delete dateParts.year
     }
 
