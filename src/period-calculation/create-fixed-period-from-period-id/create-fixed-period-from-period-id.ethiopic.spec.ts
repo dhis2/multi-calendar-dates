@@ -474,7 +474,7 @@ describe('Ethiopic/createFixedPeriodFromPeriodId', () => {
             const expected = {
                 periodType: 'DAILY',
                 name: '2015-01-01',
-                displayName: 'Meskerem 1, 2015 ERA0',
+                displayName: 'Meskerem 1, 2015',
                 id: '20150101',
                 iso: '20150101',
                 startDate: '2015-01-01',

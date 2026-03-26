@@ -171,7 +171,7 @@ const buildLabel: BuildLabelFunc = (options) => {
     }
 
     // needed for ethiopic calendar - the default formatter adds the era, which is not what we want in DHIS2
-    result = result.replace(/ERA\d+\s*/g, '').trim()
+    result = result.replace(/\s(AA|AM)/g, '').trim()
     return result
 }
 

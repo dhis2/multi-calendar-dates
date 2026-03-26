@@ -16,7 +16,8 @@
         "lint:staged": "yarn lint --staged",
         "format": "yarn d2-style apply",
         "format:staged": "yarn format --staged",
-        "cucumber": "NODE_OPTIONS=\"--loader ts-node/esm --no-warnings --experimental-specifier-resolution=node\" cucumber-js --require-module ts-node/register --require **/features/**/*.ts --tags=\"not @skip\""
+        "cucumber": "NODE_OPTIONS=\"--loader ts-node/esm --no-warnings --experimental-specifier-resolution=node\" cucumber-js --require-module ts-node/register --require **/features/**/*.ts --tags=\"not @skip\"",
+        "postinstall": "patch-package"
     },
     "eslintConfig": {
         "extends": [
@@ -90,6 +91,8 @@
         "@types/testing-library__react": "^10.2.0",
         "@types/testing-library__react-hooks": "^4.0.0",
         "jest-cucumber": "^3.0.1",
+        "patch-package": "^8.0.1",
+        "postinstall-postinstall": "^2.1.0",
         "react": "^16.14",
         "react-dom": "^16.14",
         "react-scripts": "5.0.1",

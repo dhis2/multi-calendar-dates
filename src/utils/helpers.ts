@@ -117,11 +117,12 @@ const getInvalidDateResult = (options: PickerOptions) => {
         options.calendar,
         options.timeZone
     )
+
     return { year, month, day }
 }
 
 const adjustForEthiopicCalendar = (result: customDate) => {
-    result.era = 'era1'
+    result.era = 'am'
     result.eraYear = result.year
     delete result.year
     return result

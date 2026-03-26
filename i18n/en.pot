@@ -5,8 +5,8 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"POT-Creation-Date: 2024-08-27T05:56:11.774Z\n"
-"PO-Revision-Date: 2024-08-27T05:56:11.774Z\n"
+"POT-Creation-Date: 2026-03-26T10:04:06.172Z\n"
+"PO-Revision-Date: 2026-03-26T10:04:06.172Z\n"
 
 msgid "Couldn't find a monthly period for weekly period id \"{{periodId}}\""
 msgstr "Couldn't find a monthly period for weekly period id \"{{periodId}}\""
@@ -45,17 +45,11 @@ msgstr ""
 msgid "Unrecognized date, received \"{{date}}\""
 msgstr "Unrecognized date, received \"{{date}}\""
 
-msgid "Year {{year}} is out of range."
-msgstr "Year {{year}} is out of range."
-
-msgid "Month {{month}} is out of range | 1 <= {{month}} <= 12."
-msgstr "Month {{month}} is out of range | 1 <= {{month}} <= 12."
-
-msgid "Day {{day}} is out of range | 1 <= {{day}} <= {{daysInMonth}}."
-msgstr "Day {{day}} is out of range | 1 <= {{day}} <= {{daysInMonth}}."
-
 msgid "Date is not given"
 msgstr "Date is not given"
+
+msgid "Invalid date in specified calendar"
+msgstr "Invalid date in specified calendar"
 
 msgid "Date {{dateString}} is less than the minimum allowed date {{minDateString}}."
 msgstr "Date {{dateString}} is less than the minimum allowed date {{minDateString}}."
