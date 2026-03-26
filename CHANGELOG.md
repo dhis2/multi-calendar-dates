@@ -1,3 +1,15 @@
+## [2.1.3-alpha.1](https://github.com/dhis2/multi-calendar-dates/compare/v2.1.2...v2.1.3-alpha.1) (2026-03-26)
+
+
+### Bug Fixes
+
+* force a build from alpha ([268d7c3](https://github.com/dhis2/multi-calendar-dates/commit/268d7c31bab0489982b5f428f9027097d8dedca9))
+* patch js-temporal to work with new ethiopic era codes ([905cb99](https://github.com/dhis2/multi-calendar-dates/commit/905cb99b1085d30585411907af1e58fe5b576685))
+* point to cli-utils@alpha ([4b0a15a](https://github.com/dhis2/multi-calendar-dates/commit/4b0a15a1140f9736341671fe6ab70a58a0166118))
+* **translations:** sync translations from transifex (main) ([d202f08](https://github.com/dhis2/multi-calendar-dates/commit/d202f08a8e77943b307abff3fc7feef7ff74d22b))
+* **translations:** sync translations from transifex (main) ([155c81e](https://github.com/dhis2/multi-calendar-dates/commit/155c81e1629c86a1c7459125ff6d575ec55649f2))
+* **translations:** sync translations from transifex (main) ([d8e719e](https://github.com/dhis2/multi-calendar-dates/commit/d8e719ec073d31cbdbe366d98fd881145f466e1c))
+
 ## [2.1.2](https://github.com/dhis2/multi-calendar-dates/compare/v2.1.1...v2.1.2) (2025-06-05)
 
 ### Bug Fixes
