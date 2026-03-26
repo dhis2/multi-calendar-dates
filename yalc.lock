@@ -1,0 +1,11 @@
+{
+  "version": "v1",
+  "packages": {
+    "@js-temporal/polyfill": {
+      "version": "0.4.3-8",
+      "signature": "33bf37f075a0d1ffb7b5c74370b06ea6",
+      "file": true,
+      "replaced": "0.4.3"
+    }
+  }
+}

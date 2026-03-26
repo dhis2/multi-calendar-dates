@@ -80,7 +80,7 @@ const localiseDateLabel: LocaliseDateLabel = (
             ? selectedDateZdt?.toPlainDate()
             : selectedDateZdt
 
-    return isCustom
+    let label = isCustom
         ? formatDate(selectedDateZdt)
         : nonCustomDate
               .toLocaleString(localeOptions.locale, {
@@ -88,6 +88,11 @@ const localiseDateLabel: LocaliseDateLabel = (
                   dateStyle: options.dateStyle,
               })
               .toString()
+
+    if (localeOptions.calendar == 'ethiopic') {
+        label = label.replace(/\s(AA|AM)/gm, '').trim()
+    }
+    return label
 }
 
 const localiseWeekLabel = (

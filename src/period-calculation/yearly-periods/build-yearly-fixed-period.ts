@@ -110,7 +110,7 @@ const buildLabel = (
     let result = `${fromYear} - ${toYear}`
 
     // needed for Ethiopic calendar
-    result = result.replace(/ERA\d+\s*/g, '').trim()
+    result = result.replace(/\s(AA|AM)/gm, '').trim()
 
     return result
 }
