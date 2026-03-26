@@ -70,7 +70,9 @@
     "dependencies": {
         "@dhis2/d2-i18n": "^1.1.3",
         "@js-temporal/polyfill": "0.4.3",
-        "classnames": "^2.3.2"
+        "classnames": "^2.3.2",
+        "patch-package": "^8.0.1",
+        "postinstall-postinstall": "^2.1.0"
     },
     "peerDependencies": {
         "react": ">=16.8",
@@ -91,8 +93,6 @@
         "@types/testing-library__react": "^10.2.0",
         "@types/testing-library__react-hooks": "^4.0.0",
         "jest-cucumber": "^3.0.1",
-        "patch-package": "^8.0.1",
-        "postinstall-postinstall": "^2.1.0",
         "react": "^16.14",
         "react-dom": "^16.14",
         "react-scripts": "5.0.1",
