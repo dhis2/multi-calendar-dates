@@ -1,3 +1,10 @@
+## [2.1.3-alpha.2](https://github.com/dhis2/multi-calendar-dates/compare/v2.1.3-alpha.1...v2.1.3-alpha.2) (2026-03-26)
+
+
+### Bug Fixes
+
+* move patch-package to dependencies ([de6551f](https://github.com/dhis2/multi-calendar-dates/commit/de6551f17658c5e9587fa59e14f2745f9a72449c))
+
 ## [2.1.3-alpha.1](https://github.com/dhis2/multi-calendar-dates/compare/v2.1.2...v2.1.3-alpha.1) (2026-03-26)
 
 
