@@ -1,3 +1,10 @@
+## [2.1.3-alpha.3](https://github.com/dhis2/multi-calendar-dates/compare/v2.1.3-alpha.2...v2.1.3-alpha.3) (2026-03-26)
+
+
+### Bug Fixes
+
+* change era to am ([db6bdad](https://github.com/dhis2/multi-calendar-dates/commit/db6bdad1b619ca2fbf871d1f311c0ff775def0fb))
+
 ## [2.1.3-alpha.2](https://github.com/dhis2/multi-calendar-dates/compare/v2.1.3-alpha.1...v2.1.3-alpha.2) (2026-03-26)
 
 
