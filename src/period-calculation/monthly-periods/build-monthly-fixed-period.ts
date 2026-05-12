@@ -147,6 +147,10 @@ const buildLabel: BuildLabelFunc = (options) => {
         return buildLabelForCustomCalendar(options)
     }
 
+    if (calendar === 'gregory' || calendar === 'iso8601') {
+        return buildLabelForGregorianCalendar(options)
+    }
+
     const withYearFormat = {
         month: 'long' as const,
         year: 'numeric' as const,
@@ -173,6 +177,49 @@ const buildLabel: BuildLabelFunc = (options) => {
     // needed for ethiopic calendar - the default formatter adds the era, which is not what we want in DHIS2
     result = result.replace(/ERA\d+\s*/g, '').trim()
     return result
+}
+
+const buildLabelForGregorianCalendar: BuildLabelFunc = ({
+    periodType,
+    month,
+    nextMonth,
+    locale,
+}) => {
+    if (multiMonthFixedPeriodTypes.includes(periodType)) {
+        const format = month.year === nextMonth.year ? 'month' : 'monthYear'
+        return `${localiseGregorianMonth(
+            month,
+            locale,
+            format
+        )} - ${localiseGregorianMonth(nextMonth, locale, 'monthYear')}`
+    }
+
+    return localiseGregorianMonth(month, locale, 'monthYear')
+}
+
+const localiseGregorianMonth = (
+    month: Temporal.PlainDate,
+    locale: string,
+    format: 'month' | 'monthYear'
+) => {
+    const gregorianCalendar = 'gregory' as SupportedCalendar
+    const gregorianMonth = Temporal.PlainDate.from({
+        year: month.year,
+        month: month.month,
+        day: 1,
+        calendar: gregorianCalendar,
+    })
+    const monthName = localisationHelpers.localiseMonth(
+        gregorianMonth,
+        { locale, calendar: gregorianCalendar },
+        { month: 'long' }
+    )
+
+    if (!monthName) {
+        throw new Error(`could not localise month ${month.month}`)
+    }
+
+    return format === 'month' ? monthName : `${monthName} ${month.year}`
 }
 
 const buildLabelForCustomCalendar: BuildLabelFunc = ({

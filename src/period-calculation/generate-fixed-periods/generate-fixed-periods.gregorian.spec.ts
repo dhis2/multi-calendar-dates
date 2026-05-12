@@ -121,6 +121,74 @@ describe('Gregorian Calendar fixed period calculation', () => {
     })
 
     describe('all monthly periods', () => {
+        describe.each([
+            ['gregory' as SupportedCalendar],
+            ['iso8601' as SupportedCalendar],
+        ])('calendar: %s', (calendar) => {
+            it.each(['en', 'en-US'])(
+                'should generate 2026 month labels for locale %s',
+                (locale) => {
+                    const monthly = generateFixedPeriods({
+                        periodType: 'MONTHLY',
+                        year: 2026,
+                        calendar,
+                        locale,
+                    }).map((period) => period.name)
+                    const bimonthly = generateFixedPeriods({
+                        periodType: 'BIMONTHLY',
+                        year: 2026,
+                        calendar,
+                        locale,
+                    }).map((period) => period.name)
+                    const quarterly = generateFixedPeriods({
+                        periodType: 'QUARTERLY',
+                        year: 2026,
+                        calendar,
+                        locale,
+                    }).map((period) => period.name)
+                    const sixmonthly = generateFixedPeriods({
+                        periodType: 'SIXMONTHLY',
+                        year: 2026,
+                        calendar,
+                        locale,
+                    }).map((period) => period.name)
+
+                    expect(monthly).toEqual([
+                        'January 2026',
+                        'February 2026',
+                        'March 2026',
+                        'April 2026',
+                        'May 2026',
+                        'June 2026',
+                        'July 2026',
+                        'August 2026',
+                        'September 2026',
+                        'October 2026',
+                        'November 2026',
+                        'December 2026',
+                    ])
+                    expect(bimonthly).toEqual([
+                        'January - February 2026',
+                        'March - April 2026',
+                        'May - June 2026',
+                        'July - August 2026',
+                        'September - October 2026',
+                        'November - December 2026',
+                    ])
+                    expect(quarterly).toEqual([
+                        'January - March 2026',
+                        'April - June 2026',
+                        'July - September 2026',
+                        'October - December 2026',
+                    ])
+                    expect(sixmonthly).toEqual([
+                        'January - June 2026',
+                        'July - December 2026',
+                    ])
+                }
+            )
+        })
+
         describe('periodType: MONTHLY', () => {
             it('should omit every period on/after the exclude date', () => {
                 const results = generateFixedPeriods({
