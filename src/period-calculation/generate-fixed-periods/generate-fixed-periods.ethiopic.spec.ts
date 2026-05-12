@@ -355,6 +355,39 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             })
         })
 
+        // Regression coverage: ensure non-Gregorian calendars still get
+        // proper "<month name> <year>" labels (no ERA suffix, year still
+        // included) for MONTHLY and BIMONTHLY.
+        it('should produce <month> <year> labels for ethiopic MONTHLY (year 2014)', () => {
+            const results = generateFixedPeriods({
+                periodType: 'MONTHLY',
+                year: 2014,
+                calendar: 'ethiopic',
+                locale: 'en',
+            })
+            expect(results[0].name).toBe('Meskerem 2014')
+            expect(results[5].name).toBe('Yekatit 2014')
+            results.forEach((p) => {
+                expect(p.name).not.toMatch(/^\d+$/)
+                expect(p.name).not.toMatch(/ERA\d+/)
+                expect(p.name).toContain('2014')
+            })
+        })
+
+        it('should produce <month> - <month> <year> labels for ethiopic BIMONTHLY', () => {
+            const results = generateFixedPeriods({
+                periodType: 'BIMONTHLY',
+                year: 2014,
+                calendar: 'ethiopic',
+                locale: 'en',
+            })
+            expect(results[0].name).toMatch(/^Meskerem - T[ie]kemt 2014$/)
+            results.forEach((p) => {
+                expect(p.name).not.toMatch(/^\d+$/)
+                expect(p.name).not.toMatch(/ERA\d+/)
+            })
+        })
+
         it('should omit every period on/after the exclude date (weekly)', () => {
             const results = generateFixedPeriods({
                 periodType: 'WEEKLY',

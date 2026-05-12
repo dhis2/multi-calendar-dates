@@ -147,32 +147,52 @@ const buildLabel: BuildLabelFunc = (options) => {
         return buildLabelForCustomCalendar(options)
     }
 
-    const withYearFormat = {
-        month: 'long' as const,
-        year: 'numeric' as const,
-        calendar,
+    // Avoid Temporal.PlainDate.toLocaleString here: the polyfill can route
+    // Gregorian dates through Intl with calendar: 'iso8601', which is broken
+    // in some Chrome versions. Formatting the underlying ISO date directly
+    // keeps Intl in charge of locale-specific month/year ordering.
+    const intlCalendar: SupportedCalendar =
+        calendar === 'iso8601' ? 'gregory' : calendar
+    const toUtcDate = (date: Temporal.PlainDate) => {
+        const iso = date.getISOFields()
+        return new Date(
+            Date.UTC(iso.isoYear, iso.isoMonth - 1, iso.isoDay, 12, 0, 0)
+        )
     }
-    const monthOnlyFormat = {
-        month: 'long' as const,
-        calendar,
-    }
-
-    let result = ''
+    const cleanLabel = (label: string) =>
+        // The ERA suffix is added by some calendars (e.g. Ethiopic) and is
+        // not desired in DHIS2 period labels.
+        label.replace(/ERA\d+\s*/g, '').trim()
+    const formatMonthName = (date: Temporal.PlainDate) =>
+        cleanLabel(
+            new Intl.DateTimeFormat(locale, {
+                month: 'long',
+                calendar: intlCalendar,
+                timeZone: 'UTC',
+            }).format(toUtcDate(date))
+        )
+    const formatMonthNameWithYear = (date: Temporal.PlainDate) =>
+        cleanLabel(
+            new Intl.DateTimeFormat(locale, {
+                month: 'long',
+                year: 'numeric',
+                calendar: intlCalendar,
+                timeZone: 'UTC',
+            }).format(toUtcDate(date))
+        )
 
     if (multiMonthFixedPeriodTypes.includes(periodType)) {
-        const format =
-            month.year === nextMonth.year ? monthOnlyFormat : withYearFormat
-        result = `${month.toLocaleString(
-            locale,
-            format
-        )} - ${nextMonth.toLocaleString(locale, withYearFormat)}`
-    } else {
-        result = `${month.toLocaleString(locale, withYearFormat)}`
+        const sameYear = month.year === nextMonth.year
+        return sameYear
+            ? `${formatMonthName(month)} - ${formatMonthNameWithYear(
+                  nextMonth
+              )}`
+            : `${formatMonthNameWithYear(
+                  month
+              )} - ${formatMonthNameWithYear(nextMonth)}`
     }
 
-    // needed for ethiopic calendar - the default formatter adds the era, which is not what we want in DHIS2
-    result = result.replace(/ERA\d+\s*/g, '').trim()
-    return result
+    return formatMonthNameWithYear(month)
 }
 
 const buildLabelForCustomCalendar: BuildLabelFunc = ({

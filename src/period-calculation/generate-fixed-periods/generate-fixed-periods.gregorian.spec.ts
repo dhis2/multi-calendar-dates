@@ -182,6 +182,170 @@ describe('Gregorian Calendar fixed period calculation', () => {
             })
         })
 
+        // Regression coverage: in newer Chrome versions (148.x in particular)
+        // the Aggregate Data Entry app's period dropdown was reported showing
+        // a list of bare years (e.g. `2026`, `2026`, `2026`) instead of
+        // proper `January 2026`, `February 2026`, ... labels for MONTHLY,
+        // BIMONTHLY, QUARTERLY and SIXMONTHLY period types. These tests pin
+        // the label format so that any regression in label construction or
+        // upstream `Temporal`/`Intl` behaviour is caught immediately.
+        describe('monthly period label regression (year 2026)', () => {
+            const baseInput = {
+                year: 2026,
+                calendar: 'gregory' as SupportedCalendar,
+            }
+
+            it.each(['en', 'en-US'])(
+                'should always include the month name and the year for MONTHLY (locale=%s)',
+                (locale) => {
+                    const results = generateFixedPeriods({
+                        ...baseInput,
+                        periodType: 'MONTHLY',
+                        locale,
+                    })
+
+                    expect(results.length).toBe(12)
+
+                    const expectedNames = [
+                        'January 2026',
+                        'February 2026',
+                        'March 2026',
+                        'April 2026',
+                        'May 2026',
+                        'June 2026',
+                        'July 2026',
+                        'August 2026',
+                        'September 2026',
+                        'October 2026',
+                        'November 2026',
+                        'December 2026',
+                    ]
+                    results.forEach((period, index) => {
+                        // The label must contain both the month name and the
+                        // year, never collapse to just the year.
+                        expect(period.name).not.toMatch(/^\d+$/)
+                        expect(period.name).toBe(expectedNames[index])
+                        expect(period.displayName).toBe(expectedNames[index])
+                    })
+                }
+            )
+
+            it.each(['en', 'en-US'])(
+                'should include both month names and the year for BIMONTHLY (locale=%s)',
+                (locale) => {
+                    const results = generateFixedPeriods({
+                        ...baseInput,
+                        periodType: 'BIMONTHLY',
+                        locale,
+                    })
+
+                    expect(results.length).toBe(6)
+                    expect(results.map((p) => p.name)).toEqual([
+                        'January - February 2026',
+                        'March - April 2026',
+                        'May - June 2026',
+                        'July - August 2026',
+                        'September - October 2026',
+                        'November - December 2026',
+                    ])
+                    results.forEach((period) => {
+                        expect(period.name).not.toMatch(/^\d+$/)
+                    })
+                }
+            )
+
+            it.each(['en', 'en-US'])(
+                'should include both month names and the year for QUARTERLY (locale=%s)',
+                (locale) => {
+                    const results = generateFixedPeriods({
+                        ...baseInput,
+                        periodType: 'QUARTERLY',
+                        locale,
+                    })
+
+                    expect(results.length).toBe(4)
+                    expect(results.map((p) => p.name)).toEqual([
+                        'January - March 2026',
+                        'April - June 2026',
+                        'July - September 2026',
+                        'October - December 2026',
+                    ])
+                    results.forEach((period) => {
+                        expect(period.name).not.toMatch(/^\d+$/)
+                    })
+                }
+            )
+
+            it.each(['en', 'en-US'])(
+                'should include both month names and the year for SIXMONTHLY (locale=%s)',
+                (locale) => {
+                    const results = generateFixedPeriods({
+                        ...baseInput,
+                        periodType: 'SIXMONTHLY',
+                        locale,
+                    })
+
+                    expect(results.length).toBe(2)
+                    expect(results.map((p) => p.name)).toEqual([
+                        'January - June 2026',
+                        'July - December 2026',
+                    ])
+                    results.forEach((period) => {
+                        expect(period.name).not.toMatch(/^\d+$/)
+                    })
+                }
+            )
+
+            it.each(['gregory', 'iso8601'] as const)(
+                'should preserve locale-specific month/year ordering for MONTHLY (calendar=%s)',
+                (calendar) => {
+                    const results = generateFixedPeriods({
+                        year: 2026,
+                        calendar,
+                        periodType: 'MONTHLY',
+                        locale: 'hu',
+                    })
+                    expect(results.length).toBe(12)
+                    expect(results[0].name).toBe('2026. január')
+                    expect(results[0].displayName).toBe('2026. január')
+                }
+            )
+
+            // The Chrome 148 regression that prompted this fix was actually
+            // triggered by `calendar: 'iso8601'` (the calendar used by most
+            // production DHIS2 instances, including play). Pin that path
+            // explicitly: `Intl.DateTimeFormat(..., { month: 'long', calendar:
+            // 'iso8601' })` returns the empty string in Chrome 148, so the
+            // label builder must substitute Gregorian for ISO 8601 (same
+            // month names by definition) before formatting.
+            it.each(['en', 'en-US'])(
+                'should include month names for MONTHLY when calendar is iso8601 (locale=%s)',
+                (locale) => {
+                    const results = generateFixedPeriods({
+                        year: 2026,
+                        calendar: 'iso8601' as SupportedCalendar,
+                        periodType: 'MONTHLY',
+                        locale,
+                    })
+                    expect(results.length).toBe(12)
+                    expect(results.map((p) => p.name)).toEqual([
+                        'January 2026',
+                        'February 2026',
+                        'March 2026',
+                        'April 2026',
+                        'May 2026',
+                        'June 2026',
+                        'July 2026',
+                        'August 2026',
+                        'September 2026',
+                        'October 2026',
+                        'November 2026',
+                        'December 2026',
+                    ])
+                }
+            )
+        })
+
         describe('periodType: SIXMONTHLYAPR', () => {
             it('should return only one period due to "endsBefore"', () => {
                 const results = generateFixedPeriods({
