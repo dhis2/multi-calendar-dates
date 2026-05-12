@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { CalendarPlainDate, plainDateFrom } from '../../custom-calendars'
 import { SupportedCalendar } from '../../types'
 import { fromAnyDate, formatDate, isCustomCalendar } from '../../utils/index'
 import localisationHelpers from '../../utils/localisationHelpers'
@@ -77,7 +77,7 @@ const isFinancialYear = (periodType: PeriodType) => {
 
 const buildLabel = (
     periodType: PeriodType,
-    currentYearDate: Temporal.PlainDate,
+    currentYearDate: CalendarPlainDate,
     options: {
         locale: string
         calendar: SupportedCalendar
@@ -116,20 +116,22 @@ const buildLabel = (
 }
 
 const buildLabelForCustomCalendar = (
-    date: Temporal.PlainDate,
+    date: CalendarPlainDate,
     options: { locale: string; calendar: SupportedCalendar }
 ) => {
-    const localiseMonth = (dateToDisplay: Temporal.PlainDate) =>
+    const localiseMonth = (dateToDisplay: CalendarPlainDate) =>
         `${localisationHelpers.localiseMonth(dateToDisplay, options, {})} ${
             dateToDisplay.year
         }`
 
-    const nextYearDate = Temporal.PlainDate.from({
-        year: date.year + 1,
-        month: date.month - 1,
-        day: 1,
-        calendar: options.calendar,
-    })
+    const nextYearDate = plainDateFrom(
+        {
+            year: date.year + 1,
+            month: date.month - 1,
+            day: 1,
+        },
+        options.calendar
+    )
     const result = `${localiseMonth(date)} - ${localiseMonth(nextYearDate)}`
 
     return result

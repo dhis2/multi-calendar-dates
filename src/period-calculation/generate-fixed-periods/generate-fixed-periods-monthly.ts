@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { CalendarPlainDate, plainDateFrom } from '../../custom-calendars'
 import { SupportedCalendar } from '../../types'
 import { fromAnyDate } from '../../utils/index'
 import { getStartingMonthByPeriodType } from '../get-starting-month-for-period-type'
@@ -17,7 +17,7 @@ type GenerateFixedPeriodsMonthly = (options: {
     periodType: PeriodType
     calendar: SupportedCalendar
     locale: string
-    endsBefore?: Temporal.PlainDate
+    endsBefore?: CalendarPlainDate
 }) => Array<FixedPeriod>
 
 const generateFixedPeriodsMonthly: GenerateFixedPeriodsMonthly = ({
@@ -27,15 +27,17 @@ const generateFixedPeriodsMonthly: GenerateFixedPeriodsMonthly = ({
     endsBefore,
     locale,
 }) => {
-    let currentMonth = Temporal.PlainDate.from({
-        year,
-        month: getStartingMonth(periodType),
-        // this should really just be 1 but have to set it to 14th because of a
-        // quirk in custom calendars
-        // @TODO: discuss this with the Temporal team
-        day: calendar.toString() === 'nepali' ? 14 : 1,
-        calendar,
-    })
+    let currentMonth: CalendarPlainDate = plainDateFrom(
+        {
+            year,
+            month: getStartingMonth(periodType),
+            // this should really just be 1 but have to set it to 14th because of a
+            // quirk in custom calendars
+            // @TODO: discuss this with the Temporal team
+            day: calendar === 'nepali' ? 14 : 1,
+        },
+        calendar
+    )
 
     const months: FixedPeriod[] = []
 
@@ -79,7 +81,7 @@ const generateFixedPeriodsMonthly: GenerateFixedPeriodsMonthly = ({
 
 const isEthiopic13thMonth = (
     calendar: SupportedCalendar,
-    date: Temporal.PlainDate
+    date: CalendarPlainDate
 ) => {
     return calendar === 'ethiopic' && date.month === 13
 }

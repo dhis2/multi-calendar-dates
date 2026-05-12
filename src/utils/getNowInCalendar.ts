@@ -1,31 +1,31 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
-import { getCustomCalendarIfExists, isCustomCalendar } from '../utils/helpers'
+import {
+    CalendarZonedDateTime,
+    isNepaliCalendar,
+    NepaliZonedDateTime,
+} from '../custom-calendars'
 
 /**
  * Gets the Now DateTime in the specified calendar and timeZone
  *
  * @param calendarToUse the calendar to use
  * @param timeZone the timeZone to use
- * @returns Temporal.ZoneDateTime which can be destructured to .year, .month, .day, .hour etc... (returning the values in the specified calendar) or can .getISOFields() to return the underlying iso8601 date
+ * @returns A `Temporal.ZonedDateTime` (or `NepaliZonedDateTime` for Nepali)
+ * whose `.year`/`.month`/`.day` etc. are in the requested calendar.
  */
 const getNowInCalendar = (
-    calendarToUse: Temporal.CalendarLike = 'gregory',
-    timeZone: Temporal.TimeZoneLike = Intl?.DateTimeFormat?.().resolvedOptions?.()
-        ?.timeZone || 'UTC'
-): Temporal.ZonedDateTime => {
-    const gregorianDate = Temporal.Now.zonedDateTime('gregory', timeZone)
-    let calendar: Temporal.CalendarLike =
-        dhis2CalendarsMap[calendarToUse as string] ?? calendarToUse
+    calendarToUse = 'gregory',
+    timeZone = Intl?.DateTimeFormat?.().resolvedOptions?.()?.timeZone || 'UTC'
+): CalendarZonedDateTime => {
+    const gregorianNow = Temporal.Now.zonedDateTimeISO(timeZone)
+    const resolvedCalendar = dhis2CalendarsMap[calendarToUse] ?? calendarToUse
 
-    if (isCustomCalendar(calendar)) {
-        calendar = getCustomCalendarIfExists(calendar)
+    if (isNepaliCalendar(resolvedCalendar)) {
+        return NepaliZonedDateTime.fromIso(gregorianNow)
     }
 
-    const result =
-        Temporal.ZonedDateTime.from(gregorianDate).withCalendar(calendar)
-
-    return result
+    return gregorianNow.withCalendar(resolvedCalendar)
 }
 
 export default getNowInCalendar

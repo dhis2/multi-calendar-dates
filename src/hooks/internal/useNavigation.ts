@@ -1,5 +1,5 @@
-import { Temporal } from '@js-temporal/polyfill'
 import { Dispatch, SetStateAction, useMemo } from 'react'
+import { CalendarZonedDateTime, plainDateFrom } from '../../custom-calendars'
 import {
     PickerOptionsWithResolvedCalendar,
     SupportedCalendar,
@@ -44,8 +44,8 @@ export type UseNavigationReturnType = {
 }
 
 type UseNavigationHook = (
-    firstZdtOfVisibleMonth: Temporal.ZonedDateTime,
-    setFirstZdtOfVisibleMonth: Dispatch<SetStateAction<Temporal.ZonedDateTime>>,
+    firstZdtOfVisibleMonth: CalendarZonedDateTime,
+    setFirstZdtOfVisibleMonth: Dispatch<SetStateAction<CalendarZonedDateTime>>,
     localeOptions: PickerOptionsWithResolvedCalendar
 ) => UseNavigationReturnType
 /**
@@ -78,7 +78,7 @@ export const useNavigation: UseNavigationHook = (
 
         const options = {
             locale: localeOptions.locale,
-            calendar: localeOptions.calendar.id as SupportedCalendar,
+            calendar: localeOptions.calendar as SupportedCalendar,
             numberingSystem: localeOptions.numberingSystem,
         }
 
@@ -168,20 +168,21 @@ export const useNavigation: UseNavigationHook = (
                 : getMonthsForCalendar(
                       isCustom ? 'gregory' : options.calendar
                   ).map((month) => {
-                      const calendar = new Temporal.Calendar(
-                          isCustom ? 'gregory' : options.calendar
+                      const calendarForReference = isCustom
+                          ? 'gregory'
+                          : options.calendar
+                      const referenceDate = plainDateFrom(
+                          { year: 2000, month: 1, day: 1 },
+                          calendarForReference
                       )
-                      const referenceDate = calendar.dateFromFields({
-                          year: 2000,
-                          month: 1,
-                          day: 1,
-                      })
-
-                      const date = calendar.dateFromFields({
-                          year: referenceDate.year,
-                          month: month.value,
-                          day: 1,
-                      })
+                      const date = plainDateFrom(
+                          {
+                              year: referenceDate.year,
+                              month: month.value,
+                              day: 1,
+                          },
+                          calendarForReference
+                      )
 
                       return {
                           value: month.value,

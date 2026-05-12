@@ -1,8 +1,8 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
+import { isNepaliCalendar, NepaliPlainDate } from '../custom-calendars'
 import { SupportedCalendar } from '../types'
 import { extractDatePartsFromDateString } from './extract-date-parts-from-date-string'
-import { getCustomCalendarIfExists } from './helpers'
 
 type PlainDate = {
     year: number
@@ -32,19 +32,27 @@ type ConvertDateFn = (
  * @see https://github.com/tc39/ecma402/issues/534 for more details
  */
 export const convertFromIso8601: ConvertDateFn = (date, userCalendar) => {
-    const calendar = getCustomCalendarIfExists(
-        dhis2CalendarsMap[userCalendar] ?? userCalendar
-    ) as SupportedCalendar
+    const calendar = dhis2CalendarsMap[userCalendar] ?? userCalendar
+    const isoDate = Temporal.PlainDate.from(date)
 
-    const { eraYear, year, month, day } =
-        Temporal.PlainDate.from(date).withCalendar(calendar)
-
-    return {
-        eraYear,
-        year,
-        month,
-        day,
+    if (isNepaliCalendar(calendar)) {
+        const nepali = NepaliPlainDate.fromIso(isoDate)
+        return {
+            year: nepali.year,
+            eraYear: nepali.year,
+            month: nepali.month,
+            day: nepali.day,
+        }
     }
+
+    const { eraYear, year, month, day } = isoDate.withCalendar(
+        calendar as Temporal.CalendarLike
+    )
+    // In `@js-temporal/polyfill` 0.5.x some calendars (e.g. `islamic`) no
+    // longer expose an `eraYear` even when the user-facing year equals it.
+    // Consumers of this function relied on `eraYear ?? year`, so fall back
+    // here to preserve that contract.
+    return { eraYear: eraYear ?? year, year, month, day }
 }
 
 /**
@@ -55,27 +63,36 @@ export const convertFromIso8601: ConvertDateFn = (date, userCalendar) => {
  * @returns an object representing the iso8601 date
  */
 export const convertToIso8601: ConvertDateFn = (date, userCalendar) => {
-    const calendar = getCustomCalendarIfExists(
-        dhis2CalendarsMap[userCalendar] ?? userCalendar
-    ) as SupportedCalendar
+    const calendar = dhis2CalendarsMap[userCalendar] ?? userCalendar
 
     const dateParts: Temporal.PlainDateLike =
         typeof date === 'string' ? extractDatePartsFromDateString(date) : date
 
-    // this is a workaround for the ethiopic calendar being in a different
-    // era by default. There is a discussion on Temporal on which should be
-    // considered the default era. For us, we need to manually set it to era1
-    // https://github.com/js-temporal/temporal-polyfill/blob/8fd0dead40de7c31398f4d2d41e145466ca57a16/lib/calendar.ts#L2010
-    if (calendar === 'ethiopic') {
-        dateParts.eraYear = dateParts.year
-        dateParts.era = 'era1'
-        delete dateParts.year
+    if (isNepaliCalendar(calendar)) {
+        const np = NepaliPlainDate.fromNepaliFields({
+            year: dateParts.year as number,
+            month: dateParts.month as number,
+            day: dateParts.day as number,
+        })
+        const iso = np.toIso()
+        return { year: iso.year, month: iso.month, day: iso.day }
     }
 
-    dateParts.calendar = calendar
+    const adjustedParts = { ...dateParts }
+    // The ethiopic calendar has two eras. We want the post-incarnation era.
+    // In `@js-temporal/polyfill` 0.5.x the era codes were renamed from the
+    // generic `era1`/`era2` to the calendar-specific `ethiopic`/`ethioaa`,
+    // matching the names accepted by `Temporal.PlainDate.from`.
+    if (calendar === 'ethiopic') {
+        adjustedParts.eraYear = adjustedParts.year
+        adjustedParts.era = 'ethiopic'
+        delete adjustedParts.year
+    }
+
+    adjustedParts.calendar = calendar as Temporal.CalendarLike
 
     const { year, month, day } =
-        Temporal.PlainDate.from(dateParts).withCalendar('iso8601')
+        Temporal.PlainDate.from(adjustedParts).withCalendar('iso8601')
 
     return { year, month, day }
 }

@@ -1,9 +1,14 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { useMemo } from 'react'
+import {
+    CalendarZonedDateTime,
+    isNepaliZonedDateTime,
+    NepaliZonedDateTime,
+} from '../../custom-calendars'
 
 const groupByWeek = (
-    acc: Temporal.ZonedDateTime[][],
-    day: Temporal.ZonedDateTime
+    acc: CalendarZonedDateTime[][],
+    day: CalendarZonedDateTime
 ) => {
     if (day.dayOfWeek === 1) {
         acc.push([])
@@ -19,48 +24,39 @@ const groupByWeek = (
  * @param dayZdt
  * @returns an array of array of days (each top-level array is a week)
  */
-export const useCalendarWeekDays = (dayZdt: Temporal.ZonedDateTime) => {
+export const useCalendarWeekDays = (dayZdt: CalendarZonedDateTime) => {
     return useMemo(() => {
-        const dateInfo: Temporal.ZonedDateTimeLike = {
-            year: dayZdt.year,
-            month: dayZdt.month,
-            day: dayZdt.day,
-            hour: 0,
-            minute: 0,
-            second: 0,
-            calendar: dayZdt.calendar,
-            timeZone: dayZdt.timeZone,
-        }
+        const firstDayOfMonth = dayZdt.with({ day: 1 })
 
-        // get first day of the month
-        const firstDayOfMonth = Temporal.ZonedDateTime.from({
-            ...dateInfo,
-            day: 1,
-        })
         // get first day of first week to display
         const firstDayToDisplay = firstDayOfMonth.subtract({
             days: firstDayOfMonth.dayOfWeek - 1,
         })
 
-        // get last day of month
-        const lastDayOfMonth = Temporal.ZonedDateTime.from({
-            ...dateInfo,
-            day: dayZdt.daysInMonth,
-        })
+        const lastDayOfMonth = dayZdt.with({ day: dayZdt.daysInMonth })
 
         // get last day of last week of month
         const lastDayToDisplay = lastDayOfMonth.add({
             days: 7 - lastDayOfMonth.dayOfWeek,
         })
 
-        const numberOfDaysInCalendar = lastDayToDisplay
-            .toPlainDate()
-            .since(firstDayToDisplay.toPlainDate()).days
+        const numberOfDaysInCalendar = isNepaliZonedDateTime(lastDayToDisplay)
+            ? lastDayToDisplay
+                  .toPlainDate()
+                  .since(
+                      (firstDayToDisplay as NepaliZonedDateTime).toPlainDate()
+                  ).days
+            : (lastDayToDisplay as Temporal.ZonedDateTime)
+                  .toPlainDate()
+                  .since(
+                      (
+                          firstDayToDisplay as Temporal.ZonedDateTime
+                      ).toPlainDate()
+                  ).days
 
-        let date: Temporal.ZonedDateTime =
-            Temporal.ZonedDateTime.from(firstDayToDisplay)
+        let date: CalendarZonedDateTime = firstDayToDisplay
 
-        const allDates: Temporal.ZonedDateTime[] = []
+        const allDates: CalendarZonedDateTime[] = []
 
         for (let i = 0; i <= numberOfDaysInCalendar; i++) {
             allDates.push(date)

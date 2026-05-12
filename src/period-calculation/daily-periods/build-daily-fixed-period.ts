@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { CalendarPlainDate } from '../../custom-calendars'
 import { SupportedCalendar } from '../../types'
 import { formatDate, localisationHelpers } from '../../utils/index'
 import { FixedPeriod } from '../types'
@@ -6,7 +6,7 @@ import { FixedPeriod } from '../types'
 const { localiseDateLabel } = localisationHelpers
 
 type BuildDailyFixedPeriod = (args: {
-    date: Temporal.PlainDate
+    date: CalendarPlainDate
     calendar: SupportedCalendar
     locale: string
 }) => FixedPeriod

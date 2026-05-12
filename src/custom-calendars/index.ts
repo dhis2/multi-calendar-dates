@@ -1,7 +1,5 @@
-import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../types'
 import calendarLocalisations from './calendarLocalisations'
-import { NepaliCalendar } from './nepaliCalendar'
 
 export type CustomCalendarTypes = 'nepali'
 
@@ -16,14 +14,34 @@ export type CalendarCustomLocale = {
 
 export const customCalendars: Partial<{
     [key in SupportedCalendar]: {
-        calendar: Temporal.CalendarProtocol
         locales: Record<string, CalendarCustomLocale>
         defaultLocale: string
     }
 }> = {
     nepali: {
-        calendar: new NepaliCalendar(),
         locales: calendarLocalisations.nepali,
         defaultLocale: 'en-NP',
     },
 }
+
+export {
+    NepaliPlainDate,
+    NepaliPlainYearMonth,
+    NepaliZonedDateTime,
+} from './nepaliCalendar'
+
+export {
+    isNepaliCalendar,
+    isNepaliPlainDate,
+    isNepaliZonedDateTime,
+    isPlainDateLike,
+    plainDateFrom,
+    withCalendar,
+    zonedDateTimeFrom,
+    zonedDateTimeWithCalendar,
+    comparePlainDates,
+} from './calendar-routing'
+export type {
+    CalendarPlainDate,
+    CalendarZonedDateTime,
+} from './calendar-routing'
