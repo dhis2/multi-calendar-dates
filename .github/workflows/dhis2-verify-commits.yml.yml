@@ -8,8 +8,11 @@ jobs:
     lint-pr-title:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v2
-            - uses: c-hive/gha-yarn-cache@v1
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version-file: '.nvmrc' # or node-version: '20', etc.
+                  cache: 'yarn'
             - run: yarn install --frozen-lockfile
             - id: commitlint
               run: echo ::set-output name=config_path::$(node -e "process.stdout.write(require('@dhis2/cli-style').config.commitlint)")
@@ -21,10 +24,13 @@ jobs:
         runs-on: ubuntu-latest
         if: ${{ !contains(github.event.pull_request.title, '[skip commit-lint]') }}
         steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
               with:
                   fetch-depth: 0
-            - uses: c-hive/gha-yarn-cache@v1
+            - uses: actions/setup-node@v4
+              with:
+                  node-version-file: '.nvmrc' # or node-version: '20', etc.
+                  cache: 'yarn'
             - run: yarn install --frozen-lockfile
             - id: commitlint
               run: echo ::set-output name=config_path::$(node -e "process.stdout.write(require('@dhis2/cli-style').config.commitlint)")
