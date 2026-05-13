@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { comparePlainDates } from '../../custom-calendars'
 import { SupportedCalendar } from '../../types'
 import { fromAnyDate } from '../../utils/index'
 import { generateFixedPeriodsWeekly } from '../generate-fixed-periods/index'
@@ -48,12 +48,7 @@ const getFollowingWeeklyFixedPeriods: GetAdjacentWeeklyFixedPeriods = ({
                           calendar,
                           date: curPeriod.startDate,
                       })
-                      return (
-                          Temporal.PlainDate.compare(
-                              startDate,
-                              curStartDate
-                          ) === -1
-                      )
+                      return comparePlainDates(startDate, curStartDate) === -1
                   })
                 : 0
 
@@ -100,7 +95,7 @@ const getPreviousWeeklyFixedPeriods: GetAdjacentWeeklyFixedPeriods = ({
             })
 
             const startDateIsLowerThanCurStartDate =
-                Temporal.PlainDate.compare(startDate, curStartDate) === -1
+                comparePlainDates(startDate, curStartDate) === -1
 
             return startDateIsLowerThanCurStartDate
         })

@@ -1,4 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill'
+import { CalendarPlainDate, plainDateFrom } from '../../custom-calendars'
 import { SupportedCalendar } from '../../types'
 import {
     formatDate,
@@ -18,7 +19,7 @@ import { FixedPeriod, PeriodType } from '../types'
 
 type BuildMonthlyFixedPeriod = (args: {
     periodType: PeriodType
-    month: Temporal.PlainDate
+    month: CalendarPlainDate
     year: number
     calendar: SupportedCalendar
     locale: string
@@ -45,7 +46,7 @@ const buildMonthlyFixedPeriod: BuildMonthlyFixedPeriod = ({
         index,
     })
 
-    if (month.calendar === ('ethiopic' as Temporal.CalendarLike)) {
+    if (calendar === 'ethiopic') {
         // @TODO(jira): Create issue
         // @TODO: Confirm the special cases for the 13th month with Abyot, then
         // update the start/end dates for Ethiopic calendar'
@@ -54,12 +55,14 @@ const buildMonthlyFixedPeriod: BuildMonthlyFixedPeriod = ({
         )
     }
 
-    const endDate = Temporal.PlainDate.from({
-        year: nextMonth.year,
-        month: nextMonth.month,
-        day: 1,
-        calendar: nextMonth.calendar,
-    }).subtract({ days: 1 })
+    const endDate = plainDateFrom(
+        {
+            year: nextMonth.year,
+            month: nextMonth.month,
+            day: 1,
+        },
+        calendar
+    ).subtract({ days: 1 })
 
     const name = buildLabel({
         periodType,
@@ -85,7 +88,7 @@ export default buildMonthlyFixedPeriod
 
 const buildId: (options: {
     periodType: PeriodType
-    currentMonth: Temporal.PlainDate
+    currentMonth: CalendarPlainDate
     year: number
     index: number
 }) => string = ({ periodType, currentMonth, year, index }) => {
@@ -133,8 +136,8 @@ const getMonthsToAdd = (periodType: PeriodType) => {
 
 type BuildLabelFunc = (options: {
     periodType: PeriodType
-    month: Temporal.PlainDate
-    nextMonth: Temporal.PlainDate
+    month: CalendarPlainDate
+    nextMonth: CalendarPlainDate
     index: number
     locale: string
     calendar: SupportedCalendar
@@ -157,17 +160,21 @@ const buildLabel: BuildLabelFunc = (options) => {
         calendar,
     }
 
+    // The non-custom branch never sees a Nepali shadow; cast through the
+    // shared type so we can call `.toLocaleString` without `any`.
+    const monthBuiltIn = month as Temporal.PlainDate
+    const nextMonthBuiltIn = nextMonth as Temporal.PlainDate
     let result = ''
 
     if (multiMonthFixedPeriodTypes.includes(periodType)) {
         const format =
             month.year === nextMonth.year ? monthOnlyFormat : withYearFormat
-        result = `${month.toLocaleString(
+        result = `${monthBuiltIn.toLocaleString(
             locale,
             format
-        )} - ${nextMonth.toLocaleString(locale, withYearFormat)}`
+        )} - ${nextMonthBuiltIn.toLocaleString(locale, withYearFormat)}`
     } else {
-        result = `${month.toLocaleString(locale, withYearFormat)}`
+        result = `${monthBuiltIn.toLocaleString(locale, withYearFormat)}`
     }
 
     // needed for ethiopic calendar - the default formatter adds the era, which is not what we want in DHIS2

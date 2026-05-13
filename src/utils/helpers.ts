@@ -1,13 +1,20 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { months, Month } from '../constants/months'
-import { customCalendars, CustomCalendarTypes } from '../custom-calendars'
+import {
+    customCalendars,
+    CustomCalendarTypes,
+    CalendarPlainDate,
+    CalendarZonedDateTime,
+    isNepaliPlainDate,
+    isNepaliZonedDateTime,
+} from '../custom-calendars'
 import { PickerOptions } from '../types'
 import { extractDatePartsFromDateString } from './extract-date-parts-from-date-string'
 import getNowInCalendar from './getNowInCalendar'
 import { validateDateString } from './validate-date-string'
 
-export const isCustomCalendar = (calendar: Temporal.CalendarLike) =>
-    !!customCalendars[calendar as CustomCalendarTypes]
+export const isCustomCalendar = (calendar: string | undefined | null) =>
+    !!calendar && !!customCalendars[calendar as CustomCalendarTypes]
 
 export const padWithZeroes = (number: number, count = 2) =>
     String(number).padStart(count, '0')
@@ -19,11 +26,14 @@ type customDate = Temporal.PlainDateLike & {
 }
 
 export const formatDate = (
-    date: Temporal.PlainDate | Temporal.ZonedDateTime,
+    date: CalendarPlainDate | CalendarZonedDateTime,
     dayType?: DayType,
     format?: string
 ) => {
-    const year = date.eraYear ?? date.year
+    const year =
+        isNepaliPlainDate(date) || isNepaliZonedDateTime(date)
+            ? date.year
+            : date.eraYear ?? date.year
     const month = padWithZeroes(date.month)
     let day = date.day
     if (dayType === 'endOfMonth') {
@@ -46,26 +56,16 @@ export const capitalize = (
     locale = 'en'
 ) => [firstLetter.toLocaleUpperCase(locale), ...rest].join('')
 
+/**
+ * Legacy shim retained for callers that still pass the result through
+ * `Temporal.PlainDate.from({ calendar })`. With 0.5.x, calendars are strings
+ * only; custom calendar identifiers (currently `'nepali'`) flow through
+ * unchanged and dedicated routing helpers in `custom-calendars/` build the
+ * appropriate shadow type.
+ */
 export const getCustomCalendarIfExists = (
-    calendar: Temporal.CalendarLike
-): Temporal.CalendarProtocol | Temporal.CalendarLike => {
-    const isCustom = isCustomCalendar(calendar)
-    if (!isCustom) {
-        return calendar
-    }
-
-    const customCalendar = customCalendars[
-        calendar as keyof typeof customCalendars
-    ]?.calendar as Temporal.CalendarProtocol
-
-    if (!customCalendar) {
-        throw new Error(
-            `No implemenation found for custom calendar ${calendar}`
-        )
-    }
-
-    return customCalendar
-}
+    calendar: string | undefined | null
+): string => (calendar ? String(calendar) : 'iso8601')
 
 export const extractAndValidateDateString = (
     date: string,
@@ -121,7 +121,7 @@ const getInvalidDateResult = (options: PickerOptions) => {
 }
 
 const adjustForEthiopicCalendar = (result: customDate) => {
-    result.era = 'era1'
+    result.era = 'ethiopic'
     result.eraYear = result.year
     delete result.year
     return result

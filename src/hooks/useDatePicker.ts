@@ -1,13 +1,15 @@
 import { Temporal } from '@js-temporal/polyfill'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
+import {
+    CalendarZonedDateTime,
+    isNepaliZonedDateTime,
+    zonedDateTimeFrom,
+    zonedDateTimeWithCalendar,
+} from '../custom-calendars'
 import { getNowInCalendar } from '../index'
 import { PickerOptions, SupportedCalendar } from '../types'
-import {
-    formatDate,
-    getCustomCalendarIfExists,
-    extractAndValidateDateString,
-} from '../utils/helpers'
+import { formatDate, extractAndValidateDateString } from '../utils/helpers'
 import localisationHelpers from '../utils/localisationHelpers'
 import { useCalendarWeekDays } from './internal/useCalendarWeekDays'
 import {
@@ -43,11 +45,17 @@ export type UseDatePickerReturn = UseNavigationReturnType & {
     }[][]
 }
 type UseDatePickerHookType = (options: DatePickerOptions) => UseDatePickerReturn
-type ValidatedDate = Temporal.YearOrEraAndEraYear &
-    Temporal.MonthOrMonthCode & {
-        day: number
-        format?: string
-    }
+// 0.5.x dropped the public `YearOrEraAndEraYear` / `MonthOrMonthCode` helper
+// types; re-state the shape inline.
+type ValidatedDate = {
+    year?: number
+    era?: string
+    eraYear?: number
+    month?: number
+    monthCode?: string
+    day: number
+    format?: string
+}
 
 export const useDatePicker: UseDatePickerHookType = ({
     onDateSelect,
@@ -59,10 +67,9 @@ export const useDatePicker: UseDatePickerHookType = ({
     options,
 }) => {
     const optionsWithCustomerCalendar = useMemo(() => {
-        const calendar = getCustomCalendarIfExists(
-            dhis2CalendarsMap[options.calendar ?? 'gregorian'] ??
-                options.calendar
-        ) as SupportedCalendar
+        const requested = options.calendar ?? 'gregorian'
+        const calendar = (dhis2CalendarsMap[requested] ??
+            requested) as SupportedCalendar
         return {
             ...options,
             calendar,
@@ -105,22 +112,51 @@ export const useDatePicker: UseDatePickerHookType = ({
 
     date.format = !date.format ? format : date.format
 
-    const temporalCalendar = useMemo(
-        () => Temporal.Calendar.from(resolvedOptions.calendar),
-        [resolvedOptions.calendar]
-    )
-    const temporalTimeZone = useMemo(
-        () => Temporal.TimeZone.from(resolvedOptions.timeZone),
-        [resolvedOptions.timeZone]
-    )
-
-    const selectedDateZdt = dateString
-        ? Temporal.Calendar.from(temporalCalendar)
-              .dateFromFields(date)
-              .toZonedDateTime({
-                  timeZone: temporalTimeZone,
-              })
-        : null
+    const selectedDateZdt: CalendarZonedDateTime | null = useMemo(() => {
+        if (!dateString) {
+            return null
+        }
+        const era = (date as { era?: string }).era
+        const eraYear = date.eraYear as number | undefined
+        const yearOnly = date.year as number | undefined
+        const month =
+            (date.month as number | undefined) ??
+            (date.monthCode
+                ? Number(String(date.monthCode).replace(/^M/, ''))
+                : undefined)
+        if (month === undefined) {
+            return null
+        }
+        // For calendars with eras (e.g. ethiopic) the validated date is
+        // expressed as `era` + `eraYear`; passing a `year` alongside makes
+        // the polyfill consistency-check raise. Pick one form.
+        const fields =
+            era !== undefined && eraYear !== undefined
+                ? {
+                      eraYear,
+                      era,
+                      month,
+                      day: date.day,
+                      year: undefined as number | undefined,
+                  }
+                : {
+                      year: yearOnly ?? eraYear,
+                      month,
+                      day: date.day,
+                  }
+        if (
+            (fields as { year?: number; eraYear?: number }).year ===
+                undefined &&
+            (fields as { eraYear?: number }).eraYear === undefined
+        ) {
+            return null
+        }
+        return zonedDateTimeFrom(
+            fields as Parameters<typeof zonedDateTimeFrom>[0],
+            resolvedOptions.calendar,
+            resolvedOptions.timeZone
+        )
+    }, [dateString, date, resolvedOptions.calendar, resolvedOptions.timeZone])
 
     const [firstZdtOfVisibleMonth, setFirstZdtOfVisibleMonth] = useState(() => {
         const zdt = selectedDateZdt || todayZdt
@@ -130,30 +166,44 @@ export const useDatePicker: UseDatePickerHookType = ({
     const localeOptions = useMemo(
         () => ({
             locale: resolvedOptions.locale,
-            calendar: temporalCalendar,
-            timeZone: temporalTimeZone,
+            calendar: resolvedOptions.calendar,
+            timeZone: resolvedOptions.timeZone,
             weekDayFormat: resolvedOptions.weekDayFormat,
             numberingSystem: resolvedOptions.numberingSystem,
         }),
-        [resolvedOptions, temporalCalendar, temporalTimeZone]
+        [resolvedOptions]
     )
 
     const weekDayLabels = useWeekDayLabels(localeOptions)
 
+    // Re-project the held ZDT to the active calendar so navigation reads
+    // year/month in the right calendar even after the consumer swaps
+    // `options.calendar` on the same component instance.
+    const reprojectedFirstOfVisibleMonth = useMemo(
+        () =>
+            zonedDateTimeWithCalendar(
+                firstZdtOfVisibleMonth,
+                resolvedOptions.calendar
+            ),
+        [firstZdtOfVisibleMonth, resolvedOptions.calendar]
+    )
+
     const navigation = useNavigation(
-        firstZdtOfVisibleMonth.withCalendar(localeOptions.calendar),
+        reprojectedFirstOfVisibleMonth,
         setFirstZdtOfVisibleMonth,
         { ...localeOptions, pastOnly: options?.pastOnly }
     )
     const selectDate = useCallback(
-        (zdt: Temporal.ZonedDateTime) => {
+        (zdt: CalendarZonedDateTime) => {
             onDateSelect({
                 calendarDateString: formatDate(zdt, undefined, date.format),
             })
         },
         [onDateSelect, date.format]
     )
-    const calendarWeekDaysZdts = useCalendarWeekDays(firstZdtOfVisibleMonth)
+    const calendarWeekDaysZdts = useCalendarWeekDays(
+        reprojectedFirstOfVisibleMonth
+    )
 
     useEffect(() => {
         if (dateString === prevDateStringRef.current) {
@@ -162,17 +212,17 @@ export const useDatePicker: UseDatePickerHookType = ({
 
         prevDateStringRef.current = dateString
 
-        const zdt = Temporal.Calendar.from(temporalCalendar)
-            .dateFromFields(date)
-            .toZonedDateTime({
-                timeZone: temporalTimeZone,
-            })
+        if (!selectedDateZdt) {
+            return
+        }
+
+        const zdt = selectedDateZdt
 
         if (
             (firstZdtOfVisibleMonth.year !== zdt.year ||
                 firstZdtOfVisibleMonth.month !== zdt.month) &&
             !calendarWeekDaysZdts.some((week) =>
-                week.some((day) => day.equals(zdt))
+                week.some((day) => zdtEquals(day, zdt))
             )
         ) {
             setFirstZdtOfVisibleMonth(zdt.subtract({ days: zdt.day - 1 }))
@@ -182,24 +232,21 @@ export const useDatePicker: UseDatePickerHookType = ({
         dateString,
         firstZdtOfVisibleMonth,
         calendarWeekDaysZdts,
-        temporalCalendar,
-        temporalTimeZone,
+        selectedDateZdt,
     ])
     const result: UseDatePickerReturn = {
         calendarWeekDays: calendarWeekDaysZdts.map((week) =>
             week.map((weekDayZdt) => ({
                 dateValue: formatDate(weekDayZdt, undefined, format),
-                label: localisationHelpers.localiseWeekLabel(
-                    weekDayZdt.withCalendar(localeOptions.calendar),
-                    { ...localeOptions, calendar: resolvedOptions.calendar }
-                ),
+                label: localisationHelpers.localiseWeekLabel(weekDayZdt, {
+                    ...localeOptions,
+                    calendar: resolvedOptions.calendar,
+                }),
                 onClick: () => selectDate(weekDayZdt),
                 isSelected: selectedDateZdt
-                    ? selectedDateZdt
-                          ?.withCalendar('iso8601')
-                          .equals(weekDayZdt.withCalendar('iso8601'))
+                    ? zdtSameIsoInstant(selectedDateZdt, weekDayZdt)
                     : false,
-                isToday: todayZdt && weekDayZdt.equals(todayZdt),
+                isToday: todayZdt && zdtEquals(weekDayZdt, todayZdt),
                 isInCurrentMonth:
                     firstZdtOfVisibleMonth &&
                     weekDayZdt.month === firstZdtOfVisibleMonth.month,
@@ -210,4 +257,26 @@ export const useDatePicker: UseDatePickerHookType = ({
     }
 
     return result
+}
+
+const zdtEquals = (a: CalendarZonedDateTime, b: CalendarZonedDateTime) => {
+    if (isNepaliZonedDateTime(a) || isNepaliZonedDateTime(b)) {
+        return a.year === b.year && a.month === b.month && a.day === b.day
+    }
+    return (a as Temporal.ZonedDateTime).equals(b as Temporal.ZonedDateTime)
+}
+
+const zdtSameIsoInstant = (
+    a: CalendarZonedDateTime,
+    b: CalendarZonedDateTime
+) => {
+    const aIso = zonedDateTimeWithCalendar(
+        a,
+        'iso8601'
+    ) as Temporal.ZonedDateTime
+    const bIso = zonedDateTimeWithCalendar(
+        b,
+        'iso8601'
+    ) as Temporal.ZonedDateTime
+    return aIso.equals(bIso)
 }

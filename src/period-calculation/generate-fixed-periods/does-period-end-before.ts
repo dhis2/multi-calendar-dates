@@ -1,10 +1,10 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { CalendarPlainDate, comparePlainDates } from '../../custom-calendars'
 import { SupportedCalendar } from '../../types'
 import { fromAnyDate } from '../../utils'
 
 type DoesPeriodEndBefore = (args: {
     period: { startDate: string; endDate: string }
-    date: Temporal.PlainDate
+    date: CalendarPlainDate
     calendar: SupportedCalendar
 }) => boolean
 
@@ -17,11 +17,10 @@ const doesPeriodEndBefore: DoesPeriodEndBefore = ({
     const periodEndDay = fromAnyDate({ calendar, date: period.endDate })
 
     const periodStartsOnOrAfterDate =
-        Temporal.PlainDate.compare(date, periodStartDay) < 1
+        comparePlainDates(date, periodStartDay) < 1
     const endsBeforeAfterPeriodStart =
-        Temporal.PlainDate.compare(periodStartDay, date) === -1
-    const periodEndsOnOrBeforeDate =
-        Temporal.PlainDate.compare(date, periodEndDay) < 1
+        comparePlainDates(periodStartDay, date) === -1
+    const periodEndsOnOrBeforeDate = comparePlainDates(date, periodEndDay) < 1
 
     return (
         periodStartsOnOrAfterDate ||

@@ -1,4 +1,3 @@
-import { Temporal } from '@js-temporal/polyfill'
 import { calendars } from './constants/calendars'
 import { numberingSystems } from './constants/numberingSystems'
 
@@ -13,14 +12,14 @@ export type PickerOptionsWithResolvedCalendar = Omit<
     PickerOptions,
     'calendar'
 > & {
-    calendar: Temporal.CalendarProtocol
+    calendar: SupportedCalendar
     pastOnly?: boolean
 }
 
 export type ResolvedLocaleOptions = {
     calendar: SupportedCalendar
     locale: string
-    timeZone: Temporal.TimeZoneLike
+    timeZone: string
     numberingSystem: string
     weekDayFormat: WeekDayFormat
     maxDate?: string | undefined

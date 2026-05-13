@@ -1,12 +1,17 @@
 import i18n from '@dhis2/d2-i18n'
 import { Temporal } from '@js-temporal/polyfill'
+import {
+    CalendarPlainDate,
+    isNepaliPlainDate,
+    plainDateFrom,
+} from '../custom-calendars'
 import { SupportedCalendar } from '../types'
 import fromDateString from './from-date-string'
 
 type FromAnyDate = (args: {
-    date: string | Date | Temporal.PlainDate
+    date: string | Date | CalendarPlainDate
     calendar: SupportedCalendar
-}) => Temporal.PlainDate
+}) => CalendarPlainDate
 
 const fromAnyDate: FromAnyDate = ({ date, calendar }) => {
     if (typeof date === 'string') {
@@ -14,21 +19,21 @@ const fromAnyDate: FromAnyDate = ({ date, calendar }) => {
     }
 
     if (date instanceof Date) {
-        return Temporal.PlainDate.from({
-            year: date.getFullYear(),
-            month: date.getMonth() + 1,
-            day: date.getDate(),
-            calendar,
-        })
+        return plainDateFrom(
+            {
+                year: date.getFullYear(),
+                month: date.getMonth() + 1,
+                day: date.getDate(),
+            },
+            calendar
+        )
     }
 
-    if (date instanceof Temporal.PlainDate) {
-        return Temporal.PlainDate.from({
-            year: date.year,
-            month: date.month,
-            day: date.day,
-            calendar,
-        })
+    if (isNepaliPlainDate(date) || date instanceof Temporal.PlainDate) {
+        return plainDateFrom(
+            { year: date.year, month: date.month, day: date.day },
+            calendar
+        )
     }
 
     throw new Error(i18n.t(`Unrecognized date, received "{{date}}"`, { date }))
