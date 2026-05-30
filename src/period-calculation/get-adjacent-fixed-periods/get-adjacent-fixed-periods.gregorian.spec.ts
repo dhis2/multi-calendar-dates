@@ -219,6 +219,31 @@ describe('Gregorian/getAdjacentFixedPeriods', () => {
                 endDate: '2023-01-08',
             })
         })
+
+        it('should return the previous period when the current period is the last week of the year', () => {
+            const actual = getAdjacentFixedPeriods({
+                calendar: 'gregory',
+                locale: 'en',
+                period: createFixedPeriodFromPeriodId({
+                    periodId: '2023W52',
+                    calendar: 'gregory',
+                    locale: 'en',
+                }),
+                steps: -1,
+            })
+
+            expect(actual).toEqual([
+                {
+                    periodType: 'WEEKLY',
+                    name: 'Week 51 - 2023-12-18 - 2023-12-24',
+                    displayName: 'Week 51 - 2023-12-18 - 2023-12-24',
+                    id: '2023W51',
+                    iso: '2023W51',
+                    startDate: '2023-12-18',
+                    endDate: '2023-12-24',
+                },
+            ])
+        })
     })
 
     describe('period type: MONTHLY', () => {
