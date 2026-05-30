@@ -1,7 +1,7 @@
 import i18n from '@dhis2/d2-i18n'
 import { Temporal } from '@js-temporal/polyfill'
 import { SupportedCalendar } from '../../types'
-import { fromAnyDate, formatDate, padWithZeroes } from '../../utils/index'
+import { fromAnyDate, formatDate } from '../../utils/index'
 import { FixedPeriod, PeriodType } from '../types'
 import doesPeriodEndBefore from './does-period-end-before'
 
@@ -72,8 +72,6 @@ const generateFixedPeriodsWeekly: GenerateFixedPeriodsWeekly = ({
         if (!(endofWeek.year === year + 1 && endofWeek.day >= 4)) {
             const name = buildLabel({
                 periodType,
-                date,
-                nextWeek: endofWeek,
                 weekIndex: i,
             })
             days.push({
@@ -172,27 +170,13 @@ const buildValue = ({
 
 type BuildLabelFunc = (options: {
     periodType: PeriodType
-    date: Temporal.PlainDate
-    nextWeek: Temporal.PlainDate
     weekIndex: number
 }) => string
 
-const buildLabel: BuildLabelFunc = ({
-    periodType,
-    date,
-    nextWeek,
-    weekIndex,
-}) => {
-    const { year, month, day } = date
-    const { year: nextYear, month: nextMonth, day: nextDay } = nextWeek
+const buildLabel: BuildLabelFunc = ({ periodType, weekIndex }) => {
     const prefix =
         periodType === 'BIWEEKLY' ? i18n.t('Bi-Week') : i18n.t('Week')
-    const label = `${prefix} ${weekIndex} - ${year}-${padWithZeroes(
-        month
-    )}-${padWithZeroes(day)} - ${nextYear}-${padWithZeroes(
-        nextMonth
-    )}-${padWithZeroes(nextDay)}`
-    return label
+    return `${prefix} ${weekIndex}`
 }
 
 export default generateFixedPeriodsWeekly

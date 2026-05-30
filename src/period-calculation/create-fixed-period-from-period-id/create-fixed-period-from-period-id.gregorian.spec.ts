@@ -356,8 +356,8 @@ describe('Gregorian/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'WEEKLY',
-                name: 'Week 1 - 2023-01-02 - 2023-01-08',
-                displayName: 'Week 1 - 2023-01-02 - 2023-01-08',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2023W1',
                 iso: '2023W1',
                 startDate: '2023-01-02',
@@ -375,8 +375,8 @@ describe('Gregorian/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'BIWEEKLY',
-                name: 'Bi-Week 1 - 2023-01-02 - 2023-01-15',
-                displayName: 'Bi-Week 1 - 2023-01-02 - 2023-01-15',
+                name: 'Bi-Week 1',
+                displayName: 'Bi-Week 1',
                 id: '2023BiW1',
                 iso: '2023BiW1',
                 startDate: '2023-01-02',
@@ -394,8 +394,8 @@ describe('Gregorian/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'WEEKLYWED',
-                name: 'Week 1 - 2023-01-04 - 2023-01-10',
-                displayName: 'Week 1 - 2023-01-04 - 2023-01-10',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2023WedW1',
                 iso: '2023WedW1',
                 startDate: '2023-01-04',
@@ -413,8 +413,8 @@ describe('Gregorian/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'WEEKLYTHU',
-                name: 'Week 1 - 2022-12-29 - 2023-01-04',
-                displayName: 'Week 1 - 2022-12-29 - 2023-01-04',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2023ThuW1',
                 iso: '2023ThuW1',
                 startDate: '2022-12-29',
@@ -432,8 +432,8 @@ describe('Gregorian/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'WEEKLYSAT',
-                name: 'Week 1 - 2022-12-31 - 2023-01-06',
-                displayName: 'Week 1 - 2022-12-31 - 2023-01-06',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2023SatW1',
                 iso: '2023SatW1',
                 startDate: '2022-12-31',
@@ -451,8 +451,8 @@ describe('Gregorian/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'WEEKLYSUN',
-                name: 'Week 1 - 2023-01-01 - 2023-01-07',
-                displayName: 'Week 1 - 2023-01-01 - 2023-01-07',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2023SunW1',
                 iso: '2023SunW1',
                 startDate: '2023-01-01',

@@ -52,66 +52,66 @@ Feature: Gregorian Calendar fixed periods
         When the user requests "weekly" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
-            | 1           | Week 1 - 2022-01-03 - 2022-01-09  | 2022W1      |
-            | 2           | Week 2 - 2022-01-10 - 2022-01-16  | 2022W2      |
-            | 3           | Week 3 - 2022-01-17 - 2022-01-23  | 2022W3      |
-            | 51          | Week 51 - 2022-12-19 - 2022-12-25 | 2022W51     |
-            | 52          | Week 52 - 2022-12-26 - 2023-01-01 | 2022W52     |
+            | 1           | Week 1  | 2022W1      |
+            | 2           | Week 2  | 2022W2      |
+            | 3           | Week 3  | 2022W3      |
+            | 51          | Week 51 | 2022W51     |
+            | 52          | Week 52 | 2022W52     |
 
     Scenario: Generate Weekly Periods (Starting Wednesday)
         # Weekly starting Wednesday
         When the user requests "WEEKLYWED" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
-            | 1           | Week 1 - 2021-12-29 - 2022-01-04  | 2022WedW1   |
-            | 2           | Week 2 - 2022-01-05 - 2022-01-11  | 2022WedW2   |
-            | 3           | Week 3 - 2022-01-12 - 2022-01-18  | 2022WedW3   |
-            | 51          | Week 51 - 2022-12-14 - 2022-12-20 | 2022WedW51  |
-            | 52          | Week 52 - 2022-12-21 - 2022-12-27 | 2022WedW52  |
-            | 53          | Week 53 - 2022-12-28 - 2023-01-03 | 2022WedW53  |
+            | 1           | Week 1  | 2022WedW1   |
+            | 2           | Week 2  | 2022WedW2   |
+            | 3           | Week 3  | 2022WedW3   |
+            | 51          | Week 51 | 2022WedW51  |
+            | 52          | Week 52 | 2022WedW52  |
+            | 53          | Week 53 | 2022WedW53  |
 
     Scenario: Generate Weekly Periods (Starting Thursday)
         When the user requests "WEEKLYTHU" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
-            | 1           | Week 1 - 2021-12-30 - 2022-01-05  | 2022ThuW1   |
-            | 2           | Week 2 - 2022-01-06 - 2022-01-12  | 2022ThuW2   |
-            | 3           | Week 3 - 2022-01-13 - 2022-01-19  | 2022ThuW3   |
-            | 50          | Week 50 - 2022-12-08 - 2022-12-14 | 2022ThuW50  |
-            | 51          | Week 51 - 2022-12-15 - 2022-12-21 | 2022ThuW51  |
-            | 52          | Week 52 - 2022-12-22 - 2022-12-28 | 2022ThuW52  |
+            | 1           | Week 1  | 2022ThuW1   |
+            | 2           | Week 2  | 2022ThuW2   |
+            | 3           | Week 3  | 2022ThuW3   |
+            | 50          | Week 50 | 2022ThuW50  |
+            | 51          | Week 51 | 2022ThuW51  |
+            | 52          | Week 52 | 2022ThuW52  |
 
     Scenario: Generate Weekly Periods (Starting Saturday)
         When the user requests "WEEKLYSAT" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
-            | 1           | Week 1 - 2022-01-01 - 2022-01-07  | 2022SatW1   |
-            | 2           | Week 2 - 2022-01-08 - 2022-01-14  | 2022SatW2   |
-            | 3           | Week 3 - 2022-01-15 - 2022-01-21  | 2022SatW3   |
-            | 50          | Week 50 - 2022-12-10 - 2022-12-16 | 2022SatW50  |
-            | 51          | Week 51 - 2022-12-17 - 2022-12-23 | 2022SatW51  |
-            | 52          | Week 52 - 2022-12-24 - 2022-12-30 | 2022SatW52  |
+            | 1           | Week 1  | 2022SatW1   |
+            | 2           | Week 2  | 2022SatW2   |
+            | 3           | Week 3  | 2022SatW3   |
+            | 50          | Week 50 | 2022SatW50  |
+            | 51          | Week 51 | 2022SatW51  |
+            | 52          | Week 52 | 2022SatW52  |
     Scenario: Generate Weekly Periods (Starting Sunday)
         When the user requests "WEEKLYSUN" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
-            | 1           | Week 1 - 2022-01-02 - 2022-01-08  | 2022SunW1   |
-            | 2           | Week 2 - 2022-01-09 - 2022-01-15  | 2022SunW2   |
-            | 3           | Week 3 - 2022-01-16 - 2022-01-22  | 2022SunW3   |
-            | 50          | Week 50 - 2022-12-11 - 2022-12-17 | 2022SunW50  |
-            | 51          | Week 51 - 2022-12-18 - 2022-12-24 | 2022SunW51  |
-            | 52          | Week 52 - 2022-12-25 - 2022-12-31 | 2022SunW52  |
+            | 1           | Week 1  | 2022SunW1   |
+            | 2           | Week 2  | 2022SunW2   |
+            | 3           | Week 3  | 2022SunW3   |
+            | 50          | Week 50 | 2022SunW50  |
+            | 51          | Week 51 | 2022SunW51  |
+            | 52          | Week 52 | 2022SunW52  |
 
     Scenario: Generate Bi-Weekly Periods
         When the user requests "BIWEEKLY" periods for "2022"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                          | periodValue |
-            | 1           | Bi-Week 1 - 2022-01-03 - 2022-01-16  | 2022BiW1    |
-            | 2           | Bi-Week 2 - 2022-01-17 - 2022-01-30  | 2022BiW2    |
-            | 3           | Bi-Week 3 - 2022-01-31 - 2022-02-13  | 2022BiW3    |
-            | 24          | Bi-Week 24 - 2022-11-21 - 2022-12-04 | 2022BiW24   |
-            | 25          | Bi-Week 25 - 2022-12-05 - 2022-12-18 | 2022BiW25   |
-            | 26          | Bi-Week 26 - 2022-12-19 - 2023-01-01 | 2022BiW26   |
+            | 1           | Bi-Week 1  | 2022BiW1    |
+            | 2           | Bi-Week 2  | 2022BiW2    |
+            | 3           | Bi-Week 3  | 2022BiW3    |
+            | 24          | Bi-Week 24 | 2022BiW24   |
+            | 25          | Bi-Week 25 | 2022BiW25   |
+            | 26          | Bi-Week 26 | 2022BiW26   |
 
     Scenario: Generate Bi-Monthly Periods
         When the user requests "BIMONTHLY" periods for "2022"
