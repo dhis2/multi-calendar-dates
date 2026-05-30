@@ -64,7 +64,7 @@ const getPreviousMonthlyFixedPeriods: GetAdjacentMonthlyFixedPeriods = ({
     calendar,
     locale,
 }) => {
-    const startYear = parseInt(period.id.substring(0, 4), 10)
+    const startYear = Number.parseInt(period.id.substring(0, 4), 10)
     const previousPeriods: FixedPeriod[] = []
 
     let curYear = startYear
