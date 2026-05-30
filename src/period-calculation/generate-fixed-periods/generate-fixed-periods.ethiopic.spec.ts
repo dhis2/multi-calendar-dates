@@ -368,8 +368,8 @@ describe('Ethiopic Calendar fixed period calculation', () => {
             expect(results[results.length - 1]).toMatchObject({
                 id: '2014W26',
                 iso: '2014W26',
-                name: 'Week 26 - 2014-06-29 - 2014-07-05',
-                displayName: 'Week 26 - 2014-06-29 - 2014-07-05',
+                name: 'Week 26',
+                displayName: 'Week 26',
             })
         })
 

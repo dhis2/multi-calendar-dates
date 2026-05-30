@@ -280,8 +280,8 @@ describe('Nepali/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'WEEKLY',
-                name: 'Week 1 - 2078-12-28 - 2079-01-04',
-                displayName: 'Week 1 - 2078-12-28 - 2079-01-04',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2079W1',
                 iso: '2079W1',
                 startDate: '2078-12-28',
@@ -299,8 +299,8 @@ describe('Nepali/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'BIWEEKLY',
-                name: 'Bi-Week 1 - 2078-12-28 - 2079-01-11',
-                displayName: 'Bi-Week 1 - 2078-12-28 - 2079-01-11',
+                name: 'Bi-Week 1',
+                displayName: 'Bi-Week 1',
                 id: '2079BiW1',
                 iso: '2079BiW1',
                 startDate: '2078-12-28',
@@ -318,8 +318,8 @@ describe('Nepali/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'WEEKLYWED',
-                name: 'Week 1 - 2078-12-30 - 2079-01-06',
-                displayName: 'Week 1 - 2078-12-30 - 2079-01-06',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2079WedW1',
                 iso: '2079WedW1',
                 startDate: '2078-12-30',
@@ -337,8 +337,8 @@ describe('Nepali/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'WEEKLYTHU',
-                name: 'Week 1 - 2079-01-01 - 2079-01-07',
-                displayName: 'Week 1 - 2079-01-01 - 2079-01-07',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2079ThuW1',
                 iso: '2079ThuW1',
                 startDate: '2079-01-01',
@@ -356,8 +356,8 @@ describe('Nepali/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'WEEKLYSAT',
-                name: 'Week 1 - 2079-01-03 - 2079-01-09',
-                displayName: 'Week 1 - 2079-01-03 - 2079-01-09',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2079SatW1',
                 iso: '2079SatW1',
                 startDate: '2079-01-03',
@@ -375,8 +375,8 @@ describe('Nepali/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'WEEKLYSUN',
-                name: 'Week 1 - 2079-01-04 - 2079-01-10',
-                displayName: 'Week 1 - 2079-01-04 - 2079-01-10',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2079SunW1',
                 iso: '2079SunW1',
                 startDate: '2079-01-04',

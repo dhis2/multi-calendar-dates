@@ -95,8 +95,8 @@ describe('Nepali/getAdjacentFixedPeriods', () => {
             const expected = [
                 {
                     periodType: 'WEEKLY',
-                    name: 'Week 1 - 2078-12-28 - 2079-01-04',
-                    displayName: 'Week 1 - 2078-12-28 - 2079-01-04',
+                    name: 'Week 1',
+                    displayName: 'Week 1',
                     id: '2079W1',
                     iso: '2079W1',
                     startDate: '2078-12-28',
@@ -104,8 +104,8 @@ describe('Nepali/getAdjacentFixedPeriods', () => {
                 },
                 {
                     periodType: 'WEEKLY',
-                    name: 'Week 2 - 2079-01-05 - 2079-01-11',
-                    displayName: 'Week 2 - 2079-01-05 - 2079-01-11',
+                    name: 'Week 2',
+                    displayName: 'Week 2',
                     id: '2079W2',
                     iso: '2079W2',
                     startDate: '2079-01-05',
@@ -129,8 +129,8 @@ describe('Nepali/getAdjacentFixedPeriods', () => {
             expect(actual).toHaveLength(54)
             expect(actual[0]).toEqual({
                 periodType: 'WEEKLY',
-                name: 'Week 52 - 2077-12-23 - 2077-12-29',
-                displayName: 'Week 52 - 2077-12-23 - 2077-12-29',
+                name: 'Week 52',
+                displayName: 'Week 52',
                 id: '2077W52',
                 iso: '2077W52',
                 startDate: '2077-12-23',
@@ -138,8 +138,8 @@ describe('Nepali/getAdjacentFixedPeriods', () => {
             })
             expect(actual[53]).toEqual({
                 periodType: 'WEEKLY',
-                name: 'Week 1 - 2078-12-28 - 2079-01-04',
-                displayName: 'Week 1 - 2078-12-28 - 2079-01-04',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2079W1',
                 iso: '2079W1',
                 startDate: '2078-12-28',

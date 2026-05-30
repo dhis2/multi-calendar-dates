@@ -194,7 +194,7 @@ describe('Nepali Calendar fixed period calculation', () => {
         it('should add start and end dates for QUARTERLYNOV', () => {
             const periods = generateFixedPeriods({
                 year: 2078,
-                calendar: 'nepali' as SupportedCalendar,
+                calendar: 'nepali',
                 locale: 'en',
                 periodType: 'QUARTERLYNOV',
             }).map((p) => `${p.startDate}/${p.endDate}`)
@@ -285,8 +285,8 @@ describe('Nepali Calendar fixed period calculation', () => {
             expect(results[results.length - 1]).toMatchObject({
                 id: '2014W28',
                 iso: '2014W28',
-                name: 'Week 28 - 2014-07-05 - 2014-07-11',
-                displayName: 'Week 28 - 2014-07-05 - 2014-07-11',
+                name: 'Week 28',
+                displayName: 'Week 28',
             })
         })
 

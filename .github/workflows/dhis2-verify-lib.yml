@@ -112,13 +112,9 @@ jobs:
     publish:
         runs-on: ubuntu-latest
         needs: [build, lint, test]
-        if: "!contains(github.event.head_commit.message, '[skip ci]')"
-        # if:
-        #   "!contains(github.event.head_commit.message, '[skip ci]') && contains('
-        #     refs/heads/main
-        #     refs/heads/next
-        #     refs/heads/beta
-        #   ', github.ref)"
+        if: >
+            !contains(github.event.head_commit.message, '[skip ci]') &&
+            contains(' refs/heads/main refs/heads/next refs/heads/beta ', github.ref)
         steps:
             - uses: actions/checkout@v3
               with:

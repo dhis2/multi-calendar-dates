@@ -66,70 +66,70 @@ Feature: Ethiopic Calendar fixed periods
         When the user requests "weekly" periods for "2015"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
-            | 1           | Week 1 - 2015-01-03 - 2015-01-09  | 2015W1      |
-            | 2           | Week 2 - 2015-01-10 - 2015-01-16  | 2015W2      |
-            | 3           | Week 3 - 2015-01-17 - 2015-01-23  | 2015W3      |
-            | 51          | Week 51 - 2015-12-23 - 2015-12-29 | 2015W51     |
-            | 52          | Week 52 - 2015-12-30 - 2015-13-06 | 2015W52     |
+            | 1           | Week 1  | 2015W1      |
+            | 2           | Week 2  | 2015W2      |
+            | 3           | Week 3  | 2015W3      |
+            | 51          | Week 51 | 2015W51     |
+            | 52          | Week 52 | 2015W52     |
 
     Scenario: Generate Weekly Periods (Starting Wednesday)
         When the user requests "WEEKLYWED" periods for "2015"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
-            | 1           | Week 1 - 2014-13-03 - 2015-01-04  | 2015WedW1   |
-            | 2           | Week 2 - 2015-01-05 - 2015-01-11  | 2015WedW2   |
-            | 3           | Week 3 - 2015-01-12 - 2015-01-18  | 2015WedW3   |
-            | 51          | Week 51 - 2015-12-18 - 2015-12-24 | 2015WedW51  |
-            | 52          | Week 52 - 2015-12-25 - 2015-13-01 | 2015WedW52  |
-            | 53          | Week 53 - 2015-13-02 - 2016-01-02 | 2015WedW53  |
+            | 1           | Week 1  | 2015WedW1   |
+            | 2           | Week 2  | 2015WedW2   |
+            | 3           | Week 3  | 2015WedW3   |
+            | 51          | Week 51 | 2015WedW51  |
+            | 52          | Week 52 | 2015WedW52  |
+            | 53          | Week 53 | 2015WedW53  |
 
     Scenario: Generate Weekly Periods (Starting Thursday)
         When the user requests "WEEKLYTHU" periods for "2015"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
-            | 1           | Week 1 - 2014-13-04 - 2015-01-05  | 2015ThuW1   |
-            | 2           | Week 2 - 2015-01-06 - 2015-01-12  | 2015ThuW2   |
-            | 3           | Week 3 - 2015-01-13 - 2015-01-19  | 2015ThuW3   |
-            | 50          | Week 50 - 2015-12-12 - 2015-12-18 | 2015ThuW50  |
-            | 51          | Week 51 - 2015-12-19 - 2015-12-25 | 2015ThuW51  |
-            | 52          | Week 52 - 2015-12-26 - 2015-13-02 | 2015ThuW52  |
-            | 53          | Week 53 - 2015-13-03 - 2016-01-03 | 2015ThuW53  |
+            | 1           | Week 1  | 2015ThuW1   |
+            | 2           | Week 2  | 2015ThuW2   |
+            | 3           | Week 3  | 2015ThuW3   |
+            | 50          | Week 50 | 2015ThuW50  |
+            | 51          | Week 51 | 2015ThuW51  |
+            | 52          | Week 52 | 2015ThuW52  |
+            | 53          | Week 53 | 2015ThuW53  |
 
     @abyot # should the last week here be added or not? (most of it is in the next year)
     Scenario: Generate Weekly Periods (Starting Saturday)
         When the user requests "WEEKLYSAT" periods for "2015"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
-            | 1           | Week 1 - 2015-01-01 - 2015-01-07  | 2015SatW1   |
-            | 2           | Week 2 - 2015-01-08 - 2015-01-14  | 2015SatW2   |
-            | 3           | Week 3 - 2015-01-15 - 2015-01-21  | 2015SatW3   |
-            | 50          | Week 50 - 2015-12-14 - 2015-12-20 | 2015SatW50  |
-            | 51          | Week 51 - 2015-12-21 - 2015-12-27 | 2015SatW51  |
-            | 52          | Week 52 - 2015-12-28 - 2015-13-04 | 2015SatW52  |
+            | 1           | Week 1  | 2015SatW1   |
+            | 2           | Week 2  | 2015SatW2   |
+            | 3           | Week 3  | 2015SatW3   |
+            | 50          | Week 50 | 2015SatW50  |
+            | 51          | Week 51 | 2015SatW51  |
+            | 52          | Week 52 | 2015SatW52  |
 
     @abyot # same - should the last week here be added or not?
     Scenario: Generate Weekly Periods (Starting Sunday)
         When the user requests "WEEKLYSUN" periods for "2015"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                       | periodValue |
-            | 1           | Week 1 - 2015-01-02 - 2015-01-08  | 2015SunW1   |
-            | 2           | Week 2 - 2015-01-09 - 2015-01-15  | 2015SunW2   |
-            | 3           | Week 3 - 2015-01-16 - 2015-01-22  | 2015SunW3   |
-            | 50          | Week 50 - 2015-12-15 - 2015-12-21 | 2015SunW50  |
-            | 51          | Week 51 - 2015-12-22 - 2015-12-28 | 2015SunW51  |
-            | 52          | Week 52 - 2015-12-29 - 2015-13-05 | 2015SunW52  |
+            | 1           | Week 1  | 2015SunW1   |
+            | 2           | Week 2  | 2015SunW2   |
+            | 3           | Week 3  | 2015SunW3   |
+            | 50          | Week 50 | 2015SunW50  |
+            | 51          | Week 51 | 2015SunW51  |
+            | 52          | Week 52 | 2015SunW52  |
 
     @abyot # could you confirm what we want to do with the 13th month in bi-weekly? does the last item here period#26 look correct to you?
     Scenario: Generate Bi-Weekly Periods
         When the user requests "BIWEEKLY" periods for "2015"
         Then the dates for the period type should be generated
             | periodIndex | periodLabel                          | periodValue |
-            | 1           | Bi-Week 1 - 2015-01-03 - 2015-01-16  | 2015BiW1    |
-            | 2           | Bi-Week 2 - 2015-01-17 - 2015-01-30  | 2015BiW2    |
-            | 3           | Bi-Week 3 - 2015-02-01 - 2015-02-14  | 2015BiW3    |
-            | 24          | Bi-Week 24 - 2015-11-25 - 2015-12-08 | 2015BiW24   |
-            | 25          | Bi-Week 25 - 2015-12-09 - 2015-12-22 | 2015BiW25   |
-            | 26          | Bi-Week 26 - 2015-12-23 - 2015-13-06 | 2015BiW26   |
+            | 1           | Bi-Week 1  | 2015BiW1    |
+            | 2           | Bi-Week 2  | 2015BiW2    |
+            | 3           | Bi-Week 3  | 2015BiW3    |
+            | 24          | Bi-Week 24 | 2015BiW24   |
+            | 25          | Bi-Week 25 | 2015BiW25   |
+            | 26          | Bi-Week 26 | 2015BiW26   |
 
     Scenario: Generate Bi-Monthly Periods
         When the user requests "BIMONTHLY" periods for "2015"

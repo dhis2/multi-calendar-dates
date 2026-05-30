@@ -168,8 +168,8 @@ describe('Gregorian/getAdjacentFixedPeriods', () => {
             const expected = [
                 {
                     periodType: 'WEEKLY',
-                    name: 'Week 1 - 2023-01-02 - 2023-01-08',
-                    displayName: 'Week 1 - 2023-01-02 - 2023-01-08',
+                    name: 'Week 1',
+                    displayName: 'Week 1',
                     id: '2023W1',
                     iso: '2023W1',
                     startDate: '2023-01-02',
@@ -177,8 +177,8 @@ describe('Gregorian/getAdjacentFixedPeriods', () => {
                 },
                 {
                     periodType: 'WEEKLY',
-                    name: 'Week 2 - 2023-01-09 - 2023-01-15',
-                    displayName: 'Week 2 - 2023-01-09 - 2023-01-15',
+                    name: 'Week 2',
+                    displayName: 'Week 2',
                     id: '2023W2',
                     iso: '2023W2',
                     startDate: '2023-01-09',
@@ -202,8 +202,8 @@ describe('Gregorian/getAdjacentFixedPeriods', () => {
             expect(actual).toHaveLength(54)
             expect(actual[0]).toEqual({
                 periodType: 'WEEKLY',
-                name: 'Week 52 - 2021-12-27 - 2022-01-02',
-                displayName: 'Week 52 - 2021-12-27 - 2022-01-02',
+                name: 'Week 52',
+                displayName: 'Week 52',
                 id: '2021W52',
                 iso: '2021W52',
                 startDate: '2021-12-27',
@@ -211,8 +211,8 @@ describe('Gregorian/getAdjacentFixedPeriods', () => {
             })
             expect(actual[53]).toEqual({
                 periodType: 'WEEKLY',
-                name: 'Week 1 - 2023-01-02 - 2023-01-08',
-                displayName: 'Week 1 - 2023-01-02 - 2023-01-08',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2023W1',
                 iso: '2023W1',
                 startDate: '2023-01-02',

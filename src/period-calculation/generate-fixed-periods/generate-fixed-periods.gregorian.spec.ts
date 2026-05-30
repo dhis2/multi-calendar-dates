@@ -77,8 +77,8 @@ describe('Gregorian Calendar fixed period calculation', () => {
             expect(results[results.length - 1]).toMatchObject({
                 id: '2014W27',
                 iso: '2014W27',
-                name: 'Week 27 - 2014-06-30 - 2014-07-06',
-                displayName: 'Week 27 - 2014-06-30 - 2014-07-06',
+                name: 'Week 27',
+                displayName: 'Week 27',
             })
         })
 
@@ -93,8 +93,8 @@ describe('Gregorian Calendar fixed period calculation', () => {
             expect(results[results.length - 1]).toMatchObject({
                 id: '2014W52',
                 iso: '2014W52',
-                name: 'Week 52 - 2014-12-22 - 2014-12-28',
-                displayName: 'Week 52 - 2014-12-22 - 2014-12-28',
+                name: 'Week 52',
+                displayName: 'Week 52',
             })
         })
         it('should start the year before if necessary', () => {
@@ -108,14 +108,66 @@ describe('Gregorian Calendar fixed period calculation', () => {
             expect(results[0]).toMatchObject({
                 id: '2014SunW1',
                 iso: '2014SunW1',
-                name: 'Week 1 - 2013-12-29 - 2014-01-04',
-                displayName: 'Week 1 - 2013-12-29 - 2014-01-04',
+                name: 'Week 1',
+                displayName: 'Week 1',
             })
             expect(results[52]).toMatchObject({
                 id: '2014SunW53',
                 iso: '2014SunW53',
-                name: 'Week 53 - 2014-12-28 - 2015-01-03',
-                displayName: 'Week 53 - 2014-12-28 - 2015-01-03',
+                name: 'Week 53',
+                displayName: 'Week 53',
+            })
+        })
+
+        it('should return week title labels and preserve ranges for weekly variants', () => {
+            const weekly = generateFixedPeriods({
+                periodType: 'WEEKLY',
+                year: 2026,
+                calendar: 'gregory',
+                locale: 'en',
+                startingDay: 1,
+            })[0]
+            const weeklySun = generateFixedPeriods({
+                periodType: 'WEEKLYSUN',
+                year: 2026,
+                calendar: 'gregory',
+                locale: 'en',
+                startingDay: 1,
+            })[0]
+            const biWeekly = generateFixedPeriods({
+                periodType: 'BIWEEKLY',
+                year: 2026,
+                calendar: 'gregory',
+                locale: 'en',
+                startingDay: 1,
+            })[0]
+
+            expect(weekly).toMatchObject({
+                periodType: 'WEEKLY',
+                id: '2026W1',
+                iso: '2026W1',
+                name: 'Week 1',
+                displayName: 'Week 1',
+                startDate: '2025-12-29',
+                endDate: '2026-01-04',
+            })
+            expect(weeklySun).toMatchObject({
+                periodType: 'WEEKLYSUN',
+                id: '2026SunW1',
+                iso: '2026SunW1',
+                name: 'Week 1',
+                displayName: 'Week 1',
+                startDate: '2026-01-04',
+                endDate: '2026-01-10',
+            })
+            expect(biWeekly).toMatchObject({
+                periodType: 'BIWEEKLY',
+                id: '2026BiW1',
+                iso: '2026BiW1',
+                name: 'Bi-Week 1',
+                displayName: 'Bi-Week 1',
+                startDate: '2025-12-29',
+                endDate: '2026-01-11',
             })
         })
     })

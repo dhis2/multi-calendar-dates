@@ -357,8 +357,8 @@ describe('Ethiopic/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'WEEKLY',
-                name: 'Week 1 - 2015-01-03 - 2015-01-09',
-                displayName: 'Week 1 - 2015-01-03 - 2015-01-09',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2015W1',
                 iso: '2015W1',
                 startDate: '2015-01-03',
@@ -376,8 +376,8 @@ describe('Ethiopic/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'BIWEEKLY',
-                name: 'Bi-Week 1 - 2015-01-03 - 2015-01-16',
-                displayName: 'Bi-Week 1 - 2015-01-03 - 2015-01-16',
+                name: 'Bi-Week 1',
+                displayName: 'Bi-Week 1',
                 id: '2015BiW1',
                 iso: '2015BiW1',
                 startDate: '2015-01-03',
@@ -395,8 +395,8 @@ describe('Ethiopic/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'WEEKLYWED',
-                name: 'Week 1 - 2014-13-03 - 2015-01-04',
-                displayName: 'Week 1 - 2014-13-03 - 2015-01-04',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2015WedW1',
                 iso: '2015WedW1',
                 startDate: '2014-13-03',
@@ -414,8 +414,8 @@ describe('Ethiopic/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'WEEKLYTHU',
-                name: 'Week 1 - 2014-13-04 - 2015-01-05',
-                displayName: 'Week 1 - 2014-13-04 - 2015-01-05',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2015ThuW1',
                 iso: '2015ThuW1',
                 startDate: '2014-13-04',
@@ -433,8 +433,8 @@ describe('Ethiopic/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'WEEKLYSAT',
-                name: 'Week 1 - 2015-01-01 - 2015-01-07',
-                displayName: 'Week 1 - 2015-01-01 - 2015-01-07',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2015SatW1',
                 iso: '2015SatW1',
                 startDate: '2015-01-01',
@@ -452,8 +452,8 @@ describe('Ethiopic/createFixedPeriodFromPeriodId', () => {
 
             const expected = {
                 periodType: 'WEEKLYSUN',
-                name: 'Week 1 - 2015-01-02 - 2015-01-08',
-                displayName: 'Week 1 - 2015-01-02 - 2015-01-08',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2015SunW1',
                 iso: '2015SunW1',
                 startDate: '2015-01-02',

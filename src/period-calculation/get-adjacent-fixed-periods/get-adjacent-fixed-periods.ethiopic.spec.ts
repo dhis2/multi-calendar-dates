@@ -95,8 +95,8 @@ describe('Ethiopic/getAdjacentFixedPeriods', () => {
             const expected = [
                 {
                     periodType: 'WEEKLY',
-                    name: 'Week 1 - 2015-01-03 - 2015-01-09',
-                    displayName: 'Week 1 - 2015-01-03 - 2015-01-09',
+                    name: 'Week 1',
+                    displayName: 'Week 1',
                     id: '2015W1',
                     iso: '2015W1',
                     startDate: '2015-01-03',
@@ -104,8 +104,8 @@ describe('Ethiopic/getAdjacentFixedPeriods', () => {
                 },
                 {
                     periodType: 'WEEKLY',
-                    name: 'Week 2 - 2015-01-10 - 2015-01-16',
-                    displayName: 'Week 2 - 2015-01-10 - 2015-01-16',
+                    name: 'Week 2',
+                    displayName: 'Week 2',
                     id: '2015W2',
                     iso: '2015W2',
                     startDate: '2015-01-10',
@@ -129,8 +129,8 @@ describe('Ethiopic/getAdjacentFixedPeriods', () => {
             expect(actual).toHaveLength(54)
             expect(actual[0]).toEqual({
                 periodType: 'WEEKLY',
-                name: 'Week 53 - 2013-13-02 - 2014-01-03',
-                displayName: 'Week 53 - 2013-13-02 - 2014-01-03',
+                name: 'Week 53',
+                displayName: 'Week 53',
                 id: '2013W53',
                 iso: '2013W53',
                 startDate: '2013-13-02',
@@ -138,8 +138,8 @@ describe('Ethiopic/getAdjacentFixedPeriods', () => {
             })
             expect(actual[53]).toEqual({
                 periodType: 'WEEKLY',
-                name: 'Week 1 - 2015-01-03 - 2015-01-09',
-                displayName: 'Week 1 - 2015-01-03 - 2015-01-09',
+                name: 'Week 1',
+                displayName: 'Week 1',
                 id: '2015W1',
                 iso: '2015W1',
                 endDate: '2015-01-09',
