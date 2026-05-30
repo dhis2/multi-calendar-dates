@@ -112,11 +112,11 @@ const getPreviousWeeklyFixedPeriods: GetAdjacentWeeklyFixedPeriods = ({
         )
 
         const previousPeriodsEndIndex =
-            firstCurrentOrFollowingPeriodIndex !== -1
-                ? firstCurrentOrFollowingPeriodIndex
-                : // This is the case when the "startDate" is the first day of the
+            firstCurrentOrFollowingPeriodIndex === -1
+                ? // This is the case when the "startDate" is the first day of the
                   // first period of the next year
                   periodsForYear.length
+                : firstCurrentOrFollowingPeriodIndex
         const startIndex = Math.max(0, previousPeriodsEndIndex - nextCount)
         const prevPeriods = periodsForYear.slice(
             startIndex,
