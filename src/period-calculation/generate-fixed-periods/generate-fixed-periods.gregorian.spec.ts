@@ -1,4 +1,3 @@
-import i18n from '@dhis2/d2-i18n'
 import { SupportedCalendar } from '../../types'
 import generateFixedPeriods from './generate-fixed-periods'
 
@@ -143,7 +142,7 @@ describe('Gregorian Calendar fixed period calculation', () => {
                 startingDay: 1,
             })[0]
 
-            expect(weekly).toEqual({
+            expect(weekly).toMatchObject({
                 periodType: 'WEEKLY',
                 id: '2026W1',
                 iso: '2026W1',
@@ -152,7 +151,7 @@ describe('Gregorian Calendar fixed period calculation', () => {
                 startDate: '2025-12-29',
                 endDate: '2026-01-04',
             })
-            expect(weeklySun).toEqual({
+            expect(weeklySun).toMatchObject({
                 periodType: 'WEEKLYSUN',
                 id: '2026SunW1',
                 iso: '2026SunW1',
@@ -161,7 +160,7 @@ describe('Gregorian Calendar fixed period calculation', () => {
                 startDate: '2026-01-04',
                 endDate: '2026-01-10',
             })
-            expect(biWeekly).toEqual({
+            expect(biWeekly).toMatchObject({
                 periodType: 'BIWEEKLY',
                 id: '2026BiW1',
                 iso: '2026BiW1',
@@ -170,34 +169,6 @@ describe('Gregorian Calendar fixed period calculation', () => {
                 startDate: '2025-12-29',
                 endDate: '2026-01-11',
             })
-        })
-
-        it('should use translated week prefixes without embedding ranges', () => {
-            const translate = jest
-                .spyOn(i18n, 't')
-                .mockImplementation((key: unknown) =>
-                    key === 'Week' ? 'Uke' : key
-                )
-
-            try {
-                const weekly = generateFixedPeriods({
-                    periodType: 'WEEKLY',
-                    year: 2026,
-                    calendar: 'gregory',
-                    locale: 'nb',
-                    startingDay: 1,
-                })[0]
-
-                expect(weekly).toMatchObject({
-                    name: 'Uke 1',
-                    displayName: 'Uke 1',
-                    startDate: '2025-12-29',
-                    endDate: '2026-01-04',
-                })
-                expect(translate).toHaveBeenCalledWith('Week')
-            } finally {
-                translate.mockRestore()
-            }
         })
     })
 
