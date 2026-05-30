@@ -283,6 +283,31 @@ describe('Gregorian/getAdjacentFixedPeriods', () => {
                 endDate: '2023-01-31',
             })
         })
+
+        it('should return the previous period when the current period is December', () => {
+            const actual = getAdjacentFixedPeriods({
+                calendar: 'gregory',
+                locale: 'en',
+                period: createFixedPeriodFromPeriodId({
+                    periodId: '202412',
+                    calendar: 'gregory',
+                    locale: 'en',
+                }),
+                steps: -1,
+            })
+
+            expect(actual).toEqual([
+                {
+                    periodType: 'MONTHLY',
+                    name: 'November 2024',
+                    displayName: 'November 2024',
+                    id: '202411',
+                    iso: '202411',
+                    startDate: '2024-11-01',
+                    endDate: '2024-11-30',
+                },
+            ])
+        })
     })
 
     describe('period type: YEARLY', () => {

@@ -64,10 +64,7 @@ const getPreviousMonthlyFixedPeriods: GetAdjacentMonthlyFixedPeriods = ({
     calendar,
     locale,
 }) => {
-    // This is different from the startYear calculation in
-    // `getFollowingMonthlyFixedPeriods` as a period might start in a year
-    // following the year specified in the period's id
-    const startYear = parseInt(period.startDate.substring(0, 4), 10)
+    const startYear = parseInt(period.id.substring(0, 4), 10)
     const previousPeriods: FixedPeriod[] = []
 
     let curYear = startYear
@@ -88,13 +85,17 @@ const getPreviousMonthlyFixedPeriods: GetAdjacentMonthlyFixedPeriods = ({
             continue
         }
 
-        const endIndex =
-            periodsForYear.findIndex(
-                (curPeriod) => period.startDate < curPeriod.startDate
-            ) - 1 // have to remove 1 to exclude the current one
+        const endIndex = periodsForYear.findIndex(
+            (curPeriod) => curPeriod.startDate >= period.startDate
+        )
 
-        const startIndex = Math.max(0, endIndex - nextCount)
-        const prevPeriods = periodsForYear.slice(startIndex, endIndex)
+        const previousPeriodsEndIndex =
+            endIndex === -1 ? periodsForYear.length : endIndex
+        const startIndex = Math.max(0, previousPeriodsEndIndex - nextCount)
+        const prevPeriods = periodsForYear.slice(
+            startIndex,
+            previousPeriodsEndIndex
+        )
         previousPeriods.push(...prevPeriods)
         curYear--
     }
