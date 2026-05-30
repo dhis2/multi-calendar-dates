@@ -41,7 +41,7 @@ const getFollowingWeeklyFixedPeriods: GetAdjacentWeeklyFixedPeriods = ({
             startingDay: 1,
         })
 
-        const index =
+        const firstFollowingPeriodIndex =
             curYear === startYear
                 ? periodsForYear.findIndex((curPeriod) => {
                       const curStartDate = fromAnyDate({
@@ -57,8 +57,15 @@ const getFollowingWeeklyFixedPeriods: GetAdjacentWeeklyFixedPeriods = ({
                   })
                 : 0
 
+        const followingPeriodsStartIndex =
+            firstFollowingPeriodIndex === -1
+                ? periodsForYear.length
+                : firstFollowingPeriodIndex
         const nextCount = steps - followingPeriods.length
-        const nextPeriods = periodsForYear.slice(index, index + nextCount)
+        const nextPeriods = periodsForYear.slice(
+            followingPeriodsStartIndex,
+            followingPeriodsStartIndex + nextCount
+        )
 
         followingPeriods.push(...nextPeriods)
         curYear++
@@ -93,27 +100,28 @@ const getPreviousWeeklyFixedPeriods: GetAdjacentWeeklyFixedPeriods = ({
             continue
         }
 
-        const foundIndex = periodsForYear.findIndex((curPeriod) => {
-            const curStartDate = fromAnyDate({
-                calendar,
-                date: curPeriod.startDate,
-            })
+        const firstCurrentOrFollowingPeriodIndex = periodsForYear.findIndex(
+            (curPeriod) => {
+                const curStartDate = fromAnyDate({
+                    calendar,
+                    date: curPeriod.startDate,
+                })
 
-            const startDateIsLowerThanCurStartDate =
-                Temporal.PlainDate.compare(startDate, curStartDate) === -1
+                return Temporal.PlainDate.compare(curStartDate, startDate) >= 0
+            }
+        )
 
-            return startDateIsLowerThanCurStartDate
-        })
-
-        const endIndex =
-            foundIndex !== -1
-                ? // have to remove 1 to exclude the current one
-                  foundIndex - 1
-                : // This is the case when the "startDate" is the first day of the
+        const previousPeriodsEndIndex =
+            firstCurrentOrFollowingPeriodIndex === -1
+                ? // This is the case when the "startDate" is the first day of the
                   // first period of the next year
                   periodsForYear.length
-        const startIndex = Math.max(0, endIndex - nextCount)
-        const prevPeriods = periodsForYear.slice(startIndex, endIndex)
+                : firstCurrentOrFollowingPeriodIndex
+        const startIndex = Math.max(0, previousPeriodsEndIndex - nextCount)
+        const prevPeriods = periodsForYear.slice(
+            startIndex,
+            previousPeriodsEndIndex
+        )
         previousPeriods.push(...prevPeriods)
         curYear--
     }
