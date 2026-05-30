@@ -194,7 +194,7 @@ describe('Nepali Calendar fixed period calculation', () => {
         it('should add start and end dates for QUARTERLYNOV', () => {
             const periods = generateFixedPeriods({
                 year: 2078,
-                calendar: 'nepali' as SupportedCalendar,
+                calendar: 'nepali',
                 locale: 'en',
                 periodType: 'QUARTERLYNOV',
             }).map((p) => `${p.startDate}/${p.endDate}`)
