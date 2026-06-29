@@ -7,7 +7,8 @@
         "declaration": true,
         "module": "esnext",
         // Search under node_modules for non-relative imports.
-        "moduleResolution": "node",
+        "moduleResolution": "node10",
+        "ignoreDeprecations": "6.0",
         // Process & infer types from .js files.
         // "allowJs": true,
         // "checkJs": true,
