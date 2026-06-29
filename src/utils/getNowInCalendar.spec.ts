@@ -53,4 +53,16 @@ describe('getting Now', () => {
             year: 1400,
         })
     })
+    it('should return a valid date when no timezone is provided', () => {
+        const result = getNowInCalendar('gregory')
+        expect(result.year).toBeTruthy()
+        expect(result.month).toBeGreaterThanOrEqual(1)
+        expect(result.day).toBeGreaterThanOrEqual(1)
+    })
+    it('should default to Gregorian when called with no arguments', () => {
+        // exercises the calendarToUse = 'gregory' parameter default
+        const result = getNowInCalendar()
+        expect(result.year).toBeTruthy()
+        expect((result.calendar as { id?: string }).id).toEqual('gregory')
+    })
 })
