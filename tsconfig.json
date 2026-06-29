@@ -1,5 +1,8 @@
 {
     "compilerOptions": {
+        "paths": {
+            "@js-temporal/polyfill-patched": ["./node_modules/@js-temporal/polyfill"]
+        },
         "skipLibCheck": true,
         "allowJs": true,
         // Target latest version of ECMAScript.

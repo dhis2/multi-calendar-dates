@@ -51,10 +51,14 @@
         "transformIgnorePatterns": [
             "/!node_modules\\/@js-temporal/"
         ],
+        "moduleNameMapper": {
+            "^@js-temporal/polyfill-patched$": "<rootDir>/src/vendor/temporal/index.ts"
+        },
         "collectCoverageFrom": [
             "**/*.{js,jsx,ts,tsx}",
             "!<rootDir>/node_modules/",
             "!<rootDir>/*.ts",
+            "!<rootDir>/src/vendor/**",
             "!<rootDir>/coverage/**/*.*"
         ],
         "coverageThreshold": {
@@ -89,6 +93,7 @@
         "@types/react-dom": "^16.8",
         "@types/testing-library__react": "^10.2.0",
         "@types/testing-library__react-hooks": "^4.0.0",
+        "babel-plugin-module-resolver": "^5.0.3",
         "jest-cucumber": "^3.0.1",
         "react": "^16.14",
         "react-dom": "^16.14",

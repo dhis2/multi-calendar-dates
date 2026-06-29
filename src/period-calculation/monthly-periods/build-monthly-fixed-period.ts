@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill-patched'
 import { SupportedCalendar } from '../../types'
 import {
     formatDate,
@@ -171,7 +171,8 @@ const buildLabel: BuildLabelFunc = (options) => {
     }
 
     // needed for ethiopic calendar - the default formatter adds the era, which is not what we want in DHIS2
-    result = result.replace(/ERA\d+\s*/g, '').trim()
+    // ERA\d+ is the old CLDR format (e.g. ERA0); AA/AM are the CLDR 48+ abbreviations (Amete Alem/Amete Mihret)
+    result = result.replace(/\b(ERA\d+|AA|AM)\b\s*/g, '').trim()
     return result
 }
 

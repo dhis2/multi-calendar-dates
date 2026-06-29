@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill-patched'
 import { SupportedCalendar } from '../../types'
 import { FixedPeriod, PeriodType } from '../types'
 import {

@@ -1,4 +1,4 @@
-import { Intl } from '@js-temporal/polyfill'
+import { Intl } from '@js-temporal/polyfill-patched'
 import { render } from '@testing-library/react'
 import { act, renderHook } from '@testing-library/react-hooks'
 import React from 'react'
@@ -14,10 +14,10 @@ beforeEach(() => {
 
 afterEach(jest.clearAllMocks)
 
-jest.mock('@js-temporal/polyfill', () => ({
-    ...jest.requireActual('@js-temporal/polyfill'),
+jest.mock('@js-temporal/polyfill-patched', () => ({
+    ...jest.requireActual('@js-temporal/polyfill-patched'),
     Intl: {
-        ...jest.requireActual('@js-temporal/polyfill').Intl,
+        ...jest.requireActual('@js-temporal/polyfill-patched').Intl,
     }, // this is needed, otherwise jest spying fails with " Cannot assign to read only property 'DateTimeFormat'"
 }))
 

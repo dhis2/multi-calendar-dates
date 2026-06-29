@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill-patched'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../types'
 import { extractDatePartsFromDateString } from './extract-date-parts-from-date-string'

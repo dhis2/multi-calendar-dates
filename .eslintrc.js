@@ -14,5 +14,6 @@ module.exports = {
         'react-hooks/exhaustive-deps': 'error',
         'import/extensions': 'off',
         '@typescript-eslint/explicit-module-boundary-types': 'off',
+        'import/no-unresolved': ['error', { ignore: ['^@js-temporal/polyfill-patched$'] }],
     },
 }

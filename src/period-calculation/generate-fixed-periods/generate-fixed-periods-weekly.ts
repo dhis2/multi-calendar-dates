@@ -1,5 +1,5 @@
 import i18n from '@dhis2/d2-i18n'
-import { Temporal } from '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill-patched'
 import { SupportedCalendar } from '../../types'
 import { fromAnyDate, formatDate, padWithZeroes } from '../../utils/index'
 import { FixedPeriod, PeriodType } from '../types'

@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill-patched'
 import { months, Month } from '../constants/months'
 import { customCalendars, CustomCalendarTypes } from '../custom-calendars'
 import { PickerOptions } from '../types'

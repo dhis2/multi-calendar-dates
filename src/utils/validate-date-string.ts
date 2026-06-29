@@ -1,5 +1,5 @@
 import i18n from '@dhis2/d2-i18n'
-import { Temporal } from '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill-patched'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
 import type { SupportedCalendar } from '../types'
 import { extractDatePartsFromDateString } from './extract-date-parts-from-date-string'

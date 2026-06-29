@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill-patched'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
 import { getCustomCalendarIfExists, isCustomCalendar } from '../utils/helpers'
 

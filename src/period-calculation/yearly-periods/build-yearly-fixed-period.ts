@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill-patched'
 import { SupportedCalendar } from '../../types'
 import { fromAnyDate, formatDate, isCustomCalendar } from '../../utils/index'
 import localisationHelpers from '../../utils/localisationHelpers'
@@ -110,7 +110,8 @@ const buildLabel = (
     let result = `${fromYear} - ${toYear}`
 
     // needed for Ethiopic calendar
-    result = result.replace(/ERA\d+\s*/g, '').trim()
+    // ERA\d+ is the old CLDR format (e.g. ERA0); AA/AM are the CLDR 48+ abbreviations (Amete Alem/Amete Mihret)
+    result = result.replace(/\b(ERA\d+|AA|AM)\b\s*/g, '').trim()
 
     return result
 }
