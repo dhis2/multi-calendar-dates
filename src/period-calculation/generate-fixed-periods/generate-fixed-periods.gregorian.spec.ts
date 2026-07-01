@@ -492,46 +492,71 @@ describe('Gregorian Calendar fixed period calculation', () => {
     })
 
     describe('fiscal year starting months', () => {
-        const base = { year: 2015, calendar: 'gregory' as SupportedCalendar, locale: 'en' }
+        const base = {
+            year: 2015,
+            calendar: 'gregory' as SupportedCalendar,
+            locale: 'en',
+        }
 
         it('FYFEB starts on February 1', () => {
-            const result = generateFixedPeriods({ ...base, periodType: 'FYFEB' })
+            const result = generateFixedPeriods({
+                ...base,
+                periodType: 'FYFEB',
+            })
             expect(result[0].startDate).toEqual('2015-02-01')
             expect(result[0].endDate).toEqual('2016-01-31')
         })
 
         it('FYMAR starts on March 1', () => {
-            const result = generateFixedPeriods({ ...base, periodType: 'FYMAR' })
+            const result = generateFixedPeriods({
+                ...base,
+                periodType: 'FYMAR',
+            })
             expect(result[0].startDate).toEqual('2015-03-01')
             expect(result[0].endDate).toEqual('2016-02-29')
         })
 
         it('FYMAY starts on May 1', () => {
-            const result = generateFixedPeriods({ ...base, periodType: 'FYMAY' })
+            const result = generateFixedPeriods({
+                ...base,
+                periodType: 'FYMAY',
+            })
             expect(result[0].startDate).toEqual('2015-05-01')
             expect(result[0].endDate).toEqual('2016-04-30')
         })
 
         it('FYJUN starts on June 1', () => {
-            const result = generateFixedPeriods({ ...base, periodType: 'FYJUN' })
+            const result = generateFixedPeriods({
+                ...base,
+                periodType: 'FYJUN',
+            })
             expect(result[0].startDate).toEqual('2015-06-01')
             expect(result[0].endDate).toEqual('2016-05-31')
         })
 
         it('FYAUG starts on August 1', () => {
-            const result = generateFixedPeriods({ ...base, periodType: 'FYAUG' })
+            const result = generateFixedPeriods({
+                ...base,
+                periodType: 'FYAUG',
+            })
             expect(result[0].startDate).toEqual('2015-08-01')
             expect(result[0].endDate).toEqual('2016-07-31')
         })
 
         it('FYSEP starts on September 1', () => {
-            const result = generateFixedPeriods({ ...base, periodType: 'FYSEP' })
+            const result = generateFixedPeriods({
+                ...base,
+                periodType: 'FYSEP',
+            })
             expect(result[0].startDate).toEqual('2015-09-01')
             expect(result[0].endDate).toEqual('2016-08-31')
         })
 
         it('FYDEC starts on December 1', () => {
-            const result = generateFixedPeriods({ ...base, periodType: 'FYDEC' })
+            const result = generateFixedPeriods({
+                ...base,
+                periodType: 'FYDEC',
+            })
             expect(result[0].startDate).toEqual('2015-12-01')
             expect(result[0].endDate).toEqual('2016-11-30')
         })

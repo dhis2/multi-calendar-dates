@@ -832,7 +832,11 @@ describe('format option', () => {
             useDatePicker({
                 onDateSelect: jest.fn(),
                 date: '22-01-2018', // input must match the declared format
-                options: { locale: 'en-GB', calendar: 'gregory', timeZone: 'UTC' },
+                options: {
+                    locale: 'en-GB',
+                    calendar: 'gregory',
+                    timeZone: 'UTC',
+                },
                 format: 'DD-MM-YYYY',
             })
         )
@@ -848,7 +852,11 @@ describe('format option', () => {
             useDatePicker({
                 onDateSelect,
                 date: '22-01-2018',
-                options: { locale: 'en-GB', calendar: 'gregory', timeZone: 'UTC' },
+                options: {
+                    locale: 'en-GB',
+                    calendar: 'gregory',
+                    timeZone: 'UTC',
+                },
                 format: 'DD-MM-YYYY',
             })
         )
@@ -929,7 +937,9 @@ describe('pastOnly option', () => {
         )
         // mocked today is 2021-10-13; visible year is 2021
         expect(result.current.years.every((y) => y.value <= 2021)).toBe(true)
-        expect(result.current.years.at(-1)?.value).toEqual(2021)
+        expect(
+            result.current.years[result.current.years.length - 1]?.value
+        ).toEqual(2021)
     })
 
     it('should include future years in the years list by default', () => {
@@ -954,7 +964,11 @@ describe('navigation callbacks', () => {
             useDatePicker({
                 onDateSelect: jest.fn(),
                 date: '2021-03-15',
-                options: { locale: 'en-GB', calendar: 'gregory', timeZone: 'UTC' },
+                options: {
+                    locale: 'en-GB',
+                    calendar: 'gregory',
+                    timeZone: 'UTC',
+                },
             })
         )
 

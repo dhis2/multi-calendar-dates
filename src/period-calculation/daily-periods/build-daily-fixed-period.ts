@@ -25,7 +25,9 @@ const buildDailyFixedPeriod: BuildDailyFixedPeriod = ({
         date,
         { calendar, locale },
         { dateStyle: 'long' }
-    ).replace(/\b(ERA\d+|AA|AM)\b\s*/g, '').trim()
+    )
+        .replace(/\b(ERA\d+|AA|AM)\b\s*/g, '')
+        .trim()
 
     return {
         periodType: 'DAILY',
