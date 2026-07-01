@@ -1,5 +1,6 @@
 {
     "compilerOptions": {
+        "baseUrl": ".",
         "paths": {
             "@js-temporal/polyfill-patched": [
                 "./node_modules/@js-temporal/polyfill"
