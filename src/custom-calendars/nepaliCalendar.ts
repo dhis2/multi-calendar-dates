@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill-patched'
 import { NEPALI_CALENDAR_DATA } from './nepaliCalendarData'
 type CalendarYMD = { year: number; month: number; day: number }
 

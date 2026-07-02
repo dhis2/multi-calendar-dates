@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill-patched'
 import { NepaliCalendar } from './nepaliCalendar'
 
 const calendar = new NepaliCalendar()

@@ -1,5 +1,11 @@
 {
     "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "@js-temporal/polyfill-patched": [
+                "./node_modules/@js-temporal/polyfill"
+            ]
+        },
         "skipLibCheck": true,
         "allowJs": true,
         // Target latest version of ECMAScript.
@@ -7,7 +13,9 @@
         "declaration": true,
         "module": "esnext",
         // Search under node_modules for non-relative imports.
-        "moduleResolution": "node",
+        "moduleResolution": "node10",
+        "rootDir": "./src",
+        "ignoreDeprecations": "6.0",
         // Process & infer types from .js files.
         // "allowJs": true,
         // "checkJs": true,
@@ -21,7 +29,7 @@
     },
     "files": ["src/index.ts"],
     "include": ["src/**/*"],
-    "exclude": [],
+    "exclude": ["src/vendor"],
     // this ts-node config is needed for cucumberjs to work with TypeScript
     "ts-node": {
         "esm": true,

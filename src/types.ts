@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill-patched'
 import { calendars } from './constants/calendars'
 import { numberingSystems } from './constants/numberingSystems'
 

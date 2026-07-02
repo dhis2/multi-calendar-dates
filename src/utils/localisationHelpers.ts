@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill-patched'
 import { numberingSystems } from '../constants'
 import {
     CalendarCustomLocale,

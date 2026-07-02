@@ -1,10 +1,10 @@
-import { Intl } from '@js-temporal/polyfill'
+import { Intl } from '@js-temporal/polyfill-patched'
 import { renderHook } from '@testing-library/react-hooks'
 import { PickerOptions } from '../../types'
 import getValidLocale from '../../utils/getValidLocale'
 import { useResolvedLocaleOptions } from './useResolvedLocaleOptions'
 
-jest.mock('@js-temporal/polyfill')
+jest.mock('@js-temporal/polyfill-patched')
 jest.mock('../../utils/getValidLocale')
 
 const renderResolvedLocaleHook = ({

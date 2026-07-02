@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill-patched'
 import { SupportedCalendar } from '../types'
 import calendarLocalisations from './calendarLocalisations'
 import { NepaliCalendar } from './nepaliCalendar'

@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill-patched'
 import { renderHook } from '@testing-library/react-hooks'
 import { useCalendarWeekDays } from './useCalendarWeekDays'
 

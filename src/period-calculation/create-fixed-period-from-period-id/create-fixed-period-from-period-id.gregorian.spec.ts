@@ -483,4 +483,13 @@ describe('Gregorian/createFixedPeriodFromPeriodId', () => {
             expect(actual).toEqual(expected)
         })
     })
+
+    it('should throw for an unrecognised period id', () => {
+        expect(() =>
+            createFixedPeriodFromPeriodId({
+                periodId: 'NOT_A_VALID_PERIOD_ID',
+                calendar: 'gregory',
+            })
+        ).toThrow("Couldn't handle unknown period id")
+    })
 })

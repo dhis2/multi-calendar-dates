@@ -1,6 +1,6 @@
-import { Intl } from '@js-temporal/polyfill'
+import { Intl } from '@js-temporal/polyfill-patched'
 import { render } from '@testing-library/react'
-import { renderHook } from '@testing-library/react-hooks'
+import { act, renderHook } from '@testing-library/react-hooks'
 import React from 'react'
 import { SupportedCalendar } from '../types'
 import { convertToIso8601 } from '../utils'
@@ -14,10 +14,10 @@ beforeEach(() => {
 
 afterEach(jest.clearAllMocks)
 
-jest.mock('@js-temporal/polyfill', () => ({
-    ...jest.requireActual('@js-temporal/polyfill'),
+jest.mock('@js-temporal/polyfill-patched', () => ({
+    ...jest.requireActual('@js-temporal/polyfill-patched'),
     Intl: {
-        ...jest.requireActual('@js-temporal/polyfill').Intl,
+        ...jest.requireActual('@js-temporal/polyfill-patched').Intl,
     }, // this is needed, otherwise jest spying fails with " Cannot assign to read only property 'DateTimeFormat'"
 }))
 
@@ -823,5 +823,258 @@ describe('month labels in useDatePicker hook', () => {
             expect(nepaliMonths[0]).toEqual({ value: 1, label: 'बैशाख' })
             expect(nepaliMonths[11]).toEqual({ value: 12, label: 'चैत' })
         })
+    })
+})
+
+describe('format option', () => {
+    it('should format dateValue on each cell in DD-MM-YYYY when specified', () => {
+        const { result } = renderHook(() =>
+            useDatePicker({
+                onDateSelect: jest.fn(),
+                date: '22-01-2018', // input must match the declared format
+                options: {
+                    locale: 'en-GB',
+                    calendar: 'gregory',
+                    timeZone: 'UTC',
+                },
+                format: 'DD-MM-YYYY',
+            })
+        )
+        const selectedDay = result.current.calendarWeekDays
+            .flat()
+            .find((d) => d.isSelected)
+        expect(selectedDay?.dateValue).toEqual('22-01-2018')
+    })
+
+    it('should call onDateSelect with DD-MM-YYYY string when input date is in that format', () => {
+        const onDateSelect = jest.fn()
+        const { result } = renderHook(() =>
+            useDatePicker({
+                onDateSelect,
+                date: '22-01-2018',
+                options: {
+                    locale: 'en-GB',
+                    calendar: 'gregory',
+                    timeZone: 'UTC',
+                },
+                format: 'DD-MM-YYYY',
+            })
+        )
+        const selectedDay = result.current.calendarWeekDays
+            .flat()
+            .find((d) => d.isSelected)
+        selectedDay?.onClick()
+        expect(onDateSelect).toHaveBeenCalledWith({
+            calendarDateString: '22-01-2018',
+        })
+    })
+})
+
+describe('date range options', () => {
+    const baseOptions = {
+        locale: 'en-GB',
+        calendar: 'gregory' as const,
+        timeZone: 'UTC',
+    }
+
+    it('should fall back to today when date is before minDate', () => {
+        const { result } = renderHook(() =>
+            useDatePicker({
+                onDateSelect: jest.fn(),
+                date: '2018-01-22',
+                options: baseOptions,
+                minDate: '2020-01-01',
+            })
+        )
+        // validation error → falls back to mocked today: 2021-10-13
+        expect(result.current.currYear.label).toEqual('2021')
+        expect(result.current.currMonth.label).toEqual('October')
+    })
+
+    it('should use the provided date when before minDate but strictValidation is false', () => {
+        const { result } = renderHook(() =>
+            useDatePicker({
+                onDateSelect: jest.fn(),
+                date: '2018-01-22',
+                options: baseOptions,
+                minDate: '2020-01-01',
+                strictValidation: false,
+            })
+        )
+        // warning only → date is still used
+        expect(result.current.currYear.label).toEqual('2018')
+        expect(result.current.currMonth.label).toEqual('January')
+    })
+
+    it('should fall back to today when date is after maxDate', () => {
+        const { result } = renderHook(() =>
+            useDatePicker({
+                onDateSelect: jest.fn(),
+                date: '2025-06-15',
+                options: baseOptions,
+                maxDate: '2022-12-31',
+            })
+        )
+        // validation error → falls back to mocked today: 2021-10-13
+        expect(result.current.currYear.label).toEqual('2021')
+        expect(result.current.currMonth.label).toEqual('October')
+    })
+})
+
+describe('pastOnly option', () => {
+    it('should exclude future years from the years list when pastOnly is true', () => {
+        const { result } = renderHook(() =>
+            useDatePicker({
+                onDateSelect: jest.fn(),
+                date: '2021-10-01',
+                options: {
+                    locale: 'en-GB',
+                    calendar: 'gregory',
+                    timeZone: 'UTC',
+                    pastOnly: true,
+                },
+            })
+        )
+        // mocked today is 2021-10-13; visible year is 2021
+        expect(result.current.years.every((y) => y.value <= 2021)).toBe(true)
+        expect(
+            result.current.years[result.current.years.length - 1]?.value
+        ).toEqual(2021)
+    })
+
+    it('should include future years in the years list by default', () => {
+        const { result } = renderHook(() =>
+            useDatePicker({
+                onDateSelect: jest.fn(),
+                date: '2021-10-01',
+                options: {
+                    locale: 'en-GB',
+                    calendar: 'gregory',
+                    timeZone: 'UTC',
+                },
+            })
+        )
+        expect(result.current.years.some((y) => y.value > 2021)).toBe(true)
+    })
+})
+
+describe('navigation callbacks', () => {
+    const setup = () =>
+        renderHook(() =>
+            useDatePicker({
+                onDateSelect: jest.fn(),
+                date: '2021-03-15',
+                options: {
+                    locale: 'en-GB',
+                    calendar: 'gregory',
+                    timeZone: 'UTC',
+                },
+            })
+        )
+
+    it('navigateToMonth changes the visible month', () => {
+        const { result } = setup()
+        expect(result.current.currMonth.label).toEqual('March')
+        act(() => result.current.navigateToMonth(8))
+        expect(result.current.currMonth.label).toEqual('August')
+    })
+
+    it('navigateToYear changes the visible year', () => {
+        const { result } = setup()
+        expect(result.current.currYear.label).toEqual('2021')
+        act(() => result.current.navigateToYear(2019))
+        expect(result.current.currYear.label).toEqual('2019')
+    })
+
+    it('prevMonth.navigateTo moves back one month', () => {
+        const { result } = setup()
+        expect(result.current.currMonth.label).toEqual('March')
+        act(() => result.current.prevMonth.navigateTo())
+        expect(result.current.currMonth.label).toEqual('February')
+    })
+
+    it('nextMonth.navigateTo moves forward one month', () => {
+        const { result } = setup()
+        expect(result.current.currMonth.label).toEqual('March')
+        act(() => result.current.nextMonth.navigateTo())
+        expect(result.current.currMonth.label).toEqual('April')
+    })
+
+    it('prevYear.navigateTo moves back one year', () => {
+        const { result } = setup()
+        expect(result.current.currYear.label).toEqual('2021')
+        act(() => result.current.prevYear.navigateTo())
+        expect(result.current.currYear.label).toEqual('2020')
+    })
+
+    it('nextYear.navigateTo moves forward one year', () => {
+        const { result } = setup()
+        expect(result.current.currYear.label).toEqual('2021')
+        act(() => result.current.nextYear.navigateTo())
+        expect(result.current.currYear.label).toEqual('2022')
+    })
+})
+
+describe('dateString change re-centres the calendar view', () => {
+    it('should update the visible month when date prop changes to a different month', () => {
+        const { result, rerender } = renderHook(
+            ({ date }: { date: string }) =>
+                useDatePicker({
+                    onDateSelect: jest.fn(),
+                    date,
+                    options: {
+                        locale: 'en-GB',
+                        calendar: 'gregory',
+                        timeZone: 'UTC',
+                    },
+                }),
+            { initialProps: { date: '2021-03-15' } }
+        )
+        expect(result.current.currMonth.label).toEqual('March')
+        rerender({ date: '2021-08-15' })
+        expect(result.current.currMonth.label).toEqual('August')
+    })
+
+    it('should not re-centre the view when date prop changes within the same month', () => {
+        const { result, rerender } = renderHook(
+            ({ date }: { date: string }) =>
+                useDatePicker({
+                    onDateSelect: jest.fn(),
+                    date,
+                    options: {
+                        locale: 'en-GB',
+                        calendar: 'gregory',
+                        timeZone: 'UTC',
+                    },
+                }),
+            { initialProps: { date: '2021-03-15' } }
+        )
+        expect(result.current.currMonth.label).toEqual('March')
+        rerender({ date: '2021-03-20' })
+        expect(result.current.currMonth.label).toEqual('March')
+    })
+})
+
+describe('empty date string', () => {
+    it('should show today when no date is provided', () => {
+        const { result } = renderHook(() =>
+            useDatePicker({
+                onDateSelect: jest.fn(),
+                date: '',
+                options: {
+                    locale: 'en-GB',
+                    calendar: 'gregory',
+                    timeZone: 'UTC',
+                },
+            })
+        )
+        // today is mocked to 2021-10-13
+        expect(result.current.currMonth.label).toEqual('October')
+        expect(result.current.currYear.label).toEqual('2021')
+        // no date is selected so isSelected is false/undefined for all days
+        const allSelected = result.current.calendarWeekDays
+            .flat()
+            .filter((d) => d.isSelected)
+        expect(allSelected).toHaveLength(0)
     })
 })

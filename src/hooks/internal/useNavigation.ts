@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill-patched'
 import { Dispatch, SetStateAction, useMemo } from 'react'
 import {
     PickerOptionsWithResolvedCalendar,
