@@ -34,6 +34,48 @@ override reviseIntlEra<T extends Partial<EraAndEraYear>>(calendarDate: T): T {
 }
 ```
 
+**File:** `temporal/intl.ts`
+
+Removed the TypeScript-only `this: Intl.DateTimeFormat & PrivateProps`
+parameter from `DateTimeFormatImpl`.
+
+This function is the constructor behind every `Temporal.*.prototype.toLocaleString()`
+call. Unlike this library's own source, `src/vendor` is excluded from
+`tsconfig.json` type-checking, so builds run it through Babel/`d2-app-scripts`
+targeting older JS engines rather than `tsc`. `@babel/plugin-transform-parameters`
+rewrites `DateTimeFormatImpl`'s default-valued parameters
+(`locale = undefined, optionsParam = {}`) into an `arguments`-indexed form,
+and it counts the not-yet-erased `this` parameter as a real one — the only
+function in this file where a `this` parameter is combined with default
+parameters. The emitted code ended up reading `locale` from `arguments[1]`
+and `optionsParam` from `arguments[2]` instead of `arguments[0]`/`arguments[1]`,
+so the real options object was passed where `locale` was expected and
+`optionsParam` silently became `{}`. `Intl.DateTimeFormat` then fell back to
+its full year/month/day default, so every formatted date (e.g. calendar day
+cells) rendered as a full date string instead of respecting the requested
+fields (e.g. `"10/17/2024"` instead of `"17"`).
+
+`this` is still used and works correctly inside the function body — it's
+bound dynamically by the `new DateTimeFormatImpl(...)` call site regardless
+of whether it's declared as a formal parameter. Removing the declaration
+only removes the (unchecked, in this excluded directory) TypeScript type
+for it, not the runtime value:
+
+```typescript
+// before (parameter shifts real args by one slot when Babel-compiled)
+function DateTimeFormatImpl(
+  this: Intl.DateTimeFormat & PrivateProps,
+  locale: Params['constructor'][0] = undefined,
+  optionsParam: Params['constructor'][1] = {}
+) { ... }
+
+// after
+function DateTimeFormatImpl(
+  locale: Params['constructor'][0] = undefined,
+  optionsParam: Params['constructor'][1] = {}
+) { ... }
+```
+
 ## Other modifications
 
 **All vendored files:** The TypeScript class-field declarations
