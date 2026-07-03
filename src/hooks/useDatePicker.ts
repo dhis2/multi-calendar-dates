@@ -140,10 +140,26 @@ export const useDatePicker: UseDatePickerHookType = ({
 
     const weekDayLabels = useWeekDayLabels(localeOptions)
 
+    // Both arguments below must stay referentially stable across renders
+    // when their actual contents haven't changed: `withCalendar` returns a
+    // new Temporal instance on every call, and the options object was
+    // previously a fresh object literal on every call. Either one changing
+    // identity on every render defeats useNavigation's internal useMemo,
+    // which then rebuilds the year (up to 126 entries) and month dropdown
+    // lists - each entry formatted through Intl - on every single render,
+    // including every keystroke while typing in CalendarInput.
+    const navigationDateZdt = useMemo(
+        () => firstZdtOfVisibleMonth.withCalendar(localeOptions.calendar),
+        [firstZdtOfVisibleMonth, localeOptions.calendar]
+    )
+    const navigationOptions = useMemo(
+        () => ({ ...localeOptions, pastOnly: options?.pastOnly }),
+        [localeOptions, options?.pastOnly]
+    )
     const navigation = useNavigation(
-        firstZdtOfVisibleMonth.withCalendar(localeOptions.calendar),
+        navigationDateZdt,
         setFirstZdtOfVisibleMonth,
-        { ...localeOptions, pastOnly: options?.pastOnly }
+        navigationOptions
     )
     const selectDate = useCallback(
         (zdt: Temporal.ZonedDateTime) => {
