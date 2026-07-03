@@ -1,3 +1,10 @@
+# [2.2.0-alpha.2](https://github.com/dhis2/multi-calendar-dates/compare/v2.2.0-alpha.1...v2.2.0-alpha.2) (2026-07-03)
+
+
+### Bug Fixes
+
+* **vendor:** remove this-param from DateTimeFormatImpl to fix Babel arg-shift bug ([#100](https://github.com/dhis2/multi-calendar-dates/issues/100)) ([23e7553](https://github.com/dhis2/multi-calendar-dates/commit/23e75535cdc92074ddbde9aba220278b678b04c2))
+
 # [2.2.0-alpha.1](https://github.com/dhis2/multi-calendar-dates/compare/v2.1.2...v2.2.0-alpha.1) (2026-07-02)
 
 
