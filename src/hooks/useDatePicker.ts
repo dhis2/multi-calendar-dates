@@ -114,13 +114,17 @@ export const useDatePicker: UseDatePickerHookType = ({
         [resolvedOptions.timeZone]
     )
 
-    const selectedDateZdt = dateString
-        ? Temporal.Calendar.from(temporalCalendar)
-              .dateFromFields(date)
-              .toZonedDateTime({
-                  timeZone: temporalTimeZone,
-              })
-        : null
+    const selectedDateZdt = useMemo(
+        () =>
+            dateString
+                ? Temporal.Calendar.from(temporalCalendar)
+                      .dateFromFields(date)
+                      .toZonedDateTime({
+                          timeZone: temporalTimeZone,
+                      })
+                : null,
+        [dateString, date, temporalCalendar, temporalTimeZone]
+    )
 
     const [firstZdtOfVisibleMonth, setFirstZdtOfVisibleMonth] = useState(() => {
         const zdt = selectedDateZdt || todayZdt
@@ -169,6 +173,13 @@ export const useDatePicker: UseDatePickerHookType = ({
         },
         [onDateSelect, date.format]
     )
+    // selectDate is recreated on every render (its callers rarely memoize
+    // the onDateSelect they pass in), so it can't be a dependency of the
+    // calendarWeekDays memo below without defeating it. Read the latest
+    // version through a ref instead, at click time, from inside the memo.
+    const selectDateRef = useRef(selectDate)
+    selectDateRef.current = selectDate
+
     const calendarWeekDaysZdts = useCalendarWeekDays(firstZdtOfVisibleMonth)
 
     useEffect(() => {
@@ -201,26 +212,47 @@ export const useDatePicker: UseDatePickerHookType = ({
         temporalCalendar,
         temporalTimeZone,
     ])
+    // Rebuilding this list means re-running localiseWeekLabel (Intl-backed,
+    // for non-custom calendars) for every visible day cell (~35-42 cells).
+    // Without memoization this ran on every render, including every
+    // keystroke while typing in CalendarInput.
+    const calendarWeekDays = useMemo(
+        () =>
+            calendarWeekDaysZdts.map((week) =>
+                week.map((weekDayZdt) => ({
+                    dateValue: formatDate(weekDayZdt, undefined, format),
+                    label: localisationHelpers.localiseWeekLabel(
+                        weekDayZdt.withCalendar(localeOptions.calendar),
+                        {
+                            ...localeOptions,
+                            calendar: resolvedOptions.calendar,
+                        }
+                    ),
+                    onClick: () => selectDateRef.current(weekDayZdt),
+                    isSelected: selectedDateZdt
+                        ? selectedDateZdt
+                              ?.withCalendar('iso8601')
+                              .equals(weekDayZdt.withCalendar('iso8601'))
+                        : false,
+                    isToday: todayZdt && weekDayZdt.equals(todayZdt),
+                    isInCurrentMonth:
+                        firstZdtOfVisibleMonth &&
+                        weekDayZdt.month === firstZdtOfVisibleMonth.month,
+                }))
+            ),
+        [
+            calendarWeekDaysZdts,
+            localeOptions,
+            resolvedOptions.calendar,
+            selectedDateZdt,
+            todayZdt,
+            firstZdtOfVisibleMonth,
+            format,
+        ]
+    )
+
     const result: UseDatePickerReturn = {
-        calendarWeekDays: calendarWeekDaysZdts.map((week) =>
-            week.map((weekDayZdt) => ({
-                dateValue: formatDate(weekDayZdt, undefined, format),
-                label: localisationHelpers.localiseWeekLabel(
-                    weekDayZdt.withCalendar(localeOptions.calendar),
-                    { ...localeOptions, calendar: resolvedOptions.calendar }
-                ),
-                onClick: () => selectDate(weekDayZdt),
-                isSelected: selectedDateZdt
-                    ? selectedDateZdt
-                          ?.withCalendar('iso8601')
-                          .equals(weekDayZdt.withCalendar('iso8601'))
-                    : false,
-                isToday: todayZdt && weekDayZdt.equals(todayZdt),
-                isInCurrentMonth:
-                    firstZdtOfVisibleMonth &&
-                    weekDayZdt.month === firstZdtOfVisibleMonth.month,
-            }))
-        ),
+        calendarWeekDays,
         ...navigation,
         weekDayLabels,
     }
