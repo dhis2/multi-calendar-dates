@@ -103,8 +103,15 @@ function getResolvedTimeZoneLazy(obj: PrivateProps) {
 
 type DateTimeFormatImpl = Intl.DateTimeFormat & PrivateProps;
 
+// Note: no `this` parameter here (unlike the other methods in this file).
+// Babel's parameter-transform plugin (triggered by the default values below)
+// counts the TypeScript-only `this` parameter as a real one when compiling
+// for pre-ES6 targets, which shifts `locale`/`optionsParam` into
+// `arguments[1]`/`arguments[2]` instead of `arguments[0]`/`arguments[1]` in
+// the emitted code — silently breaking every toLocaleString() call. `this`
+// is still usable below at its normal dynamic runtime value; the type is
+// unchecked because `src/vendor` is excluded from tsconfig.json.
 function DateTimeFormatImpl(
-  this: Intl.DateTimeFormat & PrivateProps,
   locale: Params['constructor'][0] = undefined,
   optionsParam: Params['constructor'][1] = {}
 ) {
