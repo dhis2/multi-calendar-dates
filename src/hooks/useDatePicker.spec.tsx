@@ -1078,3 +1078,109 @@ describe('empty date string', () => {
         expect(allSelected).toHaveLength(0)
     })
 })
+
+// Regression guards for LIBS-763: a re-render with nothing relevant changed
+// used to rebuild the year/month dropdowns and the day-cell grid from
+// scratch (via Intl-backed localisationHelpers calls), causing the
+// per-keystroke lag reported in that ticket. These assert on call counts
+// of the expensive localisation calls rather than wall-clock time, since
+// timing-based assertions are flaky across CI environments.
+describe('memoization stability (performance regression guard for LIBS-763)', () => {
+    afterEach(() => {
+        jest.restoreAllMocks()
+    })
+
+    const options = {
+        locale: 'en-GB',
+        calendar: 'gregory' as const,
+        timeZone: 'UTC',
+    }
+
+    it('should not re-run year/month localisation on a re-render when nothing relevant changed', () => {
+        const localiseYearSpy = jest.spyOn(localisationHelpers, 'localiseYear')
+        const localiseMonthSpy = jest.spyOn(
+            localisationHelpers,
+            'localiseMonth'
+        )
+        const { result, rerender } = renderHook(() =>
+            useDatePicker({
+                onDateSelect: jest.fn(),
+                date: '2021-03-15',
+                options,
+            })
+        )
+        const monthsAfterFirstRender = result.current.months
+        const yearsAfterFirstRender = result.current.years
+        const yearCallsAfterFirstRender = localiseYearSpy.mock.calls.length
+        const monthCallsAfterFirstRender = localiseMonthSpy.mock.calls.length
+        expect(yearCallsAfterFirstRender).toBeGreaterThan(0)
+        expect(monthCallsAfterFirstRender).toBeGreaterThan(0)
+
+        rerender()
+        rerender()
+
+        expect(localiseYearSpy).toHaveBeenCalledTimes(yearCallsAfterFirstRender)
+        expect(localiseMonthSpy).toHaveBeenCalledTimes(
+            monthCallsAfterFirstRender
+        )
+        // the memoized lists themselves should be referentially stable too
+        expect(result.current.months).toBe(monthsAfterFirstRender)
+        expect(result.current.years).toBe(yearsAfterFirstRender)
+    })
+
+    it('should not re-run day-cell localisation on a re-render when nothing relevant changed', () => {
+        const localiseWeekLabelSpy = jest.spyOn(
+            localisationHelpers,
+            'localiseWeekLabel'
+        )
+        const { result, rerender } = renderHook(() =>
+            useDatePicker({
+                onDateSelect: jest.fn(),
+                date: '2021-03-15',
+                options,
+            })
+        )
+        const weekDaysAfterFirstRender = result.current.calendarWeekDays
+        const callsAfterFirstRender = localiseWeekLabelSpy.mock.calls.length
+        expect(callsAfterFirstRender).toBeGreaterThan(0)
+
+        rerender()
+        rerender()
+
+        expect(localiseWeekLabelSpy).toHaveBeenCalledTimes(
+            callsAfterFirstRender
+        )
+        expect(result.current.calendarWeekDays).toBe(weekDaysAfterFirstRender)
+    })
+
+    it('should invoke the latest onDateSelect on click even when the day-cell memo does not recompute', () => {
+        const firstOnDateSelect = jest.fn()
+        const secondOnDateSelect = jest.fn()
+        const { result, rerender } = renderHook(
+            (props: { onDateSelect: jest.Mock }) =>
+                useDatePicker({
+                    onDateSelect: props.onDateSelect,
+                    date: '2021-03-15',
+                    options,
+                }),
+            { initialProps: { onDateSelect: firstOnDateSelect } }
+        )
+        const weekDaysBeforeRerender = result.current.calendarWeekDays
+
+        rerender({ onDateSelect: secondOnDateSelect })
+
+        // onDateSelect isn't a dependency of the calendarWeekDays memo, so
+        // it should stay the same reference across this re-render
+        expect(result.current.calendarWeekDays).toBe(weekDaysBeforeRerender)
+
+        const dayCell = result.current.calendarWeekDays
+            .flat()
+            .find((d) => d.dateValue === '2021-03-15')
+        dayCell?.onClick()
+
+        expect(secondOnDateSelect).toHaveBeenCalledWith({
+            calendarDateString: '2021-03-15',
+        })
+        expect(firstOnDateSelect).not.toHaveBeenCalled()
+    })
+})
