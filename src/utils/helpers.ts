@@ -1,12 +1,13 @@
 import { Temporal } from '@js-temporal/polyfill-patched'
 import { months, Month } from '../constants/months'
 import { customCalendars, CustomCalendarTypes } from '../custom-calendars'
-import { PickerOptions } from '../types'
+import { PickerOptions, SupportedCalendar } from '../types'
 import { extractDatePartsFromDateString } from './extract-date-parts-from-date-string'
 import getNowInCalendar from './getNowInCalendar'
+import { AnyPlainDate, getCustomPlainDateImplementation } from './plainDate'
 import { validateDateString } from './validate-date-string'
 
-export const isCustomCalendar = (calendar: Temporal.CalendarLike) =>
+export const isCustomCalendar = (calendar: string) =>
     !!customCalendars[calendar as CustomCalendarTypes]
 
 export const padWithZeroes = (number: number, count = 2) =>
@@ -19,7 +20,7 @@ type customDate = Temporal.PlainDateLike & {
 }
 
 export const formatDate = (
-    date: Temporal.PlainDate | Temporal.ZonedDateTime,
+    date: AnyPlainDate,
     dayType?: DayType,
     format?: string
 ) => {
@@ -46,25 +47,56 @@ export const capitalize = (
     locale = 'en'
 ) => [firstLetter.toLocaleUpperCase(locale), ...rest].join('')
 
-export const getCustomCalendarIfExists = (
-    calendar: Temporal.CalendarLike
-): Temporal.CalendarProtocol | Temporal.CalendarLike => {
-    const isCustom = isCustomCalendar(calendar)
-    if (!isCustom) {
-        return calendar
-    }
-
-    const customCalendar = customCalendars[
-        calendar as keyof typeof customCalendars
-    ]?.calendar as Temporal.CalendarProtocol
-
-    if (!customCalendar) {
-        throw new Error(
-            `No implemenation found for custom calendar ${calendar}`
+/**
+ * Constructs a date value in `calendar` from that calendar's own year/month/day
+ * fields (e.g. Nepali fields for 'nepali', or era/eraYear fields for
+ * Ethiopic). Custom calendars never use the era/eraYear form, so it's safe
+ * to read `fields.year` directly when a custom implementation exists.
+ */
+export const getPlainDateFromCalendarFields = (
+    fields: Temporal.PlainDateLike,
+    calendar: SupportedCalendar,
+    options?: Temporal.AssignmentOptions
+): AnyPlainDate => {
+    const customImpl = getCustomPlainDateImplementation(calendar)
+    if (customImpl) {
+        return customImpl.from(
+            {
+                year: fields.year as number,
+                month: fields.month as number,
+                day: fields.day as number,
+            },
+            options
         )
     }
 
-    return customCalendar
+    // era-aware calendars (gregory, ethiopic, hebrew, japanese, ...) require
+    // era and eraYear to be provided together. A CalendarDate (e.g.
+    // round-tripped from getNowInCalendar/convertFromIso8601) only ever
+    // carries `eraYear` on its own (no `era` string) - forwarding that
+    // `eraYear` without a matching `era` trips the "must be provided
+    // together" validation (it isn't the same as omitting eraYear
+    // entirely). Only forward era/eraYear when BOTH are present; `year`
+    // (the proleptic year) is always valid on its own for every calendar.
+    const { era, eraYear, ...rest } = fields
+    const calendarFields =
+        era !== undefined && eraYear !== undefined
+            ? { ...rest, era, eraYear }
+            : rest
+
+    return Temporal.PlainDate.from({ ...calendarFields, calendar }, options)
+}
+
+/** Re-interprets an ISO year/month/day in `calendar` (e.g. converts "today, ISO" into "today, Nepali"). */
+export const getPlainDateFromIso = (
+    isoFields: { year: number; month: number; day: number },
+    calendar: SupportedCalendar
+): AnyPlainDate => {
+    const isoDate = Temporal.PlainDate.from(isoFields)
+    const customImpl = getCustomPlainDateImplementation(calendar)
+    return customImpl
+        ? customImpl.fromIso(isoDate)
+        : isoDate.withCalendar(calendar)
 }
 
 export const extractAndValidateDateString = (
@@ -91,7 +123,7 @@ export const extractAndValidateDateString = (
 const getCurrentDateResult = (options: PickerOptions) => {
     const { year, month, day } = getNowInCalendar(
         options.calendar,
-        options.timeZone
+        options.timeZone as string | undefined
     )
     return { year, month, day, isValid: true }
 }
@@ -115,13 +147,13 @@ const getValidDateResult = (date: string, options: PickerOptions) => {
 const getInvalidDateResult = (options: PickerOptions) => {
     const { year, month, day } = getNowInCalendar(
         options.calendar,
-        options.timeZone
+        options.timeZone as string | undefined
     )
     return { year, month, day }
 }
 
 const adjustForEthiopicCalendar = (result: customDate) => {
-    result.era = 'era1'
+    result.era = 'ethiopic'
     result.eraYear = result.year
     delete result.year
     return result

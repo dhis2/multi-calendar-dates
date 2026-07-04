@@ -1,81 +1,53 @@
+import { assert } from './assert';
 import * as ES from './ecmascript';
-import { GetIntrinsic } from './intrinsicclass';
+import { MakeIntrinsicClass } from './intrinsicclass';
 import {
-  GetSlot,
-  INSTANT,
-  ISO_YEAR,
-  ISO_MONTH,
-  ISO_DAY,
-  ISO_HOUR,
-  ISO_MINUTE,
-  ISO_SECOND,
-  ISO_MILLISECOND,
-  ISO_MICROSECOND,
-  ISO_NANOSECOND,
+  CAL_ID,
   CALENDAR,
-  TIME_ZONE
+  CreateSlots,
+  DATE,
+  DATETIME,
+  DAYS,
+  EPOCHNANOSECONDS,
+  GetSlot,
+  HasSlot,
+  HOURS,
+  INST,
+  ISO_DATE,
+  ISO_DATE_TIME,
+  LOCALE,
+  MD,
+  MICROSECONDS,
+  MILLISECONDS,
+  MINUTES,
+  MONTHS,
+  NANOSECONDS,
+  OPTIONS,
+  ORIGINAL,
+  ResetSlot,
+  SECONDS,
+  SetSlot,
+  TIME,
+  TIME_FMT,
+  TZ_CANONICAL,
+  TZ_ORIGINAL,
+  WEEKS,
+  YEARS,
+  YM
 } from './slots';
-import type { Temporal, Intl } from '..';
+import type { Temporal } from '..';
 import type { DateTimeFormatParams as Params, DateTimeFormatReturn as Return } from './internaltypes';
 
-const DATE = Symbol('date');
-const YM = Symbol('ym');
-const MD = Symbol('md');
-const TIME = Symbol('time');
-const DATETIME = Symbol('datetime');
-const ZONED = Symbol('zoneddatetime');
-const INST = Symbol('instant');
-const ORIGINAL = Symbol('original');
-const TZ_RESOLVED = Symbol('timezone');
-const TZ_GIVEN = Symbol('timezone-id-given');
-const CAL_ID = Symbol('calendar-id');
-const LOCALE = Symbol('locale');
-const OPTIONS = Symbol('options');
+// Save the original Intl.DateTimeFormat, it will likely be overwritten
+const OriginalIntlDateTimeFormat = Intl.DateTimeFormat;
 
-const descriptor = <T extends (...args: any[]) => any>(value: T) => {
-  return {
-    value,
-    enumerable: true,
-    writable: false,
-    configurable: true
-  };
-};
-
-const IntlDateTimeFormat = globalThis.Intl.DateTimeFormat;
-const ObjectAssign = Object.assign;
-const ObjectHasOwnProperty = Object.prototype.hasOwnProperty;
-const ReflectApply = Reflect.apply;
-
-interface CustomFormatters {
-  [DATE]: typeof dateAmend | globalThis.Intl.DateTimeFormat;
-  [YM]: typeof yearMonthAmend | typeof globalThis.Intl.DateTimeFormat;
-  [MD]: typeof monthDayAmend | typeof globalThis.Intl.DateTimeFormat;
-  [TIME]: typeof timeAmend | typeof globalThis.Intl.DateTimeFormat;
-  [DATETIME]: typeof datetimeAmend | typeof globalThis.Intl.DateTimeFormat;
-  [ZONED]: typeof zonedDateTimeAmend | typeof globalThis.Intl.DateTimeFormat;
-  [INST]: typeof instantAmend | typeof globalThis.Intl.DateTimeFormat;
-}
-
-interface PrivateProps extends CustomFormatters {
-  [ORIGINAL]: globalThis.Intl.DateTimeFormat;
-  [TZ_RESOLVED]: Temporal.TimeZoneProtocol | string;
-  [TZ_GIVEN]: Temporal.TimeZoneProtocol | string | null;
-  [CAL_ID]: globalThis.Intl.ResolvedDateTimeFormatOptions['calendar'];
-  [LOCALE]: globalThis.Intl.ResolvedDateTimeFormatOptions['locale'];
-  [OPTIONS]: Intl.DateTimeFormatOptions;
-}
-
-type OptionsAmenderFunction = (options: Intl.DateTimeFormatOptions) => globalThis.Intl.DateTimeFormatOptions;
-type FormatterOrAmender = globalThis.Intl.DateTimeFormat | OptionsAmenderFunction;
+type LazySlot = typeof DATE | typeof YM | typeof MD | typeof TIME_FMT | typeof DATETIME | typeof INST;
 
 // Construction of built-in Intl.DateTimeFormat objects is sloooooow,
 // so we'll only create those instances when we need them.
 // See https://bugs.chromium.org/p/v8/issues/detail?id=6528
-function getPropLazy<T extends PrivateProps, P extends keyof CustomFormatters>(
-  obj: T,
-  prop: P
-): globalThis.Intl.DateTimeFormat {
-  let val = obj[prop] as FormatterOrAmender;
+function getSlotLazy(obj: DateTimeFormatImpl, slot: LazySlot) {
+  let val = GetSlot(obj, slot);
   if (typeof val === 'function') {
     // If we get here, `val` is an "amender function". It will take the user's
     // options and transform them into suitable options to be passed into the
@@ -84,49 +56,61 @@ function getPropLazy<T extends PrivateProps, P extends keyof CustomFormatters>(
     // formatters in separate props on the polyfill's DateTimeFormat instances.
     // The efficiency happens because we don't create an (expensive) formatter
     // until the user calls toLocaleString for that Temporal type.
-    val = new IntlDateTimeFormat(obj[LOCALE], val(obj[OPTIONS]));
-    // TODO: can this be typed more cleanly?
-    (obj[prop] as globalThis.Intl.DateTimeFormat) = val;
+    val = new OriginalIntlDateTimeFormat(GetSlot(obj, LOCALE), val(GetSlot(obj, OPTIONS)));
+    ResetSlot(obj, slot, val);
   }
   return val;
 }
 
-// Similarly, lazy-init TimeZone instances.
-function getResolvedTimeZoneLazy(obj: PrivateProps) {
-  let val = obj[TZ_RESOLVED];
-  if (typeof val === 'string') {
-    val = ES.ToTemporalTimeZone(val);
-    obj[TZ_RESOLVED] = val;
-  }
-  return val;
-}
-
-type DateTimeFormatImpl = Intl.DateTimeFormat & PrivateProps;
-
-// Note: no `this` parameter here (unlike the other methods in this file).
-// Babel's parameter-transform plugin (triggered by the default values below)
-// counts the TypeScript-only `this` parameter as a real one when compiling
-// for pre-ES6 targets, which shifts `locale`/`optionsParam` into
-// `arguments[1]`/`arguments[2]` instead of `arguments[0]`/`arguments[1]` in
-// the emitted code — silently breaking every toLocaleString() call. `this`
-// is still usable below at its normal dynamic runtime value; the type is
-// unchecked because `src/vendor` is excluded from tsconfig.json.
-function DateTimeFormatImpl(
-  locale: Params['constructor'][0] = undefined,
-  optionsParam: Params['constructor'][1] = {}
+function createDateTimeFormat(
+  dtf: DateTimeFormatImpl,
+  locale: Params['constructor'][0],
+  optionsParam: Params['constructor'][1]
 ) {
-  if (!(this instanceof DateTimeFormatImpl)) {
-    type Construct = new (
-      locale: Params['constructor'][0],
-      optionsParam: Params['constructor'][1]
-    ) => Intl.DateTimeFormat;
-    return new (DateTimeFormatImpl as unknown as Construct)(locale, optionsParam);
-  }
   const hasOptions = typeof optionsParam !== 'undefined';
-  const options = hasOptions ? ObjectAssign({}, optionsParam) : {};
-  // TODO: remove type assertion after Temporal types land in TS lib types
-  const original = new IntlDateTimeFormat(locale, options as globalThis.Intl.DateTimeFormatOptions);
+  let options: Intl.DateTimeFormatOptions;
+  if (hasOptions) {
+    // Read all the options in the expected order and copy them to a
+    // null-prototype object with which we can do further operations
+    // unobservably
+    const props: (keyof Intl.DateTimeFormatOptions)[] = [
+      'localeMatcher',
+      'calendar',
+      'numberingSystem',
+      'hour12',
+      'hourCycle',
+      'timeZone',
+      'weekday',
+      'era',
+      'year',
+      'month',
+      'day',
+      'dayPeriod',
+      'hour',
+      'minute',
+      'second',
+      'fractionalSecondDigits',
+      'timeZoneName',
+      'formatMatcher',
+      'dateStyle',
+      'timeStyle'
+    ];
+    options = ES.ToObject(optionsParam);
+    const newOptions = Object.create(null);
+    for (let i = 0; i < props.length; i++) {
+      const prop = props[i];
+      if (Object.prototype.hasOwnProperty.call(options, prop)) {
+        newOptions[prop] = options[prop];
+      }
+    }
+    options = newOptions;
+  } else {
+    options = Object.create(null);
+  }
+  const original = new OriginalIntlDateTimeFormat(locale, options);
   const ro = original.resolvedOptions();
+
+  CreateSlots(dtf);
 
   // DateTimeFormat instances are very expensive to create. Therefore, they will
   // be lazily created only when needed, using the locale and options provided.
@@ -141,106 +125,138 @@ function DateTimeFormatImpl(
   // Therefore, we limit the properties in the clone to properties that were
   // present in the original input.
   if (hasOptions) {
-    const clonedResolved = ObjectAssign({}, ro);
+    const clonedResolved = Object.assign(Object.create(null), ro);
     for (const prop in clonedResolved) {
-      if (!ReflectApply(ObjectHasOwnProperty, options, [prop])) {
+      if (!Object.prototype.hasOwnProperty.call(options, prop)) {
         delete clonedResolved[prop as keyof typeof clonedResolved];
       }
     }
-    this[OPTIONS] = clonedResolved as Intl.DateTimeFormatOptions;
+    // hour12/hourCycle don't show up in resolvedOptions() unless the chosen
+    // format includes an hour component, so copy them explicitly in case they
+    // would otherwise be lost
+    clonedResolved.hour12 = options.hour12;
+    clonedResolved.hourCycle = options.hourCycle;
+    SetSlot(dtf, OPTIONS, clonedResolved);
   } else {
-    this[OPTIONS] = options;
+    SetSlot(dtf, OPTIONS, options);
   }
 
-  this[TZ_GIVEN] = options.timeZone ? options.timeZone : null;
-  this[LOCALE] = ro.locale;
-  this[ORIGINAL] = original;
-  this[TZ_RESOLVED] = ro.timeZone;
-  this[CAL_ID] = ro.calendar;
-  this[DATE] = dateAmend;
-  this[YM] = yearMonthAmend;
-  this[MD] = monthDayAmend;
-  this[TIME] = timeAmend;
-  this[DATETIME] = datetimeAmend;
-  this[ZONED] = zonedDateTimeAmend;
-  this[INST] = instantAmend;
+  SetSlot(dtf, LOCALE, ro.locale);
+  SetSlot(dtf, ORIGINAL, original);
+  SetSlot(dtf, TZ_CANONICAL, ro.timeZone);
+  SetSlot(dtf, CAL_ID, ro.calendar);
+  SetSlot(dtf, DATE, dateAmend);
+  SetSlot(dtf, YM, yearMonthAmend);
+  SetSlot(dtf, MD, monthDayAmend);
+  SetSlot(dtf, TIME_FMT, timeAmend);
+  SetSlot(dtf, DATETIME, datetimeAmend);
+  SetSlot(dtf, INST, instantAmend);
+
+  // Save the original time zone, for a few reasons:
+  // - Clearer error messages
+  // - More clearly follows the spec for InitializeDateTimeFormat
+  // - Because it follows the spec more closely, will make it easier to integrate
+  //   support of offset strings and other potential changes like proposal-canonical-tz.
+  const timeZoneOption = hasOptions ? options.timeZone : undefined;
+  if (timeZoneOption === undefined) {
+    SetSlot(dtf, TZ_ORIGINAL, ro.timeZone);
+  } else {
+    const id = ES.ToString(timeZoneOption);
+    if (id.startsWith('−')) {
+      // The initial (Node 23) implementation of offset time zones allowed use
+      // of the Unicode minus sign, which was disallowed by a later spec change.
+      throw new RangeError('Unicode minus (U+2212) is not supported in time zone offsets');
+    }
+    // store a normalized identifier
+    SetSlot(dtf, TZ_ORIGINAL, ES.ToTemporalTimeZoneIdentifier(id));
+  }
   return undefined; // TODO: I couldn't satisfy TS without adding this. Is there another way?
 }
 
-Object.defineProperty(DateTimeFormatImpl, 'name', {
-  writable: true,
-  value: 'DateTimeFormat'
-});
-
-DateTimeFormatImpl.supportedLocalesOf = function (
-  locales: Params['supportedLocalesOf'][0],
-  options: Params['supportedLocalesOf'][1]
-) {
-  return IntlDateTimeFormat.supportedLocalesOf(locales, options as globalThis.Intl.DateTimeFormatOptions);
-};
-
-const propertyDescriptors: Partial<Record<keyof Intl.DateTimeFormat, PropertyDescriptor>> = {
-  resolvedOptions: descriptor(resolvedOptions),
-  format: descriptor(format),
-  formatRange: descriptor(formatRange)
-};
-
-if ('formatToParts' in IntlDateTimeFormat.prototype) {
-  propertyDescriptors.formatToParts = descriptor(formatToParts);
+function IsPatchedDateTimeFormat(item: unknown): item is DateTimeFormatImpl {
+  return HasSlot(item, ORIGINAL);
 }
 
-if ('formatRangeToParts' in IntlDateTimeFormat.prototype) {
-  propertyDescriptors.formatRangeToParts = descriptor(formatRangeToParts);
+class DateTimeFormatImpl {
+  constructor(locales: Params['constructor'][0] = undefined, options: Params['constructor'][1] = undefined) {
+    createDateTimeFormat(this, locales, options);
+  }
+
+  get format() {
+    ES.CheckReceiver(this, IsPatchedDateTimeFormat);
+    const boundFormat = format.bind(this);
+    Object.defineProperties(boundFormat, {
+      length: { value: 1, enumerable: false, writable: false, configurable: true },
+      name: { value: '', enumerable: false, writable: false, configurable: true }
+    });
+    return boundFormat;
+  }
+
+  formatRange(a: Params['formatRange'][0], b: Params['formatRange'][1]): Return['formatRange'] {
+    ES.CheckReceiver(this, IsPatchedDateTimeFormat);
+    return formatRange.call(this, a, b);
+  }
+
+  formatToParts?<P extends readonly unknown[]>(
+    datetime: Params['formatToParts'][0],
+    ...rest: P
+  ): Return['formatToParts'] {
+    ES.CheckReceiver(this, IsPatchedDateTimeFormat);
+    return formatToParts.call(this, datetime, ...rest);
+  }
+
+  formatRangeToParts?(
+    a: Params['formatRangeToParts'][0],
+    b: Params['formatRangeToParts'][1]
+  ): Return['formatRangeToParts'] {
+    ES.CheckReceiver(this, IsPatchedDateTimeFormat);
+    return formatRangeToParts.call(this, a, b);
+  }
+
+  resolvedOptions(): Return['resolvedOptions'] {
+    ES.CheckReceiver(this, IsPatchedDateTimeFormat);
+    return resolvedOptions.call(this);
+  }
 }
 
-DateTimeFormatImpl.prototype = Object.create(IntlDateTimeFormat.prototype, propertyDescriptors);
+if (!('formatToParts' in OriginalIntlDateTimeFormat.prototype)) {
+  delete DateTimeFormatImpl.prototype.formatToParts;
+}
 
-// Ensure that the prototype isn't writeable.
-Object.defineProperty(DateTimeFormatImpl, 'prototype', {
+if (!('formatRangeToParts' in OriginalIntlDateTimeFormat.prototype)) {
+  delete DateTimeFormatImpl.prototype.formatRangeToParts;
+}
+export type { DateTimeFormatImpl };
+
+interface DateTimeFormatInterface {
+  (locales: Params['constructor'][0], options: Params['constructor'][1]): DateTimeFormatImpl;
+  new (locales: Params['constructor'][0], options: Params['constructor'][1]): DateTimeFormatImpl;
+  supportedLocalesOf: typeof Intl.DateTimeFormat.supportedLocalesOf;
+}
+
+// A non-class constructor is needed because Intl.DateTimeFormat must be able to
+// be called without 'new'
+export const DateTimeFormat = function (
+  locales: Params['constructor'][0] = undefined,
+  options: Params['constructor'][1] = undefined
+): DateTimeFormatImpl {
+  return new DateTimeFormatImpl(locales, options);
+} as unknown as DateTimeFormatInterface;
+DateTimeFormatImpl.prototype.constructor = DateTimeFormat;
+
+Object.defineProperty(DateTimeFormat, 'prototype', {
+  value: DateTimeFormatImpl.prototype,
   writable: false,
   enumerable: false,
   configurable: false
 });
-
-export const DateTimeFormat = DateTimeFormatImpl as unknown as typeof Intl.DateTimeFormat;
+DateTimeFormat.supportedLocalesOf = OriginalIntlDateTimeFormat.supportedLocalesOf;
+MakeIntrinsicClass(DateTimeFormat as unknown as typeof Intl.DateTimeFormat, 'Intl.DateTimeFormat');
 
 function resolvedOptions(this: DateTimeFormatImpl): Return['resolvedOptions'] {
-  return this[ORIGINAL].resolvedOptions();
-}
-
-function adjustFormatterTimeZone(
-  formatter: globalThis.Intl.DateTimeFormat,
-  timeZone?: string
-): globalThis.Intl.DateTimeFormat {
-  if (!timeZone) return formatter;
-  const options = formatter.resolvedOptions();
-  if (options.timeZone === timeZone) return formatter;
-  // Existing Intl isn't typed to accept Temporal-specific options and the lib
-  // types for resolved options are less restrictive than the types for options.
-  // For example, `weekday` is
-  // `'long' | 'short' | 'narrow'` in options but `string` in resolved options.
-  // TODO: investigate why, and file an issue against TS if it's a bug.
-  if ((options as any)['dateStyle'] || (options as any)['timeStyle']) {
-    // Unfortunately, Safari's resolvedOptions include parameters that will
-    // cause errors at runtime if passed along with
-    // dateStyle or timeStyle options as per
-    // https://tc39.es/proposal-intl-datetime-style/#table-datetimeformat-components.
-    // This has been fixed in newer versions of Safari:
-    // https://bugs.webkit.org/show_bug.cgi?id=231041
-    delete options['weekday'];
-    delete options['era'];
-    delete options['year'];
-    delete options['month'];
-    delete options['day'];
-    delete options['hour'];
-    delete options['minute'];
-    delete options['second'];
-    delete options['timeZoneName'];
-    delete (options as any)['hourCycle'];
-    delete options['hour12'];
-    delete (options as any)['dayPeriod'];
-  }
-  return new IntlDateTimeFormat(options.locale, { ...(options as globalThis.Intl.DateTimeFormatOptions), timeZone });
+  const resolved = GetSlot(this, ORIGINAL).resolvedOptions();
+  resolved.timeZone = GetSlot(this, TZ_ORIGINAL);
+  return resolved;
 }
 
 // TODO: investigate why there's a rest parameter here. Does this function really need to accept extra params?
@@ -250,14 +266,16 @@ function format<P extends readonly unknown[]>(
   datetime: Params['format'][0],
   ...rest: P
 ): Return['format'] {
-  let { instant, formatter, timeZone } = extractOverrides(datetime, this);
-  if (instant && formatter) {
-    formatter = adjustFormatterTimeZone(formatter, timeZone);
-    return formatter.format(instant.epochMilliseconds);
+  let overrides = extractOverrides(datetime, this);
+  let formatter, formatArgs: [Params['format'][0], ...unknown[]];
+  if (overrides.formatter) {
+    formatter = overrides.formatter;
+    formatArgs = [ES.epochNsToMs(overrides.epochNs, 'floor')];
+  } else {
+    formatter = GetSlot(this, ORIGINAL);
+    formatArgs = [datetime, ...rest];
   }
-  // Support spreading additional args for future expansion of this Intl method
-  type AllowExtraParams = (datetime: Parameters<Intl.DateTimeFormat['format']>[0], ...rest: P) => Return['format'];
-  return (this[ORIGINAL].format as unknown as AllowExtraParams)(datetime, ...rest);
+  return formatter.format(...(formatArgs as [number | Date | undefined]));
 }
 
 function formatToParts<P extends readonly unknown[]>(
@@ -265,69 +283,78 @@ function formatToParts<P extends readonly unknown[]>(
   datetime: Params['formatToParts'][0],
   ...rest: P
 ): Return['formatToParts'] {
-  let { instant, formatter, timeZone } = extractOverrides(datetime, this);
-  if (instant && formatter) {
-    formatter = adjustFormatterTimeZone(formatter, timeZone);
-    return formatter.formatToParts(instant.epochMilliseconds);
+  let overrides = extractOverrides(datetime, this);
+  let formatter, formatArgs;
+  if (overrides.formatter) {
+    formatter = overrides.formatter;
+    formatArgs = [ES.epochNsToMs(overrides.epochNs, 'floor')];
+  } else {
+    formatter = GetSlot(this, ORIGINAL);
+    formatArgs = [datetime, ...rest];
   }
-  // Support spreading additional args for future expansion of this Intl method
-  type AllowExtraParams = (
-    datetime: Parameters<Intl.DateTimeFormat['formatToParts']>[0],
-    ...rest: P
-  ) => Return['formatToParts'];
-  return (this[ORIGINAL].formatToParts as unknown as AllowExtraParams)(datetime, ...rest);
+  return formatter.formatToParts(...(formatArgs as [number | Date | undefined]));
 }
 
-function formatRange(this: DateTimeFormatImpl, a: Params['formatRange'][0], b: Params['formatRange'][1]) {
-  if (isTemporalObject(a) || isTemporalObject(b)) {
+function formatRange(this: DateTimeFormatImpl, aParam: Params['formatRange'][0], bParam: Params['formatRange'][1]) {
+  if (aParam === undefined || bParam === undefined) {
+    throw new TypeError('Intl.DateTimeFormat.formatRange requires two values');
+  }
+  const a = toDateTimeFormattable(aParam);
+  const b = toDateTimeFormattable(bParam);
+  let formatArgs = [a, b] as const;
+  let formatter;
+  if (isTemporalObject(a) !== isTemporalObject(b)) {
+    throw new TypeError('Intl.DateTimeFormat.formatRange accepts two values of the same type');
+  }
+  if (isTemporalObject(a)) {
     if (!sameTemporalType(a, b)) {
       throw new TypeError('Intl.DateTimeFormat.formatRange accepts two values of the same type');
     }
-    const {
-      instant: aa,
-      formatter: aformatter,
-      timeZone: atz
-    } = extractOverrides(a as unknown as TypesWithToLocaleString, this);
-    const {
-      instant: bb,
-      formatter: bformatter,
-      timeZone: btz
-    } = extractOverrides(b as unknown as TypesWithToLocaleString, this);
-    if (atz && btz && atz !== btz) {
-      throw new RangeError('cannot format range between different time zones');
-    }
-    if (aa && bb && aformatter && bformatter && aformatter === bformatter) {
-      const formatter = adjustFormatterTimeZone(aformatter, atz);
-      // TODO: Remove type assertion after this method lands in TS lib types
-      return (formatter as Intl.DateTimeFormat).formatRange(aa.epochMilliseconds, bb.epochMilliseconds);
+    const { epochNs: aa, formatter: aformatter } = extractOverrides(a, this);
+    const { epochNs: bb, formatter: bformatter } = extractOverrides(b, this);
+    if (aformatter) {
+      assert(bformatter == aformatter, 'formatters for same Temporal type should be identical');
+      formatter = aformatter;
+      formatArgs = [ES.epochNsToMs(aa, 'floor'), ES.epochNsToMs(bb, 'floor')];
     }
   }
-  // TODO: Remove type assertion after this method lands in TS lib types
-  return (this[ORIGINAL] as Intl.DateTimeFormat).formatRange(a, b);
+  if (!formatter) {
+    formatter = GetSlot(this, ORIGINAL);
+  }
+  return formatter.formatRange(...(formatArgs as [number, number]));
 }
 
 function formatRangeToParts(
   this: DateTimeFormatImpl,
-  a: Params['formatRangeToParts'][0],
-  b: Params['formatRangeToParts'][1]
+  aParam: Params['formatRangeToParts'][0],
+  bParam: Params['formatRangeToParts'][1]
 ) {
-  if (isTemporalObject(a) || isTemporalObject(b)) {
+  if (aParam === undefined || bParam === undefined) {
+    throw new TypeError('Intl.DateTimeFormat.formatRange requires two values');
+  }
+  const a = toDateTimeFormattable(aParam);
+  const b = toDateTimeFormattable(bParam);
+  let formatArgs = [a, b] as const;
+  let formatter;
+  if (isTemporalObject(a) !== isTemporalObject(b)) {
+    throw new TypeError('Intl.DateTimeFormat.formatRangeToParts accepts two values of the same type');
+  }
+  if (isTemporalObject(a)) {
     if (!sameTemporalType(a, b)) {
       throw new TypeError('Intl.DateTimeFormat.formatRangeToParts accepts two values of the same type');
     }
-    const { instant: aa, formatter: aformatter, timeZone: atz } = extractOverrides(a, this);
-    const { instant: bb, formatter: bformatter, timeZone: btz } = extractOverrides(b, this);
-    if (atz && btz && atz !== btz) {
-      throw new RangeError('cannot format range between different time zones');
-    }
-    if (aa && bb && aformatter && bformatter && aformatter === bformatter) {
-      const formatter = adjustFormatterTimeZone(aformatter, atz);
-      // TODO: Remove type assertion after this method lands in TS lib types
-      return (formatter as Intl.DateTimeFormat).formatRangeToParts(aa.epochMilliseconds, bb.epochMilliseconds);
+    const { epochNs: aa, formatter: aformatter } = extractOverrides(a, this);
+    const { epochNs: bb, formatter: bformatter } = extractOverrides(b, this);
+    if (aformatter) {
+      assert(bformatter == aformatter, 'formatters for same Temporal type should be identical');
+      formatter = aformatter;
+      formatArgs = [ES.epochNsToMs(aa, 'floor'), ES.epochNsToMs(bb, 'floor')];
     }
   }
-  // TODO: Remove type assertion after this method lands in TS lib types
-  return (this[ORIGINAL] as Intl.DateTimeFormat).formatRangeToParts(a, b);
+  if (!formatter) {
+    formatter = GetSlot(this, ORIGINAL);
+  }
+  return formatter.formatRangeToParts(...(formatArgs as [number, number]));
 }
 
 // "false" is a signal to delete this option
@@ -336,8 +363,8 @@ type MaybeFalseOptions = {
 };
 
 function amend(optionsParam: Intl.DateTimeFormatOptions = {}, amended: MaybeFalseOptions = {}) {
-  const options = ObjectAssign({}, optionsParam);
-  for (const opt of [
+  const options = Object.assign({}, optionsParam);
+  const props = [
     'year',
     'month',
     'day',
@@ -349,19 +376,21 @@ function amend(optionsParam: Intl.DateTimeFormatOptions = {}, amended: MaybeFals
     'timeZoneName',
     'dateStyle',
     'timeStyle'
-  ] as const) {
+  ] as const;
+  for (let i = 0; i < props.length; i++) {
+    const opt = props[i];
     // TODO: can this be typed more cleanly?
-    type OptionMaybeFalse = typeof options[typeof opt] | false;
+    type OptionMaybeFalse = (typeof options)[typeof opt] | false;
     (options[opt] as OptionMaybeFalse) = opt in amended ? amended[opt] : options[opt];
     if ((options[opt] as OptionMaybeFalse) === false || options[opt] === undefined) delete options[opt];
   }
-  return options as globalThis.Intl.DateTimeFormatOptions;
+  return options;
 }
 
 type OptionsType<T extends TypesWithToLocaleString> = NonNullable<Parameters<T['toLocaleString']>[1]>;
 
-function timeAmend(optionsParam: OptionsType<Temporal.PlainTime>) {
-  let options = amend(optionsParam, {
+function timeAmend(originalOptions: OptionsType<Temporal.PlainTime>) {
+  const options = amend(originalOptions, {
     year: false,
     month: false,
     day: false,
@@ -369,8 +398,16 @@ function timeAmend(optionsParam: OptionsType<Temporal.PlainTime>) {
     timeZoneName: false,
     dateStyle: false
   });
+  if (options.timeStyle === 'long' || options.timeStyle === 'full') {
+    // Try to fake what timeStyle should do if not printing the time zone name
+    delete options.timeStyle;
+    Object.assign(options, { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+  }
   if (!hasTimeOptions(options)) {
-    options = ObjectAssign({}, options, {
+    if (hasAnyDateTimeOptions(originalOptions)) {
+      throw new TypeError(`cannot format Temporal.PlainTime with options [${Object.keys(originalOptions)}]`);
+    }
+    Object.assign(options, {
       hour: 'numeric',
       minute: 'numeric',
       second: 'numeric'
@@ -379,8 +416,16 @@ function timeAmend(optionsParam: OptionsType<Temporal.PlainTime>) {
   return options;
 }
 
-function yearMonthAmend(optionsParam: OptionsType<Temporal.PlainYearMonth>) {
-  let options = amend(optionsParam, {
+function yearMonthAmend(originalOptions: OptionsType<Temporal.PlainYearMonth>) {
+  // Try to fake what dateStyle should do for dates without a day. This is not
+  // accurate for locales that always print the era
+  const dateStyleHacks = {
+    short: { year: '2-digit', month: 'numeric' },
+    medium: { year: 'numeric', month: 'short' },
+    long: { year: 'numeric', month: 'long' },
+    full: { year: 'numeric', month: 'long' }
+  };
+  const options = amend(originalOptions, {
     day: false,
     hour: false,
     minute: false,
@@ -388,17 +433,31 @@ function yearMonthAmend(optionsParam: OptionsType<Temporal.PlainYearMonth>) {
     weekday: false,
     dayPeriod: false,
     timeZoneName: false,
-    dateStyle: false,
     timeStyle: false
   });
-  if (!('year' in options || 'month' in options)) {
-    options = ObjectAssign(options, { year: 'numeric', month: 'numeric' });
+  if ('dateStyle' in options && options.dateStyle) {
+    const style = options.dateStyle;
+    delete options.dateStyle;
+    Object.assign(options, dateStyleHacks[style]);
+  }
+  if (!('year' in options || 'month' in options || 'era' in options)) {
+    if (hasAnyDateTimeOptions(originalOptions)) {
+      throw new TypeError(`cannot format PlainYearMonth with options [${Object.keys(originalOptions)}]`);
+    }
+    Object.assign(options, { year: 'numeric', month: 'numeric' });
   }
   return options;
 }
 
-function monthDayAmend(optionsParam: OptionsType<Temporal.PlainMonthDay>) {
-  let options = amend(optionsParam, {
+function monthDayAmend(originalOptions: OptionsType<Temporal.PlainMonthDay>) {
+  // Try to fake what dateStyle should do for dates without a day
+  const dateStyleHacks = {
+    short: { month: 'numeric', day: 'numeric' },
+    medium: { month: 'short', day: 'numeric' },
+    long: { month: 'long', day: 'numeric' },
+    full: { month: 'long', day: 'numeric' }
+  };
+  const options = amend(originalOptions, {
     year: false,
     hour: false,
     minute: false,
@@ -406,17 +465,24 @@ function monthDayAmend(optionsParam: OptionsType<Temporal.PlainMonthDay>) {
     weekday: false,
     dayPeriod: false,
     timeZoneName: false,
-    dateStyle: false,
     timeStyle: false
   });
+  if ('dateStyle' in options && options.dateStyle) {
+    const style = options.dateStyle;
+    delete options.dateStyle;
+    Object.assign(options, dateStyleHacks[style]);
+  }
   if (!('month' in options || 'day' in options)) {
-    options = ObjectAssign({}, options, { month: 'numeric', day: 'numeric' });
+    if (hasAnyDateTimeOptions(originalOptions)) {
+      throw new TypeError(`cannot format PlainMonthDay with options [${Object.keys(originalOptions)}]`);
+    }
+    Object.assign(options, { month: 'numeric', day: 'numeric' });
   }
   return options;
 }
 
-function dateAmend(optionsParam: OptionsType<Temporal.PlainDate>) {
-  let options = amend(optionsParam, {
+function dateAmend(originalOptions: OptionsType<Temporal.PlainDate>) {
+  const options = amend(originalOptions, {
     hour: false,
     minute: false,
     second: false,
@@ -425,7 +491,10 @@ function dateAmend(optionsParam: OptionsType<Temporal.PlainDate>) {
     timeStyle: false
   });
   if (!hasDateOptions(options)) {
-    options = ObjectAssign({}, options, {
+    if (hasAnyDateTimeOptions(originalOptions)) {
+      throw new TypeError(`cannot format PlainDate with options [${Object.keys(originalOptions)}]`);
+    }
+    Object.assign(options, {
       year: 'numeric',
       month: 'numeric',
       day: 'numeric'
@@ -434,25 +503,31 @@ function dateAmend(optionsParam: OptionsType<Temporal.PlainDate>) {
   return options;
 }
 
-function datetimeAmend(optionsParam: OptionsType<Temporal.PlainDateTime>) {
-  let options = amend(optionsParam, { timeZoneName: false });
-  if (!hasTimeOptions(options) && !hasDateOptions(options)) {
-    options = ObjectAssign({}, options, {
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      second: 'numeric'
-    });
-  }
-  return options;
-}
+function datetimeAmend(originalOptions: OptionsType<Temporal.PlainDateTime>) {
+  const options = amend(originalOptions, { timeZoneName: false });
+  if (options.timeStyle === 'long' || options.timeStyle === 'full') {
+    // Try to fake what timeStyle should do if not printing the time zone name
+    delete options.timeStyle;
+    Object.assign(options, { hour: 'numeric', minute: '2-digit', second: '2-digit' });
 
-function zonedDateTimeAmend(optionsParam: OptionsType<Temporal.PlainTime>) {
-  let options = optionsParam;
+    // If moving to a fake timeStyle while dateStyle is present, we also have to
+    // move to a fake dateStyle. dateStyle is mutually exclusive with hour etc.
+    if (options.dateStyle) {
+      const dateStyleHacks = {
+        short: { year: 'numeric', month: 'numeric', day: 'numeric' },
+        medium: { year: 'numeric', month: 'short', day: 'numeric' },
+        long: { year: 'numeric', month: 'long', day: 'numeric' },
+        full: { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }
+      };
+      Object.assign(options, dateStyleHacks[options.dateStyle]);
+      delete options.dateStyle;
+    }
+  }
   if (!hasTimeOptions(options) && !hasDateOptions(options)) {
-    options = ObjectAssign({}, options, {
+    if (hasAnyDateTimeOptions(originalOptions)) {
+      throw new TypeError(`cannot format PlainDateTime with options [${Object.keys(originalOptions)}]`);
+    }
+    Object.assign(options, {
       year: 'numeric',
       month: 'numeric',
       day: 'numeric',
@@ -460,7 +535,6 @@ function zonedDateTimeAmend(optionsParam: OptionsType<Temporal.PlainTime>) {
       minute: 'numeric',
       second: 'numeric'
     });
-    if (options.timeZoneName === undefined) options.timeZoneName = 'short';
   }
   return options;
 }
@@ -468,7 +542,7 @@ function zonedDateTimeAmend(optionsParam: OptionsType<Temporal.PlainTime>) {
 function instantAmend(optionsParam: OptionsType<Temporal.Instant>) {
   let options = optionsParam;
   if (!hasTimeOptions(options) && !hasDateOptions(options)) {
-    options = ObjectAssign({}, options, {
+    options = Object.assign({}, options, {
       year: 'numeric',
       month: 'numeric',
       day: 'numeric',
@@ -481,12 +555,34 @@ function instantAmend(optionsParam: OptionsType<Temporal.Instant>) {
 }
 
 function hasDateOptions(options: OptionsType<TypesWithToLocaleString>) {
-  return 'year' in options || 'month' in options || 'day' in options || 'weekday' in options || 'dateStyle' in options;
+  return (
+    'year' in options ||
+    'month' in options ||
+    'day' in options ||
+    'weekday' in options ||
+    'dateStyle' in options ||
+    'era' in options
+  );
 }
 
 function hasTimeOptions(options: OptionsType<TypesWithToLocaleString>) {
   return (
-    'hour' in options || 'minute' in options || 'second' in options || 'timeStyle' in options || 'dayPeriod' in options
+    'hour' in options ||
+    'minute' in options ||
+    'second' in options ||
+    'timeStyle' in options ||
+    'dayPeriod' in options ||
+    'fractionalSecondDigits' in options
+  );
+}
+
+function hasAnyDateTimeOptions(originalOptions: OptionsType<TypesWithToLocaleString>) {
+  return (
+    hasDateOptions(originalOptions) ||
+    hasTimeOptions(originalOptions) ||
+    'dateStyle' in originalOptions ||
+    'timeStyle' in originalOptions ||
+    'timeZoneName' in originalOptions
   );
 }
 
@@ -511,6 +607,11 @@ function isTemporalObject(
   );
 }
 
+function toDateTimeFormattable(value: unknown) {
+  if (isTemporalObject(value)) return value;
+  return ES.ToNumber(value);
+}
+
 function sameTemporalType(x: unknown, y: unknown) {
   if (!isTemporalObject(x) || !isTemporalObject(y)) return false;
   if (ES.IsTemporalTime(x) && !ES.IsTemporalTime(y)) return false;
@@ -533,135 +634,125 @@ type TypesWithToLocaleString =
   | Temporal.Instant;
 
 function extractOverrides(temporalObj: Params['format'][0], main: DateTimeFormatImpl) {
-  const DateTime = GetIntrinsic('%Temporal.PlainDateTime%');
-
   if (ES.IsTemporalTime(temporalObj)) {
-    const hour = GetSlot(temporalObj, ISO_HOUR);
-    const minute = GetSlot(temporalObj, ISO_MINUTE);
-    const second = GetSlot(temporalObj, ISO_SECOND);
-    const millisecond = GetSlot(temporalObj, ISO_MILLISECOND);
-    const microsecond = GetSlot(temporalObj, ISO_MICROSECOND);
-    const nanosecond = GetSlot(temporalObj, ISO_NANOSECOND);
-    const datetime = new DateTime(1970, 1, 1, hour, minute, second, millisecond, microsecond, nanosecond, main[CAL_ID]);
+    const isoDateTime = {
+      isoDate: { year: 1970, month: 1, day: 1 },
+      time: GetSlot(temporalObj, TIME)
+    };
     return {
-      instant: ES.BuiltinTimeZoneGetInstantFor(getResolvedTimeZoneLazy(main), datetime, 'compatible'),
-      formatter: getPropLazy(main, TIME)
+      epochNs: ES.GetEpochNanosecondsFor(GetSlot(main, TZ_CANONICAL), isoDateTime, 'compatible'),
+      formatter: getSlotLazy(main, TIME_FMT)
     };
   }
 
   if (ES.IsTemporalYearMonth(temporalObj)) {
-    const isoYear = GetSlot(temporalObj, ISO_YEAR);
-    const isoMonth = GetSlot(temporalObj, ISO_MONTH);
-    const referenceISODay = GetSlot(temporalObj, ISO_DAY);
-    const calendar = ES.ToString(GetSlot(temporalObj, CALENDAR));
-    if (calendar !== main[CAL_ID]) {
+    const calendar = GetSlot(temporalObj, CALENDAR);
+    const mainCalendar = GetSlot(main, CAL_ID);
+    if (calendar !== mainCalendar) {
       throw new RangeError(
-        `cannot format PlainYearMonth with calendar ${calendar} in locale with calendar ${main[CAL_ID]}`
+        `cannot format PlainYearMonth with calendar ${calendar} in locale with calendar ${mainCalendar}`
       );
     }
-    const datetime = new DateTime(isoYear, isoMonth, referenceISODay, 12, 0, 0, 0, 0, 0, calendar);
+    const isoDateTime = ES.CombineISODateAndTimeRecord(GetSlot(temporalObj, ISO_DATE), ES.NoonTimeRecord());
     return {
-      instant: ES.BuiltinTimeZoneGetInstantFor(getResolvedTimeZoneLazy(main), datetime, 'compatible'),
-      formatter: getPropLazy(main, YM)
+      epochNs: ES.GetEpochNanosecondsFor(GetSlot(main, TZ_CANONICAL), isoDateTime, 'compatible'),
+      formatter: getSlotLazy(main, YM)
     };
   }
 
   if (ES.IsTemporalMonthDay(temporalObj)) {
-    const referenceISOYear = GetSlot(temporalObj, ISO_YEAR);
-    const isoMonth = GetSlot(temporalObj, ISO_MONTH);
-    const isoDay = GetSlot(temporalObj, ISO_DAY);
-    const calendar = ES.ToString(GetSlot(temporalObj, CALENDAR));
-    if (calendar !== main[CAL_ID]) {
+    const calendar = GetSlot(temporalObj, CALENDAR);
+    const mainCalendar = GetSlot(main, CAL_ID);
+    if (calendar !== mainCalendar) {
       throw new RangeError(
-        `cannot format PlainMonthDay with calendar ${calendar} in locale with calendar ${main[CAL_ID]}`
+        `cannot format PlainMonthDay with calendar ${calendar} in locale with calendar ${mainCalendar}`
       );
     }
-    const datetime = new DateTime(referenceISOYear, isoMonth, isoDay, 12, 0, 0, 0, 0, 0, calendar);
+    const isoDateTime = ES.CombineISODateAndTimeRecord(GetSlot(temporalObj, ISO_DATE), ES.NoonTimeRecord());
     return {
-      instant: ES.BuiltinTimeZoneGetInstantFor(getResolvedTimeZoneLazy(main), datetime, 'compatible'),
-      formatter: getPropLazy(main, MD)
+      epochNs: ES.GetEpochNanosecondsFor(GetSlot(main, TZ_CANONICAL), isoDateTime, 'compatible'),
+      formatter: getSlotLazy(main, MD)
     };
   }
 
   if (ES.IsTemporalDate(temporalObj)) {
-    const isoYear = GetSlot(temporalObj, ISO_YEAR);
-    const isoMonth = GetSlot(temporalObj, ISO_MONTH);
-    const isoDay = GetSlot(temporalObj, ISO_DAY);
-    const calendar = ES.ToString(GetSlot(temporalObj, CALENDAR));
-    if (calendar !== 'iso8601' && calendar !== main[CAL_ID]) {
-      throw new RangeError(`cannot format PlainDate with calendar ${calendar} in locale with calendar ${main[CAL_ID]}`);
+    const calendar = GetSlot(temporalObj, CALENDAR);
+    const mainCalendar = GetSlot(main, CAL_ID);
+    if (calendar !== 'iso8601' && calendar !== mainCalendar) {
+      throw new RangeError(`cannot format PlainDate with calendar ${calendar} in locale with calendar ${mainCalendar}`);
     }
-    const datetime = new DateTime(isoYear, isoMonth, isoDay, 12, 0, 0, 0, 0, 0, main[CAL_ID]);
+    const isoDateTime = ES.CombineISODateAndTimeRecord(GetSlot(temporalObj, ISO_DATE), ES.NoonTimeRecord());
     return {
-      instant: ES.BuiltinTimeZoneGetInstantFor(getResolvedTimeZoneLazy(main), datetime, 'compatible'),
-      formatter: getPropLazy(main, DATE)
+      epochNs: ES.GetEpochNanosecondsFor(GetSlot(main, TZ_CANONICAL), isoDateTime, 'compatible'),
+      formatter: getSlotLazy(main, DATE)
     };
   }
 
   if (ES.IsTemporalDateTime(temporalObj)) {
-    const isoYear = GetSlot(temporalObj, ISO_YEAR);
-    const isoMonth = GetSlot(temporalObj, ISO_MONTH);
-    const isoDay = GetSlot(temporalObj, ISO_DAY);
-    const hour = GetSlot(temporalObj, ISO_HOUR);
-    const minute = GetSlot(temporalObj, ISO_MINUTE);
-    const second = GetSlot(temporalObj, ISO_SECOND);
-    const millisecond = GetSlot(temporalObj, ISO_MILLISECOND);
-    const microsecond = GetSlot(temporalObj, ISO_MICROSECOND);
-    const nanosecond = GetSlot(temporalObj, ISO_NANOSECOND);
-    const calendar = ES.ToString(GetSlot(temporalObj, CALENDAR));
-    if (calendar !== 'iso8601' && calendar !== main[CAL_ID]) {
+    const calendar = GetSlot(temporalObj, CALENDAR);
+    const mainCalendar = GetSlot(main, CAL_ID);
+    if (calendar !== 'iso8601' && calendar !== mainCalendar) {
       throw new RangeError(
-        `cannot format PlainDateTime with calendar ${calendar} in locale with calendar ${main[CAL_ID]}`
+        `cannot format PlainDateTime with calendar ${calendar} in locale with calendar ${mainCalendar}`
       );
     }
-    let datetime = temporalObj;
-    if (calendar === 'iso8601') {
-      datetime = new DateTime(
-        isoYear,
-        isoMonth,
-        isoDay,
-        hour,
-        minute,
-        second,
-        millisecond,
-        microsecond,
-        nanosecond,
-        main[CAL_ID]
-      );
-    }
+    const isoDateTime = GetSlot(temporalObj, ISO_DATE_TIME);
     return {
-      instant: ES.BuiltinTimeZoneGetInstantFor(getResolvedTimeZoneLazy(main), datetime, 'compatible'),
-      formatter: getPropLazy(main, DATETIME)
+      epochNs: ES.GetEpochNanosecondsFor(GetSlot(main, TZ_CANONICAL), isoDateTime, 'compatible'),
+      formatter: getSlotLazy(main, DATETIME)
     };
   }
 
   if (ES.IsTemporalZonedDateTime(temporalObj)) {
-    const calendar = ES.ToString(GetSlot(temporalObj, CALENDAR));
-    if (calendar !== 'iso8601' && calendar !== main[CAL_ID]) {
-      throw new RangeError(
-        `cannot format ZonedDateTime with calendar ${calendar} in locale with calendar ${main[CAL_ID]}`
-      );
-    }
-
-    const timeZone = GetSlot(temporalObj, TIME_ZONE);
-    const objTimeZone = ES.ToString(timeZone);
-    if (main[TZ_GIVEN] && main[TZ_GIVEN] !== objTimeZone) {
-      throw new RangeError(`timeZone option ${main[TZ_GIVEN]} doesn't match actual time zone ${objTimeZone}`);
-    }
-
-    return {
-      instant: GetSlot(temporalObj, INSTANT),
-      formatter: getPropLazy(main, ZONED),
-      timeZone: objTimeZone
-    };
+    throw new TypeError(
+      'Temporal.ZonedDateTime not supported in DateTimeFormat methods. Use toLocaleString() instead.'
+    );
   }
 
   if (ES.IsTemporalInstant(temporalObj)) {
     return {
-      instant: temporalObj,
-      formatter: getPropLazy(main, INST)
+      epochNs: GetSlot(temporalObj, EPOCHNANOSECONDS),
+      formatter: getSlotLazy(main, INST)
     };
   }
 
   return {};
+}
+
+function temporalDurationToCompatibilityRecord(duration: Temporal.Duration) {
+  const record = Object.create(null);
+  record.years = GetSlot(duration, YEARS);
+  record.months = GetSlot(duration, MONTHS);
+  record.weeks = GetSlot(duration, WEEKS);
+  record.days = GetSlot(duration, DAYS);
+  record.hours = GetSlot(duration, HOURS);
+  record.minutes = GetSlot(duration, MINUTES);
+  record.seconds = GetSlot(duration, SECONDS);
+  record.milliseconds = GetSlot(duration, MILLISECONDS);
+  record.microseconds = GetSlot(duration, MICROSECONDS);
+  record.nanoseconds = GetSlot(duration, NANOSECONDS);
+  return record;
+}
+
+const { format: IntlDurationFormatPrototypeFormat, formatToParts: IntlDurationFormatPrototypeFormatToParts } =
+  Intl.DurationFormat?.prototype ?? Object.create(null);
+
+export function ModifiedIntlDurationFormatPrototypeFormat(
+  this: Intl.DurationFormat,
+  durationLike: Temporal.DurationLike
+) {
+  Intl.DurationFormat.prototype.resolvedOptions.call(this); // brand check
+  const duration = ES.ToTemporalDuration(durationLike);
+  const record = temporalDurationToCompatibilityRecord(duration);
+  return IntlDurationFormatPrototypeFormat.call(this, record);
+}
+
+if (Intl.DurationFormat?.prototype) {
+  Intl.DurationFormat.prototype.format = ModifiedIntlDurationFormatPrototypeFormat;
+  Intl.DurationFormat.prototype.formatToParts = function formatToParts(durationLike: Temporal.DurationLike) {
+    Intl.DurationFormat.prototype.resolvedOptions.call(this); // brand check
+    const duration = ES.ToTemporalDuration(durationLike);
+    const record = temporalDurationToCompatibilityRecord(duration);
+    return IntlDurationFormatPrototypeFormatToParts.call(this, record);
+  };
 }

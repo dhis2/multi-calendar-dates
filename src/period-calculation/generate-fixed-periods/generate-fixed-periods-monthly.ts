@@ -1,6 +1,9 @@
-import { Temporal } from '@js-temporal/polyfill-patched'
 import { SupportedCalendar } from '../../types'
-import { fromAnyDate } from '../../utils/index'
+import {
+    getPlainDateFromCalendarFields,
+    isCustomCalendar,
+} from '../../utils/helpers'
+import { AnyPlainDate } from '../../utils/plainDate'
 import { getStartingMonthByPeriodType } from '../get-starting-month-for-period-type'
 import monthNumbers from '../month-numbers'
 import { buildMonthlyFixedPeriod } from '../monthly-periods/index'
@@ -17,7 +20,7 @@ type GenerateFixedPeriodsMonthly = (options: {
     periodType: PeriodType
     calendar: SupportedCalendar
     locale: string
-    endsBefore?: Temporal.PlainDate
+    endsBefore?: AnyPlainDate
 }) => Array<FixedPeriod>
 
 const generateFixedPeriodsMonthly: GenerateFixedPeriodsMonthly = ({
@@ -27,15 +30,17 @@ const generateFixedPeriodsMonthly: GenerateFixedPeriodsMonthly = ({
     endsBefore,
     locale,
 }) => {
-    let currentMonth = Temporal.PlainDate.from({
-        year,
-        month: getStartingMonth(periodType),
-        // this should really just be 1 but have to set it to 14th because of a
-        // quirk in custom calendars
-        // @TODO: discuss this with the Temporal team
-        day: calendar.toString() === 'nepali' ? 14 : 1,
-        calendar,
-    })
+    let currentMonth: AnyPlainDate = getPlainDateFromCalendarFields(
+        {
+            year,
+            month: getStartingMonth(periodType),
+            // this should really just be 1 but have to set it to 14th because of a
+            // quirk in custom calendars
+            // @TODO: discuss this with the Temporal team
+            day: isCustomCalendar(calendar) ? 14 : 1,
+        },
+        calendar
+    )
 
     const months: FixedPeriod[] = []
 
@@ -70,8 +75,7 @@ const generateFixedPeriodsMonthly: GenerateFixedPeriodsMonthly = ({
             months.push(period)
         }
 
-        const nextMonth = currentMonth.add({ months: monthToAdd })
-        currentMonth = fromAnyDate({ date: nextMonth, calendar })
+        currentMonth = currentMonth.add({ months: monthToAdd })
     }
 
     return months
@@ -79,7 +83,7 @@ const generateFixedPeriodsMonthly: GenerateFixedPeriodsMonthly = ({
 
 const isEthiopic13thMonth = (
     calendar: SupportedCalendar,
-    date: Temporal.PlainDate
+    date: AnyPlainDate
 ) => {
     return calendar === 'ethiopic' && date.month === 13
 }

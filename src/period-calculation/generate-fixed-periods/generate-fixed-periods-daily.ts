@@ -1,31 +1,31 @@
 import { Temporal } from '@js-temporal/polyfill-patched'
 import { SupportedCalendar } from '../../types'
-import { fromAnyDate } from '../../utils/index'
+import { getPlainDateFromCalendarFields } from '../../utils/index'
+import { AnyPlainDate, toIsoPlainDate } from '../../utils/plainDate'
 import { buildDailyFixedPeriod } from '../daily-periods/index'
 import { FixedPeriod } from '../types'
 
 type GenerateFixedPeriodsDaily = (options: {
     year: number
     calendar: SupportedCalendar
-    endsBefore?: Temporal.PlainDate
+    endsBefore?: AnyPlainDate
     locale: string
 }) => Array<FixedPeriod>
 
 const generateFixedPeriodsDaily: GenerateFixedPeriodsDaily = ({
     year,
     calendar,
-    endsBefore: _endsBefore,
+    endsBefore,
     locale,
 }) => {
-    const endsBefore = _endsBefore
-        ? fromAnyDate({ calendar, date: _endsBefore })
-        : null
-    const day = Temporal.PlainDate.from({
-        year,
-        month: 1,
-        day: 1,
-        calendar,
-    })
+    const day = getPlainDateFromCalendarFields(
+        {
+            year,
+            month: 1,
+            day: 1,
+        },
+        calendar
+    )
 
     const days: FixedPeriod[] = []
 
@@ -34,7 +34,10 @@ const generateFixedPeriodsDaily: GenerateFixedPeriodsDaily = ({
 
         if (
             endsBefore &&
-            Temporal.PlainDate.compare(nextDay, endsBefore) > -1
+            Temporal.PlainDate.compare(
+                toIsoPlainDate(nextDay),
+                toIsoPlainDate(endsBefore)
+            ) > -1
         ) {
             break
         }

@@ -3,96 +3,170 @@ import { NEPALI_CALENDAR_DATA } from './nepaliCalendarData'
 type CalendarYMD = { year: number; month: number; day: number }
 
 /**
- * https://tc39.es/proposal-temporal/docs/calendar.html
+ * `@js-temporal/polyfill` 0.5.x removed the `Temporal.Calendar` class and the
+ * user-defined calendar protocol entirely - calendars are now plain string
+ * identifiers understood natively by the polyfill, and Nepali (a luni-solar
+ * calendar not in CLDR) can no longer be registered with Temporal's engine.
+ *
+ * `NepaliPlainDate` is a standalone, hand-rolled replacement that wraps a
+ * real ISO `Temporal.PlainDate`. It intentionally mirrors the previous
+ * `NepaliCalendar` class's actual behaviour rather than "fixing" it:
+ * `dateAdd`/`dateUntil`/`fields`/`mergeFields` were never overridden on the
+ * old `NepaliCalendar extends Temporal.Calendar` class - they were inherited
+ * from its `super('iso8601')` call. This meant `.add()`/`.subtract()` on a
+ * Nepali-tagged date always did plain ISO-calendar arithmetic on the
+ * underlying ISO date, then re-derived Nepali fields from the result - not
+ * genuine Nepali calendar arithmetic. `add`/`subtract`/`with` below
+ * reproduce that exact "ISO-then-reconvert" behaviour by delegating to
+ * `isoDate`, since existing workarounds elsewhere (e.g. the day-14 clamp in
+ * `useNavigation.ts` and `generate-fixed-periods-monthly.ts`) depend on it.
  *
  * This implementation is based on World-Calendars library by Keith Wood:
  * https://github.com/kbwood/world-calendars
  */
-class NepaliCalendar extends Temporal.Calendar {
-    constructor() {
-        super('iso8601')
+class NepaliPlainDate {
+    readonly calendarId = 'nepali' as const
+    readonly isoDate: Temporal.PlainDate
+
+    private constructor(isoDate: Temporal.PlainDate) {
+        this.isoDate = isoDate
     }
 
-    toString() {
-        return 'nepali'
+    /** Tags an existing ISO date as Nepali (reads its ISO y/m/d, converts to Nepali fields lazily). */
+    static fromIso(
+        isoDate: Temporal.PlainDate | Temporal.PlainDateLike | string
+    ): NepaliPlainDate {
+        return new NepaliPlainDate(Temporal.PlainDate.from(isoDate))
     }
 
-    /**
-     * The methods year, month, day return the Nepali date
-     *
-     * A custom implementation of these methods is used to convert the ISO calendar date to the calendar-space arguments.
-     */
-    year(date: Temporal.PlainDate | Temporal.PlainDateTime) {
-        const {
-            isoYear: year,
-            isoMonth: month,
-            isoDay: day,
-        } = date.getISOFields()
-        const nepaliYear = _isoToNepali({ year, month, day })?.year
-        return nepaliYear
-    }
-    eraYear(date: Temporal.PlainDate | Temporal.PlainDateTime) {
-        return this.year(date)
-    }
-    daysInMonth(date: Temporal.PlainDate | Temporal.PlainDateTime): number {
-        const { year, month } = date
-        return NEPALI_CALENDAR_DATA[year][month]
-    }
-    month(date: Temporal.PlainDate) {
-        const {
-            isoYear: year,
-            isoMonth: month,
-            isoDay: day,
-        } = date.getISOFields()
-        return _isoToNepali({ year, month, day })?.month
-    }
-    monthCode(date: Temporal.PlainDate) {
-        const { month } = date
-        return buildMonthCode(month)
-    }
-    day(date: Temporal.PlainDate) {
-        const {
-            isoYear: year,
-            isoMonth: month,
-            isoDay: day,
-        } = date.getISOFields()
-        const { day: nepaliDay } = _isoToNepali({ year, month, day })
-        return nepaliDay
-    }
-    /**
-     * The methods dateFromFields, yearMonthFromFields, monthDayFromFields convert from nepali to iso
-     *
-     * A custom implementation of these methods is used to convert the calendar-space arguments to the ISO calendar.
-     */
-    dateFromFields(
+    /** Constructs from Nepali-calendar-space fields (year/month/day as displayed in Nepali). */
+    static from(
         fields: CalendarYMD,
-        options: Temporal.AssignmentOptions
-    ): Temporal.PlainDate {
-        const { year, day, month } = _nepaliToIso(
+        options?: Temporal.AssignmentOptions
+    ): NepaliPlainDate {
+        const { year, month, day } = _nepaliToIso(fields, options)
+        return new NepaliPlainDate(
+            Temporal.PlainDate.from({ year, month, day })
+        )
+    }
+
+    get year() {
+        return _isoToNepali(this.isoDate).year
+    }
+    get eraYear() {
+        return this.year
+    }
+    get month() {
+        return _isoToNepali(this.isoDate).month
+    }
+    get monthCode() {
+        return buildMonthCode(this.month)
+    }
+    get day() {
+        return _isoToNepali(this.isoDate).day
+    }
+    get daysInMonth(): number {
+        return NEPALI_CALENDAR_DATA[this.year][this.month]
+    }
+    get monthsInYear() {
+        return 12
+    }
+    get dayOfWeek() {
+        return this.isoDate.dayOfWeek
+    }
+    get daysInWeek() {
+        return this.isoDate.daysInWeek
+    }
+    get dayOfYear() {
+        return this.isoDate.dayOfYear
+    }
+    // era/daysInYear/inLeapYear were never overridden on the old NepaliCalendar
+    // class either, so they fell back to the iso8601 default implementation it
+    // was constructed with - matched here by delegating straight to the
+    // underlying ISO date. This means these three report the ISO year's
+    // length/leap-ness, not Nepali's real (variable) year length - see
+    // src/vendor/README.md's TC39-cookbook comparison note for the one place
+    // (daily period generation) this can actually matter.
+    get era() {
+        return this.isoDate.era
+    }
+    get daysInYear() {
+        return this.isoDate.daysInYear
+    }
+    get inLeapYear() {
+        return this.isoDate.inLeapYear
+    }
+    // Unlike the properties above, weekOfYear/yearOfWeek are not given the
+    // "fall back to ISO" treatment: Nepali has no defined week-numbering
+    // scheme, so - matching the TC39 cookbook reference implementation
+    // (https://tc39.es/proposal-temporal/docs/cookbook-nepali-calendar.html) -
+    // these are always undefined rather than reporting the ISO week, which
+    // would be actively misleading if ever surfaced. Nothing in this codebase
+    // currently reads either property.
+    get weekOfYear() {
+        return undefined
+    }
+    get yearOfWeek() {
+        return undefined
+    }
+
+    with(
+        fields: Partial<CalendarYMD>,
+        options?: Temporal.AssignmentOptions
+    ): NepaliPlainDate {
+        return NepaliPlainDate.from(
             {
-                year: fields.year,
-                month: fields.month,
-                day: fields.day,
+                year: fields.year ?? this.year,
+                month: fields.month ?? this.month,
+                day: fields.day ?? this.day,
             },
             options
         )
-        return new Temporal.PlainDate(year, month, day, this)
     }
-    yearMonthFromFields(fields: CalendarYMD): Temporal.PlainYearMonth {
-        const { year, day, month } = _nepaliToIso({
-            year: fields.year,
-            month: fields.month,
-            day: fields.day,
-        })
-        return new Temporal.PlainYearMonth(year, month, this, day)
+
+    add(
+        duration: Temporal.Duration | Temporal.DurationLike | string,
+        options?: Temporal.ArithmeticOptions
+    ): NepaliPlainDate {
+        return NepaliPlainDate.fromIso(this.isoDate.add(duration, options))
     }
-    monthDayFromFields(fields: CalendarYMD): Temporal.PlainMonthDay {
-        const { year, day, month } = _nepaliToIso({
-            year: fields.year,
-            month: fields.month,
-            day: fields.day,
+
+    subtract(
+        duration: Temporal.Duration | Temporal.DurationLike | string,
+        options?: Temporal.ArithmeticOptions
+    ): NepaliPlainDate {
+        return NepaliPlainDate.fromIso(this.isoDate.subtract(duration, options))
+    }
+
+    equals(other: NepaliPlainDate): boolean {
+        return (
+            other instanceof NepaliPlainDate &&
+            this.isoDate.equals(other.isoDate)
+        )
+    }
+
+    // Matches what a real Temporal.PlainDate.prototype.toString() produces
+    // for a calendar-tagged date: the ISO position plus a calendar
+    // annotation, not the calendar-space y/m/d. (Nothing in this codebase
+    // currently calls this directly - dates are always formatted via
+    // formatDate/localisationHelpers instead - but keeping it convention-
+    // compliant avoids surprises for anyone who logs or serializes one of
+    // these.)
+    toString(options?: Temporal.ShowCalendarOption) {
+        const showCalendar = options?.calendarName ?? 'auto'
+        const isoString = this.isoDate.toString({
+            ...options,
+            calendarName: 'never',
         })
-        return new Temporal.PlainMonthDay(day, month, this, year)
+        return showCalendar === 'never'
+            ? isoString
+            : `${isoString}[u-ca=nepali]`
+    }
+
+    toJSON() {
+        return `${this.isoDate.toString({
+            calendarName: 'never',
+        })}[u-ca=nepali]`
     }
 }
 
@@ -269,4 +343,4 @@ function buildMonthCode(month: number | string) {
     return `M${month.toString().padStart(2, '0')}`
 }
 
-export { NepaliCalendar }
+export { NepaliPlainDate }

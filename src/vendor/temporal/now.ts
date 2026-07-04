@@ -1,53 +1,42 @@
 import * as ES from './ecmascript';
-import { GetIntrinsic } from './intrinsicclass';
 import type { Temporal } from '..';
 
-const instant: typeof Temporal.Now['instant'] = () => {
-  const Instant = GetIntrinsic('%Temporal.Instant%');
-  return new Instant(ES.SystemUTCEpochNanoSeconds());
+function SystemDateTime(timeZone: string) {
+  return ES.GetISODateTimeFor(timeZone, ES.SystemUTCEpochNanoSeconds());
+}
+
+const instant: (typeof Temporal.Now)['instant'] = () => {
+  return ES.CreateTemporalInstant(ES.SystemUTCEpochNanoSeconds());
 };
-const plainDateTime: typeof Temporal.Now['plainDateTime'] = (calendarLike, temporalTimeZoneLike = timeZone()) => {
-  const tZ = ES.ToTemporalTimeZone(temporalTimeZoneLike);
-  const calendar = ES.ToTemporalCalendar(calendarLike);
-  const inst = instant();
-  return ES.BuiltinTimeZoneGetPlainDateTimeFor(tZ, inst, calendar);
+const plainDateTimeISO: (typeof Temporal.Now)['plainDateTimeISO'] = (temporalTimeZoneLike = ES.DefaultTimeZone()) => {
+  const timeZone = ES.ToTemporalTimeZoneIdentifier(temporalTimeZoneLike);
+  const isoDateTime = SystemDateTime(timeZone);
+  return ES.CreateTemporalDateTime(isoDateTime, 'iso8601');
 };
-const plainDateTimeISO: typeof Temporal.Now['plainDateTimeISO'] = (temporalTimeZoneLike = timeZone()) => {
-  const tZ = ES.ToTemporalTimeZone(temporalTimeZoneLike);
-  const calendar = ES.GetISO8601Calendar();
-  const inst = instant();
-  return ES.BuiltinTimeZoneGetPlainDateTimeFor(tZ, inst, calendar);
+const zonedDateTimeISO: (typeof Temporal.Now)['zonedDateTimeISO'] = (temporalTimeZoneLike = ES.DefaultTimeZone()) => {
+  const timeZone = ES.ToTemporalTimeZoneIdentifier(temporalTimeZoneLike);
+  return ES.CreateTemporalZonedDateTime(ES.SystemUTCEpochNanoSeconds(), timeZone, 'iso8601');
 };
-const zonedDateTime: typeof Temporal.Now['zonedDateTime'] = (calendarLike, temporalTimeZoneLike = timeZone()) => {
-  const tZ = ES.ToTemporalTimeZone(temporalTimeZoneLike);
-  const calendar = ES.ToTemporalCalendar(calendarLike);
-  return ES.CreateTemporalZonedDateTime(ES.SystemUTCEpochNanoSeconds(), tZ, calendar);
+const plainDateISO: (typeof Temporal.Now)['plainDateISO'] = (temporalTimeZoneLike = ES.DefaultTimeZone()) => {
+  const timeZone = ES.ToTemporalTimeZoneIdentifier(temporalTimeZoneLike);
+  const isoDateTime = SystemDateTime(timeZone);
+  return ES.CreateTemporalDate(isoDateTime.isoDate, 'iso8601');
 };
-const zonedDateTimeISO: typeof Temporal.Now['zonedDateTimeISO'] = (temporalTimeZoneLike = timeZone()) => {
-  return zonedDateTime(ES.GetISO8601Calendar(), temporalTimeZoneLike);
+const plainTimeISO: (typeof Temporal.Now)['plainTimeISO'] = (temporalTimeZoneLike = ES.DefaultTimeZone()) => {
+  const timeZone = ES.ToTemporalTimeZoneIdentifier(temporalTimeZoneLike);
+  const isoDateTime = SystemDateTime(timeZone);
+  return ES.CreateTemporalTime(isoDateTime.time);
 };
-const plainDate: typeof Temporal.Now['plainDate'] = (calendarLike, temporalTimeZoneLike = timeZone()) => {
-  return ES.TemporalDateTimeToDate(plainDateTime(calendarLike, temporalTimeZoneLike));
-};
-const plainDateISO: typeof Temporal.Now['plainDateISO'] = (temporalTimeZoneLike = timeZone()) => {
-  return ES.TemporalDateTimeToDate(plainDateTimeISO(temporalTimeZoneLike));
-};
-const plainTimeISO: typeof Temporal.Now['plainTimeISO'] = (temporalTimeZoneLike = timeZone()) => {
-  return ES.TemporalDateTimeToTime(plainDateTimeISO(temporalTimeZoneLike));
-};
-const timeZone: typeof Temporal.Now['timeZone'] = () => {
-  return ES.SystemTimeZone();
+const timeZoneId: (typeof Temporal.Now)['timeZoneId'] = () => {
+  return ES.DefaultTimeZone();
 };
 
 export const Now: typeof Temporal.Now = {
   instant,
-  plainDateTime,
   plainDateTimeISO,
-  plainDate,
   plainDateISO,
   plainTimeISO,
-  timeZone,
-  zonedDateTime,
+  timeZoneId,
   zonedDateTimeISO,
   [Symbol.toStringTag]: 'Temporal.Now'
 };

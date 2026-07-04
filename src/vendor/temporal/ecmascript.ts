@@ -1,65 +1,49 @@
-const ArrayIncludes = Array.prototype.includes;
-const ArrayPrototypePush = Array.prototype.push;
-const IntlDateTimeFormat = globalThis.Intl.DateTimeFormat;
-const MathMin = Math.min;
-const MathMax = Math.max;
-const MathAbs = Math.abs;
-const MathFloor = Math.floor;
-const MathSign = Math.sign;
-const MathTrunc = Math.trunc;
-const NumberIsNaN = Number.isNaN;
-const NumberIsFinite = Number.isFinite;
-const NumberCtor = Number;
-const StringCtor = String;
-const NumberMaxSafeInteger = Number.MAX_SAFE_INTEGER;
-const ObjectAssign = Object.assign;
-const ObjectCreate = Object.create;
-const ObjectDefineProperty = Object.defineProperty;
-const ObjectGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
-const ObjectIs = Object.is;
-const ReflectApply = Reflect.apply;
-
-import { DEBUG } from './debug';
+import { DEBUG, ENABLE_ASSERTS } from './debug';
 import JSBI from 'jsbi';
 
 import type { Temporal } from '..';
+import { assert, assertNotReached } from './assert';
+import { abs, compare, DAY_NANOS_JSBI, divmod, ensureJSBI, isEven, MILLION, ONE, TWO, ZERO } from './bigintmath';
+import type { CalendarImpl } from './calendar';
 import type {
   AnyTemporalLikeType,
   UnitSmallerThanOrEqualTo,
-  CalendarProtocolParams,
-  TimeZoneProtocolParams,
   InstantParams,
   PlainMonthDayParams,
   ZonedDateTimeParams,
-  CalendarParams,
-  TimeZoneParams,
   PlainDateParams,
   PlainTimeParams,
   DurationParams,
   PlainDateTimeParams,
   PlainYearMonthParams,
-  PrimitiveFieldsOf,
-  BuiltinCalendarId
+  BuiltinCalendarId,
+  Keys,
+  AnyTemporalKey,
+  FieldKey,
+  InternalDuration,
+  ISODateTime,
+  ISODate,
+  TimeRecord,
+  ISODateToFieldsType,
+  DateDuration,
+  CalendarFieldsRecord,
+  MonthDayFromFieldsObject,
+  Overflow,
+  Resolve,
+  AnySlottedType
 } from './internaltypes';
 import { GetIntrinsic } from './intrinsicclass';
+import { ApplyUnsignedRoundingMode, FMAPowerOf10, GetUnsignedRoundingMode, TruncatingDivModByPowerOf10 } from './math';
+import { TimeDuration } from './timeduration';
 import {
   CreateSlots,
   GetSlot,
   HasSlot,
   SetSlot,
   EPOCHNANOSECONDS,
-  TIMEZONE_ID,
-  CALENDAR_ID,
-  INSTANT,
-  ISO_YEAR,
-  ISO_MONTH,
-  ISO_DAY,
-  ISO_HOUR,
-  ISO_MINUTE,
-  ISO_SECOND,
-  ISO_MILLISECOND,
-  ISO_MICROSECOND,
-  ISO_NANOSECOND,
+  ISO_DATE,
+  ISO_DATE_TIME,
+  TIME,
   DATE_BRAND,
   YEAR_MONTH_BRAND,
   MONTH_DAY_BRAND,
@@ -77,23 +61,25 @@ import {
   NANOSECONDS
 } from './slots';
 
-export const ZERO = JSBI.BigInt(0);
-const ONE = JSBI.BigInt(1);
-const SIXTY = JSBI.BigInt(60);
-export const THOUSAND = JSBI.BigInt(1e3);
-export const MILLION = JSBI.BigInt(1e6);
-export const BILLION = JSBI.BigInt(1e9);
-const NEGATIVE_ONE = JSBI.BigInt(-1);
-const DAY_SECONDS = 86400;
-const DAY_NANOS = JSBI.multiply(JSBI.BigInt(DAY_SECONDS), BILLION);
-const NS_MIN = JSBI.multiply(JSBI.BigInt(-86400), JSBI.BigInt(1e17));
-const NS_MAX = JSBI.multiply(JSBI.BigInt(86400), JSBI.BigInt(1e17));
+const DAY_MS = 86400_000;
+export const DAY_NANOS = DAY_MS * 1e6;
+const MINUTE_NANOS = 60e9;
+// Instant range is 100 million days (inclusive) before or after epoch.
+const MS_MAX = DAY_MS * 1e8;
+const NS_MAX = epochMsToNs(MS_MAX);
+const NS_MIN = JSBI.unaryMinus(NS_MAX);
+// PlainDateTime range is 24 hours wider (exclusive) than the Instant range on
+// both ends, to allow for valid Instant=>PlainDateTime conversion for all
+// built-in time zones (whose offsets must have a magnitude less than 24 hours).
+const DATETIME_NS_MIN = JSBI.add(JSBI.subtract(NS_MIN, DAY_NANOS_JSBI), ONE);
+const DATETIME_NS_MAX = JSBI.subtract(JSBI.add(NS_MAX, DAY_NANOS_JSBI), ONE);
+// The pattern of leap years in the ISO 8601 calendar repeats every 400 years.
+// The constant below is the number of nanoseconds in 400 years. It is used to
+// avoid overflows when dealing with values at the edge legacy Date's range.
+const MS_IN_400_YEAR_CYCLE = (400 * 365 + 97) * DAY_MS;
 const YEAR_MIN = -271821;
 const YEAR_MAX = 275760;
-const BEFORE_FIRST_OFFSET_TRANSITION = JSBI.multiply(JSBI.BigInt(-388152), JSBI.BigInt(1e13)); // 1847-01-01T00:00:00Z
-const ABOUT_TEN_YEARS_NANOS = JSBI.multiply(DAY_NANOS, JSBI.BigInt(366 * 10));
-const ABOUT_ONE_YEAR_NANOS = JSBI.multiply(DAY_NANOS, JSBI.BigInt(366 * 1));
-const TWO_WEEKS_NANOS = JSBI.multiply(DAY_NANOS, JSBI.BigInt(2 * 7));
+const BEFORE_FIRST_DST = Date.UTC(1847, 0, 1); // 1847-01-01T00:00:00Z
 
 const BUILTIN_CALENDAR_IDS = [
   'iso8601',
@@ -107,6 +93,7 @@ const BUILTIN_CALENDAR_IDS = [
   'persian',
   'ethiopic',
   'ethioaa',
+  'ethiopic-amete-alem',
   'coptic',
   'chinese',
   'dangi',
@@ -117,10 +104,64 @@ const BUILTIN_CALENDAR_IDS = [
   'gregory'
 ];
 
-function IsInteger(value: unknown): value is number {
-  if (typeof value !== 'number' || !NumberIsFinite(value)) return false;
-  const abs = MathAbs(value);
-  return MathFloor(abs) === abs;
+const ICU_LEGACY_TIME_ZONE_IDS = new Set([
+  'ACT',
+  'AET',
+  'AGT',
+  'ART',
+  'AST',
+  'BET',
+  'BST',
+  'CAT',
+  'CNT',
+  'CST',
+  'CTT',
+  'EAT',
+  'ECT',
+  'IET',
+  'IST',
+  'JST',
+  'MIT',
+  'NET',
+  'NST',
+  'PLT',
+  'PNT',
+  'PRT',
+  'PST',
+  'SST',
+  'VST'
+]);
+
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function */
+/**
+ * uncheckedAssertNarrowedType forces TypeScript to change the type of the argument to the one given in
+ * the type parameter. This should only be used to help TS understand when variables change types,
+ * but TS can't or won't infer this automatically. They should be used sparingly, because
+ * if used incorrectly can lead to difficult-to-diagnose problems.
+ * */
+export function uncheckedAssertNarrowedType<T = unknown>(
+  arg: unknown,
+  justification: string
+): asserts arg is T extends typeof arg ? T : never {}
+/* eslint-enable */
+
+/**
+ * In debug builds, this function verifies that the given argument "exists" (is not
+ * null or undefined). This function becomes a no-op in the final bundles distributed via NPM.
+ * @param arg
+ */
+export function assertExists<A>(arg: A): asserts arg is NonNullable<A> {
+  if (ENABLE_ASSERTS) {
+    if (arg == null) {
+      throw new Error('Expected arg to be set.');
+    }
+  }
+}
+
+/** Similar to assertExists, but returns the argument. */
+function castExists<A>(arg: A): NonNullable<A> {
+  assertExists(arg);
+  return arg;
 }
 
 // For unknown values, this narrows the result to a Record. But for union types
@@ -134,115 +175,160 @@ export function IsObject(value: unknown): value is Record<string | number | symb
 }
 
 export function ToNumber(value: unknown): number {
+  // ES 2022's es-abstract made minor changes to ToNumber, but polyfilling these
+  // changes adds zero benefit to Temporal and brings in a lot of extra code. So
+  // we'll leave ToNumber as-is.
+  // See https://github.com/ljharb/es-abstract/blob/main/2022/ToNumber.js
   if (typeof value === 'bigint') throw new TypeError('Cannot convert BigInt to number');
-  return NumberCtor(value);
+  return Number(value);
 }
 
-function ToInteger(value: unknown): number {
-  const num = ToNumber(value);
-  if (NumberIsNaN(num)) return 0;
-  const integer = MathTrunc(num);
-  if (num === 0) return 0;
-  return integer;
+function IsIntegralNumber(argument: unknown) {
+  if (typeof argument !== 'number' || Number.isNaN(argument) || argument === Infinity || argument === -Infinity) {
+    return false;
+  }
+  const absValue = Math.abs(argument);
+  return Math.floor(absValue) === absValue;
 }
 
 export function ToString(value: unknown): string {
   if (typeof value === 'symbol') {
     throw new TypeError('Cannot convert a Symbol value to a String');
   }
-  return StringCtor(value);
+  return String(value);
 }
 
-export function ToIntegerThrowOnInfinity(value: unknown): number {
-  const integer = ToInteger(value);
-  if (!NumberIsFinite(integer)) {
-    throw new RangeError('infinity is out of range');
+export function ToIntegerWithTruncation(value: unknown): number {
+  const number = ToNumber(value);
+  if (number === 0) return 0;
+  if (Number.isNaN(number) || number === Infinity || number === -Infinity) {
+    throw new RangeError('invalid number value');
   }
+  const integer = Math.trunc(number);
+  if (integer === 0) return 0; // ℝ(value) in spec text; converts -0 to 0
   return integer;
 }
 
-function ToPositiveInteger(valueParam: unknown, property?: string): number {
-  const value = ToInteger(valueParam);
-  if (!NumberIsFinite(value)) {
-    throw new RangeError('infinity is out of range');
-  }
-  if (value < 1) {
+function ToPositiveIntegerWithTruncation(valueParam: unknown, property?: string): number {
+  const integer = ToIntegerWithTruncation(valueParam);
+  if (integer <= 0) {
     if (property !== undefined) {
       throw new RangeError(`property '${property}' cannot be a a number less than one`);
     }
     throw new RangeError('Cannot convert a number less than one to a positive integer');
   }
+  return integer;
+}
+
+export function ToIntegerIfIntegral(valueParam: unknown): number {
+  const number = ToNumber(valueParam);
+  if (Number.isNaN(number)) throw new RangeError('not a number');
+  if (number === Infinity || number === -Infinity) throw new RangeError('infinity is out of range');
+  if (!IsIntegralNumber(number)) throw new RangeError(`unsupported fractional value ${valueParam}`);
+  if (number === 0) return 0; // ℝ(value) in spec text; converts -0 to 0
+  return number;
+}
+
+function ToZeroPaddedDecimalString(n: number, minLength: number) {
+  if (DEBUG) {
+    if (!IsIntegralNumber(n) || n < 0) {
+      throw new RangeError('Assertion failed: `${n}` must be a non-negative integer');
+    }
+  }
+  const s = String(n);
+  return s.padStart(minLength, '0');
+}
+
+// This convenience function isn't in the spec, but is useful in the polyfill
+// for DRY and better error messages.
+export function RequireString(value: unknown): string {
+  if (typeof value !== 'string') {
+    // Use String() to ensure that Symbols won't throw
+    throw new TypeError(`expected a string, not ${String(value)}`);
+  }
   return value;
 }
 
-export function ToIntegerWithoutRounding(valueParam: unknown): number {
-  const value = ToNumber(valueParam);
-  if (NumberIsNaN(value)) return 0;
-  if (!NumberIsFinite(value)) {
-    throw new RangeError('infinity is out of range');
+function ToSyntacticallyValidMonthCode(valueParam: unknown) {
+  const value = RequireString(ToPrimitive(valueParam, String));
+  if (
+    value.length < 3 ||
+    value.length > 4 ||
+    value[0] !== 'M' ||
+    '0123456789'.indexOf(value[1]) === -1 ||
+    '0123456789'.indexOf(value[2]) === -1 ||
+    (value[1] + value[2] === '00' && value[3] !== 'L') ||
+    (value[3] !== 'L' && value[3] !== undefined)
+  ) {
+    throw new RangeError(`bad month code ${value}; must match M01-M99 or M00L-M99L`);
   }
-  if (!IsInteger(value)) {
-    throw new RangeError(`unsupported fractional value ${value}`);
-  }
-  return ToInteger(value); // ℝ(value) in spec text; converts -0 to 0
-}
-function divmod(x: JSBI, y: JSBI): { quotient: JSBI; remainder: JSBI } {
-  const quotient = JSBI.divide(x, y);
-  const remainder = JSBI.remainder(x, y);
-  return { quotient, remainder };
+  return value;
 }
 
-function abs(x: JSBI): JSBI {
-  if (JSBI.lessThan(x, ZERO)) return JSBI.multiply(x, NEGATIVE_ONE);
-  return x;
+function ToOffsetString(valueParam: unknown) {
+  const value = RequireString(ToPrimitive(valueParam, String));
+  ParseDateTimeUTCOffset(value);
+  return value;
 }
 
-export function ArrayPush<NewValue>(
-  arr: ReadonlyArray<NewValue>,
-  ...newItem: readonly NewValue[]
-): ReadonlyArray<NewValue> {
-  ArrayPrototypePush.apply(arr, newItem as any[]);
-  return arr;
+// Limited implementation of ToPrimitive that only handles the string case,
+// because that's all that's used in this polyfill.
+function ToPrimitive(value: unknown, preferredType: typeof String): string | number {
+  assertExists(preferredType === String);
+  if (IsObject(value)) {
+    const result = value?.toString();
+    if (typeof result === 'string' || typeof result === 'number') return result;
+    throw new TypeError('Cannot convert object to primitive value');
+  }
+  return value;
 }
+
+const CALENDAR_FIELD_KEYS: readonly FieldKey[] = [
+  'era',
+  'eraYear',
+  'year',
+  'month',
+  'monthCode',
+  'day',
+  'hour',
+  'minute',
+  'second',
+  'millisecond',
+  'microsecond',
+  'nanosecond',
+  'offset',
+  'timeZone'
+] as const;
 
 type BuiltinCastFunction = (v: unknown) => string | number;
-const BUILTIN_CASTS = new Map<AnyTemporalKey, BuiltinCastFunction>([
-  ['year', ToIntegerThrowOnInfinity],
-  ['month', ToPositiveInteger],
-  ['monthCode', ToString],
-  ['day', ToPositiveInteger],
-  ['hour', ToIntegerThrowOnInfinity],
-  ['minute', ToIntegerThrowOnInfinity],
-  ['second', ToIntegerThrowOnInfinity],
-  ['millisecond', ToIntegerThrowOnInfinity],
-  ['microsecond', ToIntegerThrowOnInfinity],
-  ['nanosecond', ToIntegerThrowOnInfinity],
-  ['years', ToIntegerWithoutRounding],
-  ['months', ToIntegerWithoutRounding],
-  ['weeks', ToIntegerWithoutRounding],
-  ['days', ToIntegerWithoutRounding],
-  ['hours', ToIntegerWithoutRounding],
-  ['minutes', ToIntegerWithoutRounding],
-  ['seconds', ToIntegerWithoutRounding],
-  ['milliseconds', ToIntegerWithoutRounding],
-  ['microseconds', ToIntegerWithoutRounding],
-  ['nanoseconds', ToIntegerWithoutRounding],
-  ['era', ToString],
-  ['eraYear', ToInteger],
-  ['offset', ToString]
-]);
+const BUILTIN_CASTS: Partial<Record<FieldKey, BuiltinCastFunction>> = {
+  era: ToString,
+  eraYear: ToIntegerWithTruncation,
+  year: ToIntegerWithTruncation,
+  month: ToPositiveIntegerWithTruncation,
+  monthCode: ToSyntacticallyValidMonthCode,
+  day: ToPositiveIntegerWithTruncation,
+  hour: ToIntegerWithTruncation,
+  minute: ToIntegerWithTruncation,
+  second: ToIntegerWithTruncation,
+  millisecond: ToIntegerWithTruncation,
+  microsecond: ToIntegerWithTruncation,
+  nanosecond: ToIntegerWithTruncation,
+  offset: ToOffsetString,
+  timeZone: ToTemporalTimeZoneIdentifier
+};
 
-const BUILTIN_DEFAULTS = new Map([
-  ['hour', 0],
-  ['minute', 0],
-  ['second', 0],
-  ['millisecond', 0],
-  ['microsecond', 0],
-  ['nanosecond', 0]
-]);
+const BUILTIN_DEFAULTS: Partial<Record<FieldKey, number>> = {
+  hour: 0,
+  minute: 0,
+  second: 0,
+  millisecond: 0,
+  microsecond: 0,
+  nanosecond: 0
+};
 
-// each item is [plural, singular, category]
-const SINGULAR_PLURAL_UNITS = [
+// each item is [plural, singular, category, (length in ns)]
+const TEMPORAL_UNITS = [
   ['years', 'year', 'date'],
   ['months', 'month', 'date'],
   ['weeks', 'week', 'date'],
@@ -254,21 +340,47 @@ const SINGULAR_PLURAL_UNITS = [
   ['microseconds', 'microsecond', 'time'],
   ['nanoseconds', 'nanosecond', 'time']
 ] as const;
-const SINGULAR_FOR = new Map(SINGULAR_PLURAL_UNITS.map((e) => [e[0], e[1]] as const));
-const PLURAL_FOR = new Map(SINGULAR_PLURAL_UNITS.map(([p, s]) => [s, p]));
-const UNITS_DESCENDING = SINGULAR_PLURAL_UNITS.map(([, s]) => s);
+const SINGULAR_FOR = Object.fromEntries(TEMPORAL_UNITS.map((e) => [e[0], e[1]] as const));
+const PLURAL_FOR = Object.fromEntries(TEMPORAL_UNITS.map(([p, s]) => [s, p] as const));
+const UNITS_DESCENDING = TEMPORAL_UNITS.map(([, s]) => s);
+type TimeUnitOrDay = Temporal.TimeUnit | 'day';
+const NS_PER_TIME_UNIT = {
+  day: DAY_NANOS,
+  hour: 3600e9,
+  minute: 60e9,
+  second: 1e9,
+  millisecond: 1e6,
+  microsecond: 1e3,
+  nanosecond: 1
+};
 
-const DURATION_FIELDS = Array.from(SINGULAR_FOR.keys()).sort();
+const DURATION_FIELDS = [
+  'days',
+  'hours',
+  'microseconds',
+  'milliseconds',
+  'minutes',
+  'months',
+  'nanoseconds',
+  'seconds',
+  'weeks',
+  'years'
+] as const;
 
 import * as PARSE from './regex';
 
+// Save the original Intl.DateTimeFormat, it will likely be overwritten with the
+// one from this polyfill. Caching the formatter below may be reentrant, so we
+// need to use the original one
+const OriginalIntlDateTimeFormat = Intl.DateTimeFormat;
 const IntlDateTimeFormatEnUsCache = new Map<string, Intl.DateTimeFormat>();
 
 function getIntlDateTimeFormatEnUsForTimeZone(timeZoneIdentifier: string) {
-  let instance = IntlDateTimeFormatEnUsCache.get(timeZoneIdentifier);
+  const lowercaseIdentifier = ASCIILowercase(timeZoneIdentifier);
+  let instance = IntlDateTimeFormatEnUsCache.get(lowercaseIdentifier);
   if (instance === undefined) {
-    instance = new IntlDateTimeFormat('en-us', {
-      timeZone: StringCtor(timeZoneIdentifier),
+    instance = new OriginalIntlDateTimeFormat('en-us', {
+      timeZone: lowercaseIdentifier,
       hour12: false,
       era: 'short',
       year: 'numeric',
@@ -278,47 +390,60 @@ function getIntlDateTimeFormatEnUsForTimeZone(timeZoneIdentifier: string) {
       minute: 'numeric',
       second: 'numeric'
     });
-    IntlDateTimeFormatEnUsCache.set(timeZoneIdentifier, instance);
+    IntlDateTimeFormatEnUsCache.set(lowercaseIdentifier, instance);
   }
   return instance;
+}
+
+export function ToObject<T>(value: T): T extends Record<string, unknown> ? T : Record<PropertyKey, unknown> {
+  if (typeof value === 'undefined' || value === null) {
+    throw new TypeError(`Expected object not ${value}`);
+  }
+  return Object(value);
+}
+
+// Adapted from https://github.com/ljharb/es-abstract/blob/main/2022/CopyDataProperties.js
+// but simplified (e.g. removed assertions) for this polyfill to reduce bundle size.
+export function CopyDataProperties<K extends PropertyKey, T extends Record<K, unknown>>(
+  target: T,
+  source: T | undefined,
+  excludedKeys: K[],
+  excludedValues?: unknown[]
+) {
+  if (typeof source === 'undefined' || source === null) return;
+
+  const keys = Reflect.ownKeys(source) as (keyof T)[];
+  for (let index = 0; index < keys.length; index++) {
+    const nextKey = keys[index];
+    if (excludedKeys.some((e) => Object.is(e, nextKey))) continue;
+    if (Object.prototype.propertyIsEnumerable.call(source, nextKey)) {
+      const propValue = source[nextKey];
+      if (excludedValues && excludedValues.some((e) => Object.is(e, propValue))) continue;
+
+      target[nextKey] = propValue;
+    }
+  }
 }
 
 export function IsTemporalInstant(item: unknown): item is Temporal.Instant {
   return HasSlot(item, EPOCHNANOSECONDS) && !HasSlot(item, TIME_ZONE, CALENDAR);
 }
 
-export function IsTemporalTimeZone(item: unknown): item is Temporal.TimeZone {
-  return HasSlot(item, TIMEZONE_ID);
-}
-export function IsTemporalCalendar(item: unknown): item is Temporal.Calendar {
-  return HasSlot(item, CALENDAR_ID);
-}
 export function IsTemporalDuration(item: unknown): item is Temporal.Duration {
   return HasSlot(item, YEARS, MONTHS, DAYS, HOURS, MINUTES, SECONDS, MILLISECONDS, MICROSECONDS, NANOSECONDS);
 }
 export function IsTemporalDate(item: unknown): item is Temporal.PlainDate {
   return HasSlot(item, DATE_BRAND);
 }
+
 export function IsTemporalTime(item: unknown): item is Temporal.PlainTime {
-  return (
-    HasSlot(item, ISO_HOUR, ISO_MINUTE, ISO_SECOND, ISO_MILLISECOND, ISO_MICROSECOND, ISO_NANOSECOND) &&
-    !HasSlot(item, ISO_YEAR, ISO_MONTH, ISO_DAY)
-  );
+  return HasSlot(item, TIME);
 }
+
 export function IsTemporalDateTime(item: unknown): item is Temporal.PlainDateTime {
-  return HasSlot(
-    item,
-    ISO_YEAR,
-    ISO_MONTH,
-    ISO_DAY,
-    ISO_HOUR,
-    ISO_MINUTE,
-    ISO_SECOND,
-    ISO_MILLISECOND,
-    ISO_MICROSECOND,
-    ISO_NANOSECOND
-  );
+  return HasSlot(item, ISO_DATE_TIME);
 }
+
 export function IsTemporalYearMonth(item: unknown): item is Temporal.PlainYearMonth {
   return HasSlot(item, YEAR_MONTH_BRAND);
 }
@@ -328,9 +453,20 @@ export function IsTemporalMonthDay(item: unknown): item is Temporal.PlainMonthDa
 export function IsTemporalZonedDateTime(item: unknown): item is Temporal.ZonedDateTime {
   return HasSlot(item, EPOCHNANOSECONDS, TIME_ZONE, CALENDAR);
 }
-export function RejectObjectWithCalendarOrTimeZone(item: AnyTemporalLikeType) {
+
+export function CheckReceiver<T extends AnySlottedType>(
+  item: unknown,
+  test: (item: unknown) => item is T
+): asserts item is T {
+  if (!test(item)) throw new TypeError('invalid receiver: method called with the wrong type of this-object');
+}
+
+export function RejectTemporalLikeObject(item: AnyTemporalLikeType) {
   if (HasSlot(item, CALENDAR) || HasSlot(item, TIME_ZONE)) {
     throw new TypeError('with() does not support a calendar or timeZone property');
+  }
+  if (IsTemporalTime(item)) {
+    throw new TypeError('with() does not accept Temporal.PlainTime, use withPlainTime() instead');
   }
   if ((item as { calendar: unknown }).calendar !== undefined) {
     throw new TypeError('with() does not support a calendar property');
@@ -339,81 +475,75 @@ export function RejectObjectWithCalendarOrTimeZone(item: AnyTemporalLikeType) {
     throw new TypeError('with() does not support a timeZone property');
   }
 }
-function ParseTemporalTimeZone(stringIdent: string) {
-  let { ianaName, offset, z } = ParseTemporalTimeZoneString(stringIdent);
-  if (ianaName) return ianaName;
-  if (z) return 'UTC';
-  return offset as string; // if !ianaName && !z then offset must be present
-}
 
-function FormatCalendarAnnotation(id: string, showCalendar: Temporal.ShowCalendarOption['calendarName']) {
+function FormatCalendarAnnotation(id: BuiltinCalendarId, showCalendar: Temporal.ShowCalendarOption['calendarName']) {
   if (showCalendar === 'never') return '';
   if (showCalendar === 'auto' && id === 'iso8601') return '';
-  return `[u-ca=${id}]`;
+  const flag = showCalendar === 'critical' ? '!' : '';
+  return `[${flag}u-ca=${id}]`;
+}
+
+// Not a separate abstract operation in the spec, because it only occurs in one
+// place: ParseISODateTime. In the code it's more convenient to split up
+// ParseISODateTime for the YYYY-MM, MM-DD, and THH:MM:SS parse goals, so it's
+// repeated four times.
+function processAnnotations(annotations: string) {
+  let calendar;
+  let calendarWasCritical = false;
+  // Avoid the user code minefield of matchAll.
+  let match;
+  PARSE.annotation.lastIndex = 0;
+  while ((match = PARSE.annotation.exec(annotations))) {
+    const { 1: critical, 2: key, 3: value } = match;
+    if (key === 'u-ca') {
+      if (calendar === undefined) {
+        calendar = value;
+        calendarWasCritical = critical === '!';
+      } else if (critical === '!' || calendarWasCritical) {
+        throw new RangeError(`Invalid annotations in ${annotations}: more than one u-ca present with critical flag`);
+      }
+    } else if (critical === '!') {
+      throw new RangeError(`Unrecognized annotation: !${key}=${value}`);
+    }
+  }
+  return calendar;
 }
 
 function ParseISODateTime(isoString: string) {
   // ZDT is the superset of fields for every other Temporal type
   const match = PARSE.zoneddatetime.exec(isoString);
-  if (!match) throw new RangeError(`invalid ISO 8601 string: ${isoString}`);
+  if (!match) throw new RangeError(`invalid RFC 9557 string: ${isoString}`);
+  const calendar = processAnnotations(match[16]);
   let yearString = match[1];
-  if (yearString[0] === '\u2212') yearString = `-${yearString.slice(1)}`;
-  if (yearString === '-000000') throw new RangeError(`invalid ISO 8601 string: ${isoString}`);
-  const year = ToInteger(yearString);
-  const month = ToInteger(match[2] || match[4]);
-  const day = ToInteger(match[3] || match[5]);
-  const hour = ToInteger(match[6]);
+  if (yearString === '-000000') throw new RangeError(`invalid RFC 9557 string: ${isoString}`);
+  const year = +yearString;
+  const month = +(match[2] ?? match[4] ?? 1);
+  const day = +(match[3] ?? match[5] ?? 1);
   const hasTime = match[6] !== undefined;
-  const minute = ToInteger(match[7] || match[10]);
-  let second = ToInteger(match[8] || match[11]);
+  const hour = +(match[6] ?? 0);
+  const minute = +(match[7] ?? match[10] ?? 0);
+  let second = +(match[8] ?? match[11] ?? 0);
   if (second === 60) second = 59;
-  const fraction = (match[9] || match[12]) + '000000000';
-  const millisecond = ToInteger(fraction.slice(0, 3));
-  const microsecond = ToInteger(fraction.slice(3, 6));
-  const nanosecond = ToInteger(fraction.slice(6, 9));
+  const fraction = (match[9] ?? match[12] ?? '') + '000000000';
+  const millisecond = +fraction.slice(0, 3);
+  const microsecond = +fraction.slice(3, 6);
+  const nanosecond = +fraction.slice(6, 9);
   let offset;
   let z = false;
   if (match[13]) {
     offset = undefined;
     z = true;
-  } else if (match[14] && match[15]) {
-    const offsetSign = match[14] === '-' || match[14] === '\u2212' ? '-' : '+';
-    const offsetHours = match[15] || '00';
-    const offsetMinutes = match[16] || '00';
-    const offsetSeconds = match[17] || '00';
-    let offsetFraction = match[18] || '0';
-    offset = `${offsetSign}${offsetHours}:${offsetMinutes}`;
-    if (+offsetFraction) {
-      while (offsetFraction.endsWith('0')) offsetFraction = offsetFraction.slice(0, -1);
-      offset += `:${offsetSeconds}.${offsetFraction}`;
-    } else if (+offsetSeconds) {
-      offset += `:${offsetSeconds}`;
-    }
-    if (offset === '-00:00') offset = '+00:00';
+  } else if (match[14]) {
+    offset = match[14];
   }
-  let ianaName = match[19];
-  if (ianaName) {
-    try {
-      // Canonicalize name if it is an IANA link name or is capitalized wrong
-      ianaName = GetCanonicalTimeZoneIdentifier(ianaName).toString();
-    } catch {
-      // Not an IANA name, may be a custom ID, pass through unchanged
-    }
-  }
-  const calendar = match[20];
+  const tzAnnotation = match[15];
   RejectDateTime(year, month, day, hour, minute, second, millisecond, microsecond, nanosecond);
   return {
     year,
     month,
     day,
-    hasTime,
-    hour,
-    minute,
-    second,
-    millisecond,
-    microsecond,
-    nanosecond,
-    ianaName,
+    time: hasTime ? { hour, minute, second, millisecond, microsecond, nanosecond } : ('start-of-day' as const),
+    tzAnnotation,
     offset,
     z,
     calendar
@@ -430,7 +560,7 @@ export function ParseTemporalInstantString(isoString: string) {
 // ts-prune-ignore-next TODO: remove if test/validStrings is converted to TS.
 export function ParseTemporalZonedDateTimeString(isoString: string) {
   const result = ParseISODateTime(isoString);
-  if (!result.ianaName) throw new RangeError('Temporal.ZonedDateTime requires a time zone ID in brackets');
+  if (!result.tzAnnotation) throw new RangeError('Temporal.ZonedDateTime requires a time zone ID in brackets');
   return result;
 }
 
@@ -449,29 +579,28 @@ export function ParseTemporalTimeString(isoString: string) {
   const match = PARSE.time.exec(isoString);
   let hour, minute, second, millisecond, microsecond, nanosecond, calendar;
   if (match) {
-    hour = ToInteger(match[1]);
-    minute = ToInteger(match[2] || match[5]);
-    second = ToInteger(match[3] || match[6]);
+    calendar = processAnnotations(match[10]);
+    hour = +(match[1] ?? 0);
+    minute = +(match[2] ?? match[5] ?? 0);
+    second = +(match[3] ?? match[6] ?? 0);
     if (second === 60) second = 59;
-    const fraction = (match[4] || match[7]) + '000000000';
-    millisecond = ToInteger(fraction.slice(0, 3));
-    microsecond = ToInteger(fraction.slice(3, 6));
-    nanosecond = ToInteger(fraction.slice(6, 9));
-    calendar = match[15];
+    const fraction = (match[4] ?? match[7] ?? '') + '000000000';
+    millisecond = +fraction.slice(0, 3);
+    microsecond = +fraction.slice(3, 6);
+    nanosecond = +fraction.slice(6, 9);
+    if (match[8]) throw new RangeError('Z designator not supported for PlainTime');
   } else {
-    let z, hasTime;
-    ({ hasTime, hour, minute, second, millisecond, microsecond, nanosecond, calendar, z } =
-      ParseISODateTime(isoString));
-    if (!hasTime) throw new RangeError(`time is missing in string: ${isoString}`);
+    let time, z;
+    ({ time, z, calendar } = ParseISODateTime(isoString));
+    if (time === 'start-of-day') throw new RangeError(`time is missing in string: ${isoString}`);
     if (z) throw new RangeError('Z designator not supported for PlainTime');
+    ({ hour, minute, second, millisecond, microsecond, nanosecond } = time);
   }
+  RejectTime(hour, minute, second, millisecond, microsecond, nanosecond);
   // if it's a date-time string, OK
   if (/[tT ][0-9][0-9]/.test(isoString)) {
     return { hour, minute, second, millisecond, microsecond, nanosecond, calendar };
   }
-  // slow but non-grammar-dependent way to ensure that time-only strings that
-  // are also valid PlainMonthDay and PlainYearMonth throw. corresponds to
-  // assertion in spec text
   try {
     const { month, day } = ParseTemporalMonthDayString(isoString);
     RejectISODate(1972, month, day);
@@ -483,7 +612,7 @@ export function ParseTemporalTimeString(isoString: string) {
       return { hour, minute, second, millisecond, microsecond, nanosecond, calendar };
     }
   }
-  throw new RangeError(`invalid ISO 8601 time-only string ${isoString}; may need a T prefix`);
+  throw new RangeError(`invalid RFC 9557 time-only string ${isoString}; may need a T prefix`);
 }
 
 // ts-prune-ignore-next TODO: remove if test/validStrings is converted to TS.
@@ -491,12 +620,15 @@ export function ParseTemporalYearMonthString(isoString: string) {
   const match = PARSE.yearmonth.exec(isoString);
   let year, month, calendar, referenceISODay;
   if (match) {
+    calendar = processAnnotations(match[3]);
     let yearString = match[1];
-    if (yearString[0] === '\u2212') yearString = `-${yearString.slice(1)}`;
-    if (yearString === '-000000') throw new RangeError(`invalid ISO 8601 string: ${isoString}`);
-    year = ToInteger(yearString);
-    month = ToInteger(match[2]);
-    calendar = match[3];
+    if (yearString === '-000000') throw new RangeError(`invalid RFC 9557 string: ${isoString}`);
+    year = +yearString;
+    month = +match[2];
+    referenceISODay = 1;
+    if (calendar !== undefined && calendar !== 'iso8601') {
+      throw new RangeError('YYYY-MM format is only valid with iso8601 calendar');
+    }
   } else {
     let z;
     ({ year, month, calendar, day: referenceISODay, z } = ParseISODateTime(isoString));
@@ -510,8 +642,12 @@ export function ParseTemporalMonthDayString(isoString: string) {
   const match = PARSE.monthday.exec(isoString);
   let month, day, calendar, referenceISOYear;
   if (match) {
-    month = ToInteger(match[1]);
-    day = ToInteger(match[2]);
+    calendar = processAnnotations(match[3]);
+    month = +match[1];
+    day = +match[2];
+    if (calendar !== undefined && calendar !== 'iso8601') {
+      throw new RangeError('MM-DD format is only valid with iso8601 calendar');
+    }
   } else {
     let z;
     ({ month, day, calendar, year: referenceISOYear, z } = ParseISODateTime(isoString));
@@ -520,101 +656,137 @@ export function ParseTemporalMonthDayString(isoString: string) {
   return { month, day, calendar, referenceISOYear };
 }
 
+const TIMEZONE_IDENTIFIER = new RegExp(`^${PARSE.timeZoneID.source}$`, 'i');
+const OFFSET_IDENTIFIER = new RegExp(`^${PARSE.offsetIdentifier.source}$`);
+
+function throwBadTimeZoneStringError(timeZoneString: string): never {
+  // Offset identifiers only support minute precision, but offsets in ISO
+  // strings support nanosecond precision. If the identifier is invalid but
+  // it's a valid ISO offset, then it has sub-minute precision. Show a clearer
+  // error message in that case.
+  const msg = OFFSET.test(timeZoneString) ? 'Seconds not allowed in offset time zone' : 'Invalid time zone';
+  throw new RangeError(`${msg}: ${timeZoneString}`);
+}
+
+export function ParseTimeZoneIdentifier(
+  identifier: string
+): { tzName: string; offsetMinutes?: undefined } | { tzName?: undefined; offsetMinutes: number } {
+  if (!TIMEZONE_IDENTIFIER.test(identifier)) {
+    throwBadTimeZoneStringError(identifier);
+  }
+  if (OFFSET_IDENTIFIER.test(identifier)) {
+    const offsetNanoseconds = ParseDateTimeUTCOffset(identifier);
+    // The regex limits the input to minutes precision, so we know that the
+    // division below will result in an integer.
+    return { offsetMinutes: offsetNanoseconds / 60e9 };
+  }
+  return { tzName: identifier };
+}
+
+// This operation doesn't exist in the spec, but in the polyfill it's split from
+// ParseTemporalTimeZoneString so that parsing can be tested separately from the
+// logic of converting parsed values into a named or offset identifier.
 // ts-prune-ignore-next TODO: remove if test/validStrings is converted to TS.
-export function ParseTemporalTimeZoneString(stringIdent: string): Partial<{
-  ianaName: string | undefined;
+export function ParseTemporalTimeZoneStringRaw(timeZoneString: string): {
+  tzAnnotation: string;
   offset: string | undefined;
-  z: boolean | undefined;
-}> {
-  try {
-    let canonicalIdent = GetCanonicalTimeZoneIdentifier(stringIdent);
-    if (canonicalIdent) return { ianaName: canonicalIdent.toString() };
-  } catch {
-    // fall through
+  z: boolean;
+} {
+  if (TIMEZONE_IDENTIFIER.test(timeZoneString)) {
+    return { tzAnnotation: timeZoneString, offset: undefined, z: false };
   }
   try {
     // Try parsing ISO string instead
-    const result = ParseISODateTime(stringIdent);
-    if (result.z || result.offset || result.ianaName) {
-      return result;
+    const { tzAnnotation, offset, z } = ParseISODateTime(timeZoneString);
+    if (z || tzAnnotation || offset) {
+      return { tzAnnotation, offset, z };
     }
   } catch {
     // fall through
   }
-  throw new RangeError(`Invalid time zone: ${stringIdent}`);
+  throwBadTimeZoneStringError(timeZoneString);
+}
+
+function ParseTemporalTimeZoneString(stringIdent: string): ReturnType<typeof ParseTimeZoneIdentifier> {
+  const { tzAnnotation, offset, z } = ParseTemporalTimeZoneStringRaw(stringIdent);
+  if (tzAnnotation) return ParseTimeZoneIdentifier(tzAnnotation);
+  if (z) return ParseTimeZoneIdentifier('UTC');
+  if (offset) return ParseTimeZoneIdentifier(offset);
+  /* c8 ignore next */ assertNotReached();
 }
 
 // ts-prune-ignore-next TODO: remove if test/validStrings is converted to TS.
-export function ParseTemporalDurationString(isoString: string) {
+export function ParseTemporalDurationStringRaw(isoString: string) {
   const match = PARSE.duration.exec(isoString);
   if (!match) throw new RangeError(`invalid duration: ${isoString}`);
-  if (match.slice(2).every((element) => element === undefined)) {
+  if (match.every((part, i) => i < 2 || part === undefined)) {
     throw new RangeError(`invalid duration: ${isoString}`);
   }
-  const sign = match[1] === '-' || match[1] === '\u2212' ? -1 : 1;
-  const years = ToInteger(match[2]) * sign;
-  const months = ToInteger(match[3]) * sign;
-  const weeks = ToInteger(match[4]) * sign;
-  const days = ToInteger(match[5]) * sign;
-  const hours = ToInteger(match[6]) * sign;
-  let fHours: number | string = match[7];
-  let minutes = ToInteger(match[8]) * sign;
-  let fMinutes: number | string = match[9];
-  let seconds = ToInteger(match[10]) * sign;
-  const fSeconds = match[11] + '000000000';
-  let milliseconds = ToInteger(fSeconds.slice(0, 3)) * sign;
-  let microseconds = ToInteger(fSeconds.slice(3, 6)) * sign;
-  let nanoseconds = ToInteger(fSeconds.slice(6, 9)) * sign;
+  const sign = match[1] === '-' ? -1 : 1;
+  const years = match[2] === undefined ? 0 : ToIntegerWithTruncation(match[2]) * sign;
+  const months = match[3] === undefined ? 0 : ToIntegerWithTruncation(match[3]) * sign;
+  const weeks = match[4] === undefined ? 0 : ToIntegerWithTruncation(match[4]) * sign;
+  const days = match[5] === undefined ? 0 : ToIntegerWithTruncation(match[5]) * sign;
+  const hours = match[6] === undefined ? 0 : ToIntegerWithTruncation(match[6]) * sign;
+  const fHours = match[7];
+  const minutesStr = match[8];
+  const fMinutes = match[9];
+  const secondsStr = match[10];
+  const fSeconds = match[11];
+  let minutes = 0;
+  let seconds = 0;
+  // fractional hours, minutes, or seconds, expressed in whole nanoseconds:
+  let excessNanoseconds = 0;
 
-  fHours = fHours ? (sign * ToInteger(fHours)) / 10 ** fHours.length : 0;
-  fMinutes = fMinutes ? (sign * ToInteger(fMinutes)) / 10 ** fMinutes.length : 0;
+  if (fHours !== undefined) {
+    if (minutesStr ?? fMinutes ?? secondsStr ?? fSeconds ?? false) {
+      throw new RangeError('only the smallest unit can be fractional');
+    }
+    excessNanoseconds = ToIntegerWithTruncation((fHours + '000000000').slice(0, 9)) * 3600 * sign;
+  } else {
+    minutes = minutesStr === undefined ? 0 : ToIntegerWithTruncation(minutesStr) * sign;
+    if (fMinutes !== undefined) {
+      if (secondsStr ?? fSeconds ?? false) {
+        throw new RangeError('only the smallest unit can be fractional');
+      }
+      excessNanoseconds = ToIntegerWithTruncation((fMinutes + '000000000').slice(0, 9)) * 60 * sign;
+    } else {
+      seconds = secondsStr === undefined ? 0 : ToIntegerWithTruncation(secondsStr) * sign;
+      if (fSeconds !== undefined) {
+        excessNanoseconds = ToIntegerWithTruncation((fSeconds + '000000000').slice(0, 9)) * sign;
+      }
+    }
+  }
 
-  ({ minutes, seconds, milliseconds, microseconds, nanoseconds } = DurationHandleFractions(
-    fHours,
-    minutes,
-    fMinutes,
-    seconds,
-    milliseconds,
-    microseconds,
-    nanoseconds
-  ));
+  const nanoseconds = excessNanoseconds % 1000;
+  const microseconds = Math.trunc(excessNanoseconds / 1000) % 1000;
+  const milliseconds = Math.trunc(excessNanoseconds / 1e6) % 1000;
+  seconds += Math.trunc(excessNanoseconds / 1e9) % 60;
+  minutes += Math.trunc(excessNanoseconds / 60e9);
+
   RejectDuration(years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds);
   return { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds };
 }
 
-// ts-prune-ignore-next TODO: remove if test/validStrings is converted to TS.
-export function ParseTemporalInstant(isoString: string) {
-  let { year, month, day, hour, minute, second, millisecond, microsecond, nanosecond, offset, z } =
-    ParseTemporalInstantString(isoString);
-
-  if (!z && !offset) throw new RangeError('Temporal.Instant requires a time zone offset');
-  // At least one of z or offset is defined, but TS doesn't seem to understand
-  // that we only use offset if z is not defined (and thus offset must be defined).
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const offsetNs = z ? 0 : ParseTimeZoneOffsetString(offset!);
-  ({ year, month, day, hour, minute, second, millisecond, microsecond, nanosecond } = BalanceISODateTime(
-    year,
-    month,
-    day,
-    hour,
-    minute,
-    second,
-    millisecond,
-    microsecond,
-    nanosecond - offsetNs
-  ));
-
-  const epochNs = GetEpochFromISOParts(year, month, day, hour, minute, second, millisecond, microsecond, nanosecond);
-  if (epochNs === null) throw new RangeError('DateTime outside of supported range');
-  return epochNs;
+function ParseTemporalDurationString(isoString: string) {
+  const { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } =
+    ParseTemporalDurationStringRaw(isoString);
+  const TemporalDuration = GetIntrinsic('%Temporal.Duration%');
+  return new TemporalDuration(
+    years,
+    months,
+    weeks,
+    days,
+    hours,
+    minutes,
+    seconds,
+    milliseconds,
+    microseconds,
+    nanoseconds
+  );
 }
 
-export function RegulateISODate(
-  yearParam: number,
-  monthParam: number,
-  dayParam: number,
-  overflow: Temporal.ArithmeticOptions['overflow']
-) {
+export function RegulateISODate(yearParam: number, monthParam: number, dayParam: number, overflow: Overflow) {
   let year = yearParam;
   let month = monthParam;
   let day = dayParam;
@@ -636,7 +808,7 @@ export function RegulateTime(
   millisecondParam: number,
   microsecondParam: number,
   nanosecondParam: number,
-  overflow: Temporal.ArithmeticOptions['overflow']
+  overflow: Overflow
 ) {
   let hour = hourParam;
   let minute = minuteParam;
@@ -650,140 +822,22 @@ export function RegulateTime(
       RejectTime(hour, minute, second, millisecond, microsecond, nanosecond);
       break;
     case 'constrain':
-      ({ hour, minute, second, millisecond, microsecond, nanosecond } = ConstrainTime(
-        hour,
-        minute,
-        second,
-        millisecond,
-        microsecond,
-        nanosecond
-      ));
+      hour = ConstrainToRange(hour, 0, 23);
+      minute = ConstrainToRange(minute, 0, 59);
+      second = ConstrainToRange(second, 0, 59);
+      millisecond = ConstrainToRange(millisecond, 0, 999);
+      microsecond = ConstrainToRange(microsecond, 0, 999);
+      nanosecond = ConstrainToRange(nanosecond, 0, 999);
       break;
   }
   return { hour, minute, second, millisecond, microsecond, nanosecond };
 }
 
-export function RegulateISOYearMonth(
-  yearParam: number,
-  monthParam: number,
-  overflow: Temporal.ArithmeticOptions['overflow']
-) {
-  let year = yearParam;
-  let month = monthParam;
-  const referenceISODay = 1;
-  switch (overflow) {
-    case 'reject':
-      RejectISODate(year, month, referenceISODay);
-      break;
-    case 'constrain':
-      ({ year, month } = ConstrainISODate(year, month));
-      break;
-  }
-  return { year, month };
-}
-
-function DurationHandleFractions(
-  fHoursParam: number,
-  minutesParam: number,
-  fMinutesParam: number,
-  secondsParam: number,
-  millisecondsParam: number,
-  microsecondsParam: number,
-  nanosecondsParam: number
-) {
-  let fHours = fHoursParam;
-  let minutes = minutesParam;
-  let fMinutes = fMinutesParam;
-  let seconds = secondsParam;
-  let milliseconds = millisecondsParam;
-  let microseconds = microsecondsParam;
-  let nanoseconds = nanosecondsParam;
-
-  if (fHours !== 0) {
-    [minutes, fMinutes, seconds, milliseconds, microseconds, nanoseconds].forEach((val) => {
-      if (val !== 0) throw new RangeError('only the smallest unit can be fractional');
-    });
-    const mins = fHours * 60;
-    minutes = MathTrunc(mins);
-    fMinutes = mins % 1;
-  }
-
-  if (fMinutes !== 0) {
-    [seconds, milliseconds, microseconds, nanoseconds].forEach((val) => {
-      if (val !== 0) throw new RangeError('only the smallest unit can be fractional');
-    });
-    const secs = fMinutes * 60;
-    seconds = MathTrunc(secs);
-    const fSeconds = secs % 1;
-
-    if (fSeconds !== 0) {
-      const mils = fSeconds * 1000;
-      milliseconds = MathTrunc(mils);
-      const fMilliseconds = mils % 1;
-
-      if (fMilliseconds !== 0) {
-        const mics = fMilliseconds * 1000;
-        microseconds = MathTrunc(mics);
-        const fMicroseconds = mics % 1;
-
-        if (fMicroseconds !== 0) {
-          const nans = fMicroseconds * 1000;
-          nanoseconds = MathTrunc(nans);
-        }
-      }
-    }
-  }
-
-  return { minutes, seconds, milliseconds, microseconds, nanoseconds };
-}
-
-function ToTemporalDurationRecord(item: Temporal.DurationLike | string) {
-  if (!IsObject(item)) {
-    return ParseTemporalDurationString(ToString(item));
-  }
-  if (IsTemporalDuration(item)) {
-    return {
-      years: GetSlot(item, YEARS),
-      months: GetSlot(item, MONTHS),
-      weeks: GetSlot(item, WEEKS),
-      days: GetSlot(item, DAYS),
-      hours: GetSlot(item, HOURS),
-      minutes: GetSlot(item, MINUTES),
-      seconds: GetSlot(item, SECONDS),
-      milliseconds: GetSlot(item, MILLISECONDS),
-      microseconds: GetSlot(item, MICROSECONDS),
-      nanoseconds: GetSlot(item, NANOSECONDS)
-    };
-  }
-  const result = {
-    years: 0,
-    months: 0,
-    weeks: 0,
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-    milliseconds: 0,
-    microseconds: 0,
-    nanoseconds: 0
-  };
-  let partial = ToTemporalPartialDurationRecord(item);
-  for (const property of DURATION_FIELDS) {
-    const value = partial[property];
-    if (value !== undefined) {
-      result[property] = value;
-    }
-  }
-  let { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = result;
-  RejectDuration(years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds);
-  return { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds };
-}
-
-function ToTemporalPartialDurationRecord(temporalDurationLike: Temporal.DurationLike | string) {
+export function ToTemporalPartialDurationRecord(temporalDurationLike: Temporal.DurationLike | string) {
   if (!IsObject(temporalDurationLike)) {
     throw new TypeError('invalid duration-like');
   }
-  const result: Record<typeof DURATION_FIELDS[number], number | undefined> = {
+  const result: Record<(typeof DURATION_FIELDS)[number], number | undefined> = {
     years: undefined,
     months: undefined,
     weeks: undefined,
@@ -796,11 +850,12 @@ function ToTemporalPartialDurationRecord(temporalDurationLike: Temporal.Duration
     nanoseconds: undefined
   };
   let any = false;
-  for (const property of DURATION_FIELDS) {
+  for (let index = 0; index < DURATION_FIELDS.length; index++) {
+    const property = DURATION_FIELDS[index];
     const value = temporalDurationLike[property];
     if (value !== undefined) {
       any = true;
-      result[property] = ToIntegerWithoutRounding(value);
+      result[property] = ToIntegerIfIntegral(value);
     }
   }
   if (!any) {
@@ -809,133 +864,141 @@ function ToTemporalPartialDurationRecord(temporalDurationLike: Temporal.Duration
   return result;
 }
 
-function ToLimitedTemporalDuration(
-  item: Temporal.DurationLike | string,
-  disallowedProperties: (keyof Temporal.DurationLike)[]
+export function AdjustDateDurationRecord(
+  { years, months, weeks, days }: DateDuration,
+  newDays: number,
+  newWeeks?: number,
+  newMonths?: number
 ) {
-  let record = ToTemporalDurationRecord(item);
-  for (const property of disallowedProperties) {
-    if (record[property] !== 0) {
-      throw new RangeError(
-        `Duration field ${property} not supported by Temporal.Instant. Try Temporal.ZonedDateTime instead.`
-      );
-    }
-  }
-  return record;
+  return {
+    years,
+    months: newMonths ?? months,
+    weeks: newWeeks ?? weeks,
+    days: newDays ?? days
+  };
 }
 
-export function ToTemporalOverflow(options: Temporal.AssignmentOptions | undefined) {
-  if (options === undefined) return 'constrain';
+export function ZeroDateDuration() {
+  return { years: 0, months: 0, weeks: 0, days: 0 };
+}
+
+export function CombineISODateAndTimeRecord(isoDate: ISODate, time: TimeRecord) {
+  return { isoDate, time };
+}
+
+export function MidnightTimeRecord() {
+  return { deltaDays: 0, hour: 0, minute: 0, second: 0, millisecond: 0, microsecond: 0, nanosecond: 0 };
+}
+
+export function NoonTimeRecord() {
+  return { deltaDays: 0, hour: 12, minute: 0, second: 0, millisecond: 0, microsecond: 0, nanosecond: 0 };
+}
+
+export function GetTemporalOverflowOption(options: Temporal.AssignmentOptions) {
   return GetOption(options, 'overflow', ['constrain', 'reject'], 'constrain');
 }
 
-export function ToTemporalDisambiguation(options: Temporal.ToInstantOptions | undefined) {
-  if (options === undefined) return 'compatible';
+export function GetTemporalDisambiguationOption(options: Temporal.ToInstantOptions) {
   return GetOption(options, 'disambiguation', ['compatible', 'earlier', 'later', 'reject'], 'compatible');
 }
 
-export function ToTemporalRoundingMode(
+export function GetRoundingModeOption(
   options: { roundingMode?: Temporal.RoundingMode },
   fallback: Temporal.RoundingMode
 ) {
-  return GetOption(options, 'roundingMode', ['ceil', 'floor', 'trunc', 'halfExpand'], fallback);
+  return GetOption(
+    options,
+    'roundingMode',
+    ['ceil', 'floor', 'expand', 'trunc', 'halfCeil', 'halfFloor', 'halfExpand', 'halfTrunc', 'halfEven'],
+    fallback
+  );
 }
 
-function NegateTemporalRoundingMode(roundingMode: Temporal.RoundingMode) {
+function NegateRoundingMode(roundingMode: Temporal.RoundingMode) {
   switch (roundingMode) {
     case 'ceil':
       return 'floor';
     case 'floor':
       return 'ceil';
+    case 'halfCeil':
+      return 'halfFloor';
+    case 'halfFloor':
+      return 'halfCeil';
     default:
       return roundingMode;
   }
 }
 
-export function ToTemporalOffset(
-  options: Temporal.OffsetDisambiguationOptions | undefined,
+export function GetTemporalOffsetOption(
+  options: Temporal.OffsetDisambiguationOptions,
   fallback: Required<Temporal.OffsetDisambiguationOptions>['offset']
 ) {
-  if (options === undefined) return fallback;
   return GetOption(options, 'offset', ['prefer', 'use', 'ignore', 'reject'], fallback);
 }
 
-export function ToShowCalendarOption(options: Temporal.ShowCalendarOption) {
-  return GetOption(options, 'calendarName', ['auto', 'always', 'never'], 'auto');
+export function GetTemporalShowCalendarNameOption(options: Temporal.ShowCalendarOption) {
+  return GetOption(options, 'calendarName', ['auto', 'always', 'never', 'critical'], 'auto');
 }
 
-export function ToShowTimeZoneNameOption(options: Temporal.ZonedDateTimeToStringOptions) {
-  return GetOption(options, 'timeZoneName', ['auto', 'never'], 'auto');
+export function GetTemporalShowTimeZoneNameOption(options: Temporal.ZonedDateTimeToStringOptions) {
+  return GetOption(options, 'timeZoneName', ['auto', 'never', 'critical'], 'auto');
 }
 
-export function ToShowOffsetOption(options: Temporal.ZonedDateTimeToStringOptions) {
+export function GetTemporalShowOffsetOption(options: Temporal.ZonedDateTimeToStringOptions) {
   return GetOption(options, 'offset', ['auto', 'never'], 'auto');
 }
 
-export function ToTemporalRoundingIncrement(
-  options: { roundingIncrement?: number },
-  dividend: number | undefined,
-  inclusive?: boolean
-) {
-  let maximum = Infinity;
-  if (dividend !== undefined) maximum = dividend;
-  if (!inclusive && dividend !== undefined) maximum = dividend > 1 ? dividend - 1 : 1;
-  const increment = GetNumberOption(options, 'roundingIncrement', 1, maximum, 1);
-  if (dividend !== undefined && dividend % increment !== 0) {
+export function GetDirectionOption(options: { direction?: 'next' | 'previous' }) {
+  return GetOption(options, 'direction', ['next', 'previous'], REQUIRED);
+}
+
+export function GetTemporalRoundingIncrementOption(options: { roundingIncrement?: number }) {
+  let increment = options.roundingIncrement;
+  if (increment === undefined) return 1;
+  const integerIncrement = ToIntegerWithTruncation(increment);
+  if (integerIncrement < 1 || integerIncrement > 1e9) {
+    throw new RangeError(`roundingIncrement must be at least 1 and at most 1e9, not ${increment}`);
+  }
+  return integerIncrement;
+}
+export function ValidateTemporalRoundingIncrement(increment: number, dividend: number, inclusive: boolean) {
+  const maximum = inclusive ? dividend : dividend - 1;
+  if (increment > maximum) {
+    throw new RangeError(`roundingIncrement must be at least 1 and less than ${maximum}, not ${increment}`);
+  }
+  if (dividend % increment !== 0) {
     throw new RangeError(`Rounding increment must divide evenly into ${dividend}`);
   }
-  return increment;
 }
 
-type TemporalDateTimeRoundingMaximumIncrements = {
-  year?: number;
-  month?: number;
-  week?: number;
-  day?: number;
-  hour?: number;
-  minute: number;
-  second: number;
-  millisecond: number;
-  microsecond: number;
-  nanosecond: number;
-};
-
-export function ToTemporalDateTimeRoundingIncrement(
-  options: { roundingIncrement?: number },
-  smallestUnit: keyof TemporalDateTimeRoundingMaximumIncrements
-) {
-  const maximumIncrements: TemporalDateTimeRoundingMaximumIncrements = {
-    year: undefined,
-    month: undefined,
-    week: undefined,
-    day: undefined,
-    hour: 24,
-    minute: 60,
-    second: 60,
-    millisecond: 1000,
-    microsecond: 1000,
-    nanosecond: 1000
-  };
-  return ToTemporalRoundingIncrement(options, maximumIncrements[smallestUnit], false);
+export function GetTemporalFractionalSecondDigitsOption(
+  normalizedOptions: Temporal.ToStringPrecisionOptions
+): Temporal.ToStringPrecisionOptions['fractionalSecondDigits'] {
+  const digitsValue = normalizedOptions.fractionalSecondDigits;
+  if (digitsValue === undefined) return 'auto';
+  if (typeof digitsValue !== 'number') {
+    if (ToString(digitsValue) !== 'auto') {
+      throw new RangeError(`fractionalSecondDigits must be 'auto' or 0 through 9, not ${digitsValue}`);
+    }
+    return 'auto';
+  }
+  const digitCount = Math.floor(digitsValue);
+  if (!Number.isFinite(digitCount) || digitCount < 0 || digitCount > 9) {
+    throw new RangeError(`fractionalSecondDigits must be 'auto' or 0 through 9, not ${digitsValue}`);
+  }
+  return digitCount as Exclude<Temporal.ToStringPrecisionOptions['fractionalSecondDigits'], 'auto'>;
 }
 
-export function ToSecondsStringPrecision(options: Temporal.ToStringPrecisionOptions): {
-  precision: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 'auto' | 'minute';
+interface SecondsStringPrecisionRecord {
+  precision: Temporal.ToStringPrecisionOptions['fractionalSecondDigits'] | 'minute';
   unit: UnitSmallerThanOrEqualTo<'minute'>;
   increment: number;
-} {
-  const smallestUnit = GetTemporalUnit(options, 'smallestUnit', 'time', undefined);
-  if (smallestUnit === 'hour') {
-    const ALLOWED_UNITS = SINGULAR_PLURAL_UNITS.reduce((allowed, [p, s, c]) => {
-      // Weirdly, local type inference seems to understand the types of s and p, but tsc still complains.
-      // Maybe this is fixed in later TS versions?
-      if (c === 'time' && s !== 'hour') {
-        allowed.push(s as Temporal.TimeUnit, p as Temporal.PluralUnit<Temporal.TimeUnit>);
-      }
-      return allowed;
-    }, [] as Array<Temporal.TimeUnit | Temporal.PluralUnit<Temporal.TimeUnit>>);
-    throw new RangeError(`smallestUnit must be one of ${ALLOWED_UNITS.join(', ')}, not ${smallestUnit}`);
-  }
+}
+
+export function ToSecondsStringPrecisionRecord(
+  smallestUnit: Temporal.ToStringPrecisionOptions['smallestUnit'],
+  precision: Temporal.ToStringPrecisionOptions['fractionalSecondDigits']
+): SecondsStringPrecisionRecord {
   switch (smallestUnit) {
     case 'minute':
       return { precision: 'minute', unit: 'minute', increment: 1 };
@@ -949,18 +1012,9 @@ export function ToSecondsStringPrecision(options: Temporal.ToStringPrecisionOpti
       return { precision: 9, unit: 'nanosecond', increment: 1 };
     default: // fall through if option not given
   }
-  let digits = options.fractionalSecondDigits;
-  if (digits === undefined) digits = 'auto';
-  if (typeof digits !== 'number') {
-    const stringDigits = ToString(digits);
-    if (stringDigits === 'auto') return { precision: 'auto', unit: 'nanosecond', increment: 1 };
-    throw new RangeError(`fractionalSecondDigits must be 'auto' or 0 through 9, not ${stringDigits}`);
-  }
-  if (NumberIsNaN(digits) || digits < 0 || digits > 9) {
-    throw new RangeError(`fractionalSecondDigits must be 'auto' or 0 through 9, not ${digits}`);
-  }
-  const precision = MathFloor(digits);
   switch (precision) {
+    case 'auto':
+      return { precision, unit: 'nanosecond', increment: 1 };
     case 0:
       return { precision, unit: 'second', increment: 1 };
     case 1:
@@ -976,7 +1030,7 @@ export function ToSecondsStringPrecision(options: Temporal.ToStringPrecisionOpti
     case 9:
       return { precision, unit: 'nanosecond', increment: 10 ** (9 - precision) };
     default:
-      throw new RangeError(`fractionalSecondDigits must be 'auto' or 0 through 9, not ${digits}`);
+      throw new RangeError(`fractionalSecondDigits must be 'auto' or 0 through 9, not ${precision}`);
   }
 }
 
@@ -999,13 +1053,13 @@ type AllowedGetTemporalUnitDefaultValues = {
   unit: undefined;
 };
 
-export function GetTemporalUnit<
+export function GetTemporalUnitValuedOption<
   U extends keyof TemporalUnitOptionsBag,
   T extends keyof UnitTypeMapping,
   D extends typeof REQUIRED | UnitTypeMapping[T] | AllowedGetTemporalUnitDefaultValues[U],
   R extends Exclude<D, typeof REQUIRED> | UnitTypeMapping[T]
 >(options: TemporalUnitOptionsBag, key: U, unitGroup: T, requiredOrDefault: D): R;
-export function GetTemporalUnit<
+export function GetTemporalUnitValuedOption<
   U extends keyof TemporalUnitOptionsBag,
   T extends keyof UnitTypeMapping,
   D extends typeof REQUIRED | UnitTypeMapping[T] | AllowedGetTemporalUnitDefaultValues[U],
@@ -1015,7 +1069,7 @@ export function GetTemporalUnit<
 // This signature of the function is NOT used in type-checking, so restricting
 // the default value via generic binding like the other overloads isn't
 // necessary.
-export function GetTemporalUnit<
+export function GetTemporalUnitValuedOption<
   T extends keyof UnitTypeMapping,
   D extends typeof REQUIRED | UnitTypeMapping[T] | 'auto' | undefined,
   E extends 'auto' | Temporal.DateTimeUnit,
@@ -1027,24 +1081,27 @@ export function GetTemporalUnit<
   requiredOrDefault: D,
   extraValues: ReadonlyArray<E> | never[] = []
 ): R {
-  const allowedSingular: Array<Temporal.DateTimeUnit | 'auto'> = [];
-  for (const [, singular, category] of SINGULAR_PLURAL_UNITS) {
+  let allowedSingular: Array<Temporal.DateTimeUnit | 'auto'> = [];
+  for (let index = 0; index < TEMPORAL_UNITS.length; index++) {
+    const unitInfo = TEMPORAL_UNITS[index];
+    const singular = unitInfo[1];
+    const category = unitInfo[2];
     if (unitGroup === 'datetime' || unitGroup === category) {
       allowedSingular.push(singular);
     }
   }
-  allowedSingular.push(...extraValues);
+  allowedSingular = allowedSingular.concat(extraValues);
   let defaultVal: typeof REQUIRED | Temporal.DateTimeUnit | 'auto' | undefined = requiredOrDefault;
   if (defaultVal === REQUIRED) {
     defaultVal = undefined;
   } else if (defaultVal !== undefined) {
     allowedSingular.push(defaultVal);
   }
-  const allowedValues: Array<Temporal.DateTimeUnit | Temporal.PluralUnit<Temporal.DateTimeUnit> | 'auto'> = [
-    ...allowedSingular
-  ];
-  for (const singular of allowedSingular) {
-    const plural = PLURAL_FOR.get(singular as Parameters<typeof PLURAL_FOR.get>[0]);
+  let allowedValues: Array<Temporal.DateTimeUnit | Temporal.PluralUnit<Temporal.DateTimeUnit> | 'auto'> = [];
+  allowedValues = allowedValues.concat(allowedSingular);
+  for (let index = 0; index < allowedSingular.length; index++) {
+    const singular = allowedSingular[index];
+    const plural = PLURAL_FOR[singular];
     if (plural !== undefined) allowedValues.push(plural);
   }
   let retval = GetOption(options, key, allowedValues, defaultVal);
@@ -1052,15 +1109,10 @@ export function GetTemporalUnit<
     throw new RangeError(`${key} is required`);
   }
   // Coerce any plural units into their singular form
-  if (SINGULAR_FOR.has(retval as Temporal.PluralUnit<Temporal.DateTimeUnit>)) {
-    // We just has-checked this, but tsc doesn't understand that.
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return SINGULAR_FOR.get(retval as Temporal.PluralUnit<Temporal.DateTimeUnit>)! as R;
-  }
-  return retval as R;
+  return (retval && retval in SINGULAR_FOR ? SINGULAR_FOR[retval] : retval) as R;
 }
 
-export function ToRelativeTemporalObject(options: {
+export function GetTemporalRelativeToOption(options: {
   relativeTo?:
     | Temporal.ZonedDateTime
     | Temporal.PlainDateTime
@@ -1068,113 +1120,83 @@ export function ToRelativeTemporalObject(options: {
     | Temporal.PlainDateTimeLike
     | string
     | undefined;
-}): Temporal.ZonedDateTime | Temporal.PlainDate | undefined {
+}):
+  | { zonedRelativeTo?: Temporal.ZonedDateTime; plainRelativeTo?: never }
+  | { plainRelativeTo?: Temporal.PlainDate; zonedRelativeTo?: never } {
   const relativeTo = options.relativeTo;
-  if (relativeTo === undefined) return relativeTo;
+  if (relativeTo === undefined) return {};
 
   let offsetBehaviour: OffsetBehaviour = 'option';
   let matchMinutes = false;
-  let year, month, day, hour, minute, second, millisecond, microsecond, nanosecond, calendar, timeZone, offset;
+  let isoDate, time, calendar, timeZone, offset;
   if (IsObject(relativeTo)) {
-    if (IsTemporalZonedDateTime(relativeTo) || IsTemporalDate(relativeTo)) return relativeTo;
-    if (IsTemporalDateTime(relativeTo)) return TemporalDateTimeToDate(relativeTo);
-    calendar = GetTemporalCalendarWithISODefault(relativeTo);
-    const fieldNames = CalendarFields(calendar, [
-      'day',
-      'hour',
-      'microsecond',
-      'millisecond',
-      'minute',
-      'month',
-      'monthCode',
-      'nanosecond',
-      'second',
-      'year'
-    ] as const);
-    const fields = PrepareTemporalFields(relativeTo, fieldNames, []);
-    const dateOptions = ObjectCreate(null);
-    dateOptions.overflow = 'constrain';
-    ({ year, month, day, hour, minute, second, millisecond, microsecond, nanosecond } = InterpretTemporalDateTimeFields(
-      calendar,
-      fields,
-      dateOptions
-    ));
-    // The `offset` and `timeZone` properties only exist on ZonedDateTime (or
-    // ZonedDateTimeLike-property bags). The assertions below are used to avoid
-    // TS errors while not diverging runtime code from proposal-temporal.
-    offset = (relativeTo as Temporal.ZonedDateTimeLike).offset;
-    if (offset === undefined) offsetBehaviour = 'wall';
-    timeZone = (relativeTo as Temporal.ZonedDateTimeLike).timeZone;
-  } else {
-    let ianaName, z;
-    ({ year, month, day, hour, minute, second, millisecond, microsecond, nanosecond, calendar, ianaName, offset, z } =
-      ParseISODateTime(ToString(relativeTo)));
-    if (ianaName) timeZone = ianaName;
-    if (z) {
-      offsetBehaviour = 'exact';
-    } else if (!offset) {
-      offsetBehaviour = 'wall';
+    if (IsTemporalZonedDateTime(relativeTo)) {
+      return { zonedRelativeTo: relativeTo };
     }
-    if (!calendar) calendar = GetISO8601Calendar();
-    calendar = ToTemporalCalendar(calendar);
-    matchMinutes = true;
-  }
-  if (timeZone !== undefined) {
-    timeZone = ToTemporalTimeZone(timeZone);
-    let offsetNs = 0;
-    if (offsetBehaviour === 'option') offsetNs = ParseTimeZoneOffsetString(ToString(offset));
-    const epochNanoseconds = InterpretISODateTimeOffset(
-      year,
-      month,
-      day,
-      hour,
-      minute,
-      second,
-      millisecond,
-      microsecond,
-      nanosecond,
-      offsetBehaviour,
-      offsetNs,
-      timeZone,
-      'compatible',
-      'reject',
-      matchMinutes
+    if (IsTemporalDate(relativeTo)) return { plainRelativeTo: relativeTo };
+    if (IsTemporalDateTime(relativeTo)) {
+      return {
+        plainRelativeTo: CreateTemporalDate(GetSlot(relativeTo, ISO_DATE_TIME).isoDate, GetSlot(relativeTo, CALENDAR))
+      };
+    }
+    calendar = GetTemporalCalendarIdentifierWithISODefault(relativeTo);
+    const fields = PrepareCalendarFields(
+      calendar,
+      relativeTo,
+      ['year', 'month', 'monthCode', 'day'],
+      ['hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond', 'offset', 'timeZone'],
+      []
     );
-    return CreateTemporalZonedDateTime(epochNanoseconds, timeZone, calendar);
+    ({ isoDate, time } = InterpretTemporalDateTimeFields(calendar, fields, 'constrain'));
+    ({ offset, timeZone } = fields);
+    if (offset === undefined) offsetBehaviour = 'wall';
+  } else {
+    let tzAnnotation, z, year, month, day;
+    ({ year, month, day, time, calendar, tzAnnotation, offset, z } = ParseISODateTime(RequireString(relativeTo)));
+    if (tzAnnotation) {
+      timeZone = ToTemporalTimeZoneIdentifier(tzAnnotation);
+      if (z) {
+        offsetBehaviour = 'exact';
+      } else if (!offset) {
+        offsetBehaviour = 'wall';
+      }
+      matchMinutes = true;
+    } else if (z) {
+      throw new RangeError(
+        'Z designator not supported for PlainDate relativeTo; either remove the Z or add a bracketed time zone'
+      );
+    }
+    if (!calendar) calendar = 'iso8601';
+    calendar = CanonicalizeCalendar(calendar);
+    isoDate = { year, month, day };
   }
-  return CreateTemporalDate(year, month, day, calendar);
+  if (timeZone === undefined) {
+    return { plainRelativeTo: CreateTemporalDate(isoDate, calendar) };
+  }
+  const offsetNs = offsetBehaviour === 'option' ? ParseDateTimeUTCOffset(castExists(offset)) : 0;
+  const epochNanoseconds = InterpretISODateTimeOffset(
+    isoDate,
+    time,
+    offsetBehaviour,
+    offsetNs,
+    timeZone,
+    'compatible',
+    'reject',
+    matchMinutes
+  );
+  return { zonedRelativeTo: CreateTemporalZonedDateTime(epochNanoseconds, timeZone, calendar) };
 }
 
-export function DefaultTemporalLargestUnit(
-  years: number,
-  months: number,
-  weeks: number,
-  days: number,
-  hours: number,
-  minutes: number,
-  seconds: number,
-  milliseconds: number,
-  microseconds: number,
-  nanoseconds: number
-): Temporal.DateTimeUnit {
-  for (const [prop, v] of [
-    ['years', years],
-    ['months', months],
-    ['weeks', weeks],
-    ['days', days],
-    ['hours', hours],
-    ['minutes', minutes],
-    ['seconds', seconds],
-    ['milliseconds', milliseconds],
-    ['microseconds', microseconds],
-    ['nanoseconds', nanoseconds]
-  ] as const) {
-    if (v !== 0) {
-      // All the above keys are definitely in SINGULAR_FOR
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      return SINGULAR_FOR.get(prop)!;
-    }
-  }
+export function DefaultTemporalLargestUnit(duration: Temporal.Duration) {
+  if (GetSlot(duration, YEARS) !== 0) return 'year';
+  if (GetSlot(duration, MONTHS) !== 0) return 'month';
+  if (GetSlot(duration, WEEKS) !== 0) return 'week';
+  if (GetSlot(duration, DAYS) !== 0) return 'day';
+  if (GetSlot(duration, HOURS) !== 0) return 'hour';
+  if (GetSlot(duration, MINUTES) !== 0) return 'minute';
+  if (GetSlot(duration, SECONDS) !== 0) return 'second';
+  if (GetSlot(duration, MILLISECONDS) !== 0) return 'millisecond';
+  if (GetSlot(duration, MICROSECONDS) !== 0) return 'microsecond';
   return 'nanosecond';
 }
 
@@ -1182,149 +1204,123 @@ export function LargerOfTwoTemporalUnits<T1 extends Temporal.DateTimeUnit, T2 ex
   unit1: T1,
   unit2: T2
 ) {
-  if (UNITS_DESCENDING.indexOf(unit1) > UNITS_DESCENDING.indexOf(unit2)) return unit2;
+  const i1 = UNITS_DESCENDING.indexOf(unit1);
+  const i2 = UNITS_DESCENDING.indexOf(unit2);
+  if (i1 > i2) {
+    return unit2;
+  }
   return unit1;
 }
 
-function MergeLargestUnitOption<T extends Temporal.DateTimeUnit>(
-  optionsParam: Temporal.DifferenceOptions<T> | undefined,
-  largestUnit: T
-): Temporal.DifferenceOptions<T> {
-  let options = optionsParam;
-  if (options === undefined) options = ObjectCreate(null);
-  return ObjectAssign(ObjectCreate(null), options, { largestUnit });
+export function IsCalendarUnit(unit: Temporal.DateTimeUnit): unit is Exclude<Temporal.DateUnit, 'day'> {
+  return unit === 'year' || unit === 'month' || unit === 'week';
 }
 
-type FieldCompleteness = 'complete' | 'partial';
-interface FieldPrepareOptions {
-  emptySourceErrorMessage: string;
+export function TemporalUnitCategory(unit: Temporal.DateTimeUnit) {
+  if (IsCalendarUnit(unit) || unit === 'day') return 'date';
+  return 'time';
 }
 
-type AnyTemporalKey = Exclude<Keys<AnyTemporalLikeType>, symbol>;
+function calendarImplForID(calendar: BuiltinCalendarId) {
+  return GetIntrinsic('%calendarImpl%')(calendar);
+}
 
-// Keys is a conditionally-mapped version of keyof
-type Keys<T> = T extends Record<string, unknown> ? keyof T : never;
+export function calendarImplForObj(
+  temporalObj:
+    | Temporal.PlainDate
+    | Temporal.PlainDateTime
+    | Temporal.PlainMonthDay
+    | Temporal.PlainYearMonth
+    | Temporal.ZonedDateTime
+) {
+  return GetIntrinsic('%calendarImpl%')(GetSlot(temporalObj, CALENDAR));
+}
 
-// Returns all potential owners from all Temporal Like-types for a given union
-// of keys in K.
-// e.g.
-// Owner<'nanosecond'> => PlainDateTimeLike | ZonedDateTimeLike | PlainDateTimeLike | ZonedDateTimeLike
-// Owner<'nanoseconds'> => Duration (the only type with plural keys)
-type Owner<K extends AnyTemporalKey> =
-  // Conditional typing maps over all of the types given in AnyTemporalLikeType
-  // union
-  K extends unknown ? OwnerOf<K, AnyTemporalLikeType> : 'ThisShouldNeverHappen';
+type ISODateToFieldsReturn<Type extends ISODateToFieldsType> = Resolve<{
+  year: Type extends 'date' | 'year-month' ? number : never;
+  monthCode: string;
+  day: Type extends 'date' | 'month-day' ? number : never;
+}>;
 
-// Returns T iff T has K as all of the key(s) (even if those keys are optional
-// in T), never otherwise. This is a private type for use only in the Owner type
-// above.
-type OwnerOf<K extends AnyTemporalKey, T> =
-  // Distribute the union before passing to Required
-  // Without distributing, this is
-  // Required<ZonedDateTimeLike | DurationLike> extends Record
-  // vs (with distribution)
-  // Required<ZonedDateTimeLike> extends Record<....> | Required<DurationLike> extends Record<....>
-  T extends unknown
-    ? // All the keys in the Like-types are optional, so in order for them to
-      // 'extend Record<K,...>', where K indicates the required fields, we pass T
-      // through Required to make all the keys non-optional.
-      // Note this doesn't work the other way around: using Partial<Record<K, ..>>
-      // will always be extended by any object (as all the keys are optional).
-      Required<T> extends Record<K, unknown>
-      ? T
-      : // never is the 'identity' type for unions - nothing will be added or
-        // removed from the union.
-        never
-    : 'ThisShouldNeverHappen';
+export function ISODateToFields(calendar: BuiltinCalendarId, isoDate: ISODate): ISODateToFieldsReturn<'date'>;
+export function ISODateToFields<T extends ISODateToFieldsType>(
+  calendar: BuiltinCalendarId,
+  isoDate: ISODate,
+  type: T
+): ISODateToFieldsReturn<T>;
+export function ISODateToFields(calendar: BuiltinCalendarId, isoDate: ISODate, type = 'date') {
+  const fields = Object.create(null);
+  const calendarImpl = calendarImplForID(calendar);
+  const calendarDate = calendarImpl.isoToDate(isoDate, { year: true, monthCode: true, day: true });
+
+  fields.monthCode = calendarDate.monthCode;
+  if (type === 'month-day' || type === 'date') {
+    fields.day = calendarDate.day;
+  }
+  if (type === 'year-month' || type === 'date') {
+    fields.year = calendarDate.year;
+  }
+  return fields;
+}
 
 type Prop<T, K> = T extends unknown ? (K extends keyof T ? T[K] : undefined) : 'ThisShouldNeverHappen';
 
-// Resolve copies the keys and values of a given object type so that TS will
-// stop using type names in error messages / autocomplete. Generally, those
-// names can be more useful, but sometimes having the primitive object shape is
-// significantly easier to reason about (e.g. deeply-nested types).
-// Resolve is an identity function for function types.
-type Resolve<T> =
-  // Re-mapping doesn't work very well for functions, so exclude them
-  T extends (...args: never[]) => unknown
-    ? T
-    : // Re-map all the keys in T to the same value. This forces TS into no longer
-      // using type aliases, etc.
-      { [K in keyof T]: T[K] };
-
-type FieldObjectFromOwners<OwnerT, FieldKeys extends AnyTemporalKey> = Resolve<
+type FieldObjectWithRequired<FieldKeys extends FieldKey> = Resolve<
   // The resulting object type contains:
   // - All keys in FieldKeys, which are required properties and their values
   //   don't include undefined.
-  // - All the other keys in OwnerT that aren't in FieldKeys, which are optional
-  //   properties and their value types explicitly include undefined.
+  // - All the other keys in CalendarFieldsRecord that aren't in FieldKeys,
+  //   which are optional properties and their value types explicitly include
+  //   undefined.
   {
-    -readonly [k in FieldKeys]: Exclude<Prop<OwnerT, k>, undefined>;
+    -readonly [k in FieldKeys]: Exclude<Prop<CalendarFieldsRecord, k>, undefined>;
   } & {
-    -readonly [k in Exclude<Keys<OwnerT>, FieldKeys>]?: Prop<OwnerT, k> | undefined;
+    -readonly [k in Exclude<Keys<CalendarFieldsRecord>, FieldKeys>]?: Prop<CalendarFieldsRecord, k> | undefined;
   }
 >;
 
-type PrepareTemporalFieldsReturn<
-  FieldKeys extends AnyTemporalKey,
-  RequiredFieldsOpt extends ReadonlyArray<FieldKeys> | FieldCompleteness,
-  OwnerT extends Owner<FieldKeys>
-> = RequiredFieldsOpt extends 'partial' ? Partial<OwnerT> : FieldObjectFromOwners<OwnerT, FieldKeys>;
-export function PrepareTemporalFields<
-  FieldKeys extends AnyTemporalKey,
-  // Constrains the Required keys to be a subset of the given field keys
-  // This could have been written directly into the parameter type, but that
-  // causes an unintended effect where the required fields are added to the list
-  // of field keys, even if that key isn't present in 'fields'.
-  // RequiredFieldKeys extends FieldKeys,
-  RequiredFields extends ReadonlyArray<FieldKeys> | FieldCompleteness
+type PrepareCalendarFieldsReturn<
+  FieldKeys extends FieldKey,
+  RequiredFieldsOpt extends ReadonlyArray<FieldKey> | 'partial'
+> = RequiredFieldsOpt extends 'partial' ? Partial<CalendarFieldsRecord> : FieldObjectWithRequired<FieldKeys>;
+
+export function PrepareCalendarFields<
+  FieldKeys extends FieldKey,
+  RequiredFields extends ReadonlyArray<FieldKey> | 'partial'
 >(
+  calendar: BuiltinCalendarId,
   bag: Partial<Record<FieldKeys, unknown>>,
-  fields: ReadonlyArray<FieldKeys>,
-  requiredFields: RequiredFields,
-  { emptySourceErrorMessage }: FieldPrepareOptions = { emptySourceErrorMessage: 'no supported properties found' }
-): PrepareTemporalFieldsReturn<FieldKeys, RequiredFields, Owner<FieldKeys>> {
-  const result: Partial<Record<AnyTemporalKey, unknown>> = ObjectCreate(null);
+  calendarFieldNames: Array<FieldKeys>,
+  nonCalendarFieldNames: Array<FieldKeys>,
+  requiredFields: RequiredFields
+): PrepareCalendarFieldsReturn<FieldKeys, RequiredFields> {
+  const extraFieldNames = calendarImplForID(calendar).extraFields(calendarFieldNames) as FieldKeys[];
+  const fields = calendarFieldNames.concat(nonCalendarFieldNames, extraFieldNames);
+  const result: Partial<Record<AnyTemporalKey, unknown>> = Object.create(null);
   let any = false;
-  for (const property of fields) {
-    let value = bag[property];
+  fields.sort();
+  for (let index = 0; index < fields.length; index++) {
+    const property = fields[index];
+    const value = bag[property];
     if (value !== undefined) {
       any = true;
-      if (BUILTIN_CASTS.has(property)) {
-        // We just has-checked this map access, so there will definitely be a
-        // value.
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        value = BUILTIN_CASTS.get(property)!(value);
-      }
-      result[property] = value;
+      result[property] = castExists(BUILTIN_CASTS[property])(value);
     } else if (requiredFields !== 'partial') {
-      // TODO: using .call in this way is not correctly type-checked by tsc.
-      // We might need a type-safe Call wrapper?
-      if (ArrayIncludes.call(requiredFields, property)) {
+      if (requiredFields.includes(property)) {
         throw new TypeError(`required property '${property}' missing or undefined`);
       }
-      value = BUILTIN_DEFAULTS.get(property);
-      result[property] = value;
+      result[property] = BUILTIN_DEFAULTS[property];
     }
   }
   if (requiredFields === 'partial' && !any) {
-    throw new TypeError(emptySourceErrorMessage);
+    throw new TypeError('no supported properties found');
   }
-  if ((result.era === undefined) !== (result.eraYear === undefined)) {
-    throw new RangeError("properties 'era' and 'eraYear' must be provided together");
-  }
-  return result as unknown as PrepareTemporalFieldsReturn<FieldKeys, RequiredFields, Owner<FieldKeys>>;
+  return result as unknown as PrepareCalendarFieldsReturn<FieldKeys, RequiredFields>;
 }
 
-interface TimeRecord {
-  hour?: number;
-  minute?: number;
-  second?: number;
-  microsecond?: number;
-  millisecond?: number;
-  nanosecond?: number;
-}
-export function ToTemporalTimeRecord(bag: Partial<Record<keyof TimeRecord, string | number>>): Required<TimeRecord>;
+type FieldCompleteness = 'complete' | 'partial';
+
+export function ToTemporalTimeRecord(bag: Partial<Record<keyof TimeRecord, string | number>>): TimeRecord;
 export function ToTemporalTimeRecord(
   bag: Partial<Record<keyof TimeRecord, string | number | undefined>>,
   completeness: 'partial'
@@ -1332,448 +1328,213 @@ export function ToTemporalTimeRecord(
 export function ToTemporalTimeRecord(
   bag: Partial<Record<keyof TimeRecord, string | number>>,
   completeness: 'complete'
-): Required<TimeRecord>;
+): TimeRecord;
 export function ToTemporalTimeRecord(
   bag: Partial<Record<keyof TimeRecord, string | number | undefined>>,
   completeness: FieldCompleteness = 'complete'
 ): Partial<TimeRecord> {
-  // NOTE: Field order here is important.
-  const fields = ['hour', 'microsecond', 'millisecond', 'minute', 'nanosecond', 'second'] as const;
-  const partial = PrepareTemporalFields(bag, fields, 'partial', { emptySourceErrorMessage: 'invalid time-like' });
-  const result: Partial<TimeRecord> = {};
-  for (const field of fields) {
-    const valueDesc = ObjectGetOwnPropertyDescriptor(partial, field);
-    if (valueDesc !== undefined) {
-      result[field] = valueDesc.value;
+  // NOTE: Field order is sorted to make the sort in PrepareTemporalFields more efficient.
+  const fields: (keyof TimeRecord)[] = ['hour', 'microsecond', 'millisecond', 'minute', 'nanosecond', 'second'];
+  let any = false;
+  const result: Partial<TimeRecord> = Object.create(null);
+  for (let index = 0; index < fields.length; index++) {
+    const field = fields[index];
+    const value = bag[field];
+    if (value !== undefined) {
+      result[field] = ToIntegerWithTruncation(value);
+      any = true;
     } else if (completeness === 'complete') {
       result[field] = 0;
     }
   }
+  if (!any) throw new TypeError('invalid time-like');
   return result;
 }
 
 export function ToTemporalDate(
-  itemParam: PlainDateParams['from'][0],
+  item: PlainDateParams['from'][0],
   options?: PlainDateParams['from'][1]
 ): Temporal.PlainDate {
-  let item = itemParam;
   if (IsObject(item)) {
-    if (IsTemporalDate(item)) return item;
+    if (IsTemporalDate(item)) {
+      GetTemporalOverflowOption(GetOptionsObject(options));
+      return CreateTemporalDate(GetSlot(item, ISO_DATE), GetSlot(item, CALENDAR));
+    }
     if (IsTemporalZonedDateTime(item)) {
-      ToTemporalOverflow(options); // validate and ignore
-      item = BuiltinTimeZoneGetPlainDateTimeFor(
-        GetSlot(item, TIME_ZONE),
-        GetSlot(item, INSTANT),
-        GetSlot(item, CALENDAR)
-      );
+      const isoDateTime = GetISODateTimeFor(GetSlot(item, TIME_ZONE), GetSlot(item, EPOCHNANOSECONDS));
+      GetTemporalOverflowOption(GetOptionsObject(options)); // validate and ignore
+      const isoDate = isoDateTime.isoDate;
+      return CreateTemporalDate(isoDate, GetSlot(item, CALENDAR));
     }
     if (IsTemporalDateTime(item)) {
-      ToTemporalOverflow(options); // validate and ignore
-      return CreateTemporalDate(
-        GetSlot(item, ISO_YEAR),
-        GetSlot(item, ISO_MONTH),
-        GetSlot(item, ISO_DAY),
-        GetSlot(item, CALENDAR)
-      );
+      GetTemporalOverflowOption(GetOptionsObject(options)); // validate and ignore
+      return CreateTemporalDate(GetSlot(item, ISO_DATE_TIME).isoDate, GetSlot(item, CALENDAR));
     }
-    const calendar = GetTemporalCalendarWithISODefault(item);
-    const fieldNames = CalendarFields(calendar, ['day', 'month', 'monthCode', 'year'] as const);
-    const fields = PrepareTemporalFields(item, fieldNames, []);
-    return CalendarDateFromFields(calendar, fields, options);
+    const calendar = GetTemporalCalendarIdentifierWithISODefault(item);
+    const fields = PrepareCalendarFields(calendar, item, ['year', 'month', 'monthCode', 'day'], [], []);
+    const overflow = GetTemporalOverflowOption(GetOptionsObject(options));
+    const isoDate = CalendarDateFromFields(calendar, fields, overflow);
+    return CreateTemporalDate(isoDate, calendar);
   }
-  ToTemporalOverflow(options); // validate and ignore
-  const { year, month, day, calendar, z } = ParseTemporalDateString(ToString(item));
+  let { year, month, day, calendar, z } = ParseTemporalDateString(RequireString(item));
   if (z) throw new RangeError('Z designator not supported for PlainDate');
-  const TemporalPlainDate = GetIntrinsic('%Temporal.PlainDate%');
-  return new TemporalPlainDate(year, month, day, calendar); // include validation
+  if (!calendar) calendar = 'iso8601';
+  calendar = CanonicalizeCalendar(calendar);
+  uncheckedAssertNarrowedType<BuiltinCalendarId>(calendar, 'lowercased and canonicalized');
+  GetTemporalOverflowOption(GetOptionsObject(options)); // validate and ignore
+  return CreateTemporalDate({ year, month, day }, calendar);
 }
 
 export function InterpretTemporalDateTimeFields(
-  calendar: Temporal.CalendarProtocol,
-  fields: PrimitiveFieldsOf<Temporal.PlainDateTimeLike> & Parameters<typeof CalendarDateFromFields>[1],
-  options?: Temporal.AssignmentOptions
+  calendar: BuiltinCalendarId,
+  fields: CalendarFieldsRecord & TimeRecord,
+  overflow: Overflow
 ) {
-  let { hour, minute, second, millisecond, microsecond, nanosecond } = ToTemporalTimeRecord(fields);
-  const overflow = ToTemporalOverflow(options);
-  const date = CalendarDateFromFields(calendar, fields, options);
-  const year = GetSlot(date, ISO_YEAR);
-  const month = GetSlot(date, ISO_MONTH);
-  const day = GetSlot(date, ISO_DAY);
-  ({ hour, minute, second, millisecond, microsecond, nanosecond } = RegulateTime(
-    hour,
-    minute,
-    second,
-    millisecond,
-    microsecond,
-    nanosecond,
+  const isoDate = CalendarDateFromFields(calendar, fields, overflow);
+  const time = RegulateTime(
+    fields.hour,
+    fields.minute,
+    fields.second,
+    fields.millisecond,
+    fields.microsecond,
+    fields.nanosecond,
     overflow
-  ));
-  return { year, month, day, hour, minute, second, millisecond, microsecond, nanosecond };
+  );
+  return CombineISODateAndTimeRecord(isoDate, time);
 }
 
 export function ToTemporalDateTime(item: PlainDateTimeParams['from'][0], options?: PlainDateTimeParams['from'][1]) {
-  let year: number,
-    month: number,
-    day: number,
-    hour: number,
-    minute: number,
-    second: number,
-    millisecond: number,
-    microsecond: number,
-    nanosecond: number,
-    calendar;
+  let isoDate, time, calendar;
+
   if (IsObject(item)) {
-    if (IsTemporalDateTime(item)) return item;
+    if (IsTemporalDateTime(item)) {
+      GetTemporalOverflowOption(GetOptionsObject(options));
+      return CreateTemporalDateTime(GetSlot(item, ISO_DATE_TIME), GetSlot(item, CALENDAR));
+    }
     if (IsTemporalZonedDateTime(item)) {
-      ToTemporalOverflow(options); // validate and ignore
-      return BuiltinTimeZoneGetPlainDateTimeFor(
-        GetSlot(item, TIME_ZONE),
-        GetSlot(item, INSTANT),
-        GetSlot(item, CALENDAR)
-      );
+      const isoDateTime = GetISODateTimeFor(GetSlot(item, TIME_ZONE), GetSlot(item, EPOCHNANOSECONDS));
+      GetTemporalOverflowOption(GetOptionsObject(options));
+      return CreateTemporalDateTime(isoDateTime, GetSlot(item, CALENDAR));
     }
     if (IsTemporalDate(item)) {
-      ToTemporalOverflow(options); // validate and ignore
+      GetTemporalOverflowOption(GetOptionsObject(options));
       return CreateTemporalDateTime(
-        GetSlot(item, ISO_YEAR),
-        GetSlot(item, ISO_MONTH),
-        GetSlot(item, ISO_DAY),
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
+        CombineISODateAndTimeRecord(GetSlot(item, ISO_DATE), MidnightTimeRecord()),
         GetSlot(item, CALENDAR)
       );
     }
 
-    calendar = GetTemporalCalendarWithISODefault(item);
-    const fieldNames = CalendarFields(calendar, [
-      'day',
-      'hour',
-      'microsecond',
-      'millisecond',
-      'minute',
-      'month',
-      'monthCode',
-      'nanosecond',
-      'second',
-      'year'
-    ] as const);
-    const fields = PrepareTemporalFields(item, fieldNames, []);
-    ({ year, month, day, hour, minute, second, millisecond, microsecond, nanosecond } = InterpretTemporalDateTimeFields(
+    calendar = GetTemporalCalendarIdentifierWithISODefault(item);
+    const fields = PrepareCalendarFields(
       calendar,
-      fields,
-      options
-    ));
+      item,
+      ['year', 'month', 'monthCode', 'day'],
+      ['hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond'],
+      []
+    );
+    const overflow = GetTemporalOverflowOption(GetOptionsObject(options));
+    ({ isoDate, time } = InterpretTemporalDateTimeFields(calendar, fields, overflow));
   } else {
-    ToTemporalOverflow(options); // validate and ignore
-    let z;
-    ({ year, month, day, hour, minute, second, millisecond, microsecond, nanosecond, calendar, z } =
-      ParseTemporalDateTimeString(ToString(item)));
+    let z, year, month, day;
+    ({ year, month, day, time, calendar, z } = ParseTemporalDateTimeString(RequireString(item)));
     if (z) throw new RangeError('Z designator not supported for PlainDateTime');
-    RejectDateTime(year, month, day, hour, minute, second, millisecond, microsecond, nanosecond);
-    if (calendar === undefined) calendar = GetISO8601Calendar();
-    calendar = ToTemporalCalendar(calendar);
+    if (time === 'start-of-day') time = MidnightTimeRecord();
+    RejectDateTime(
+      year,
+      month,
+      day,
+      time.hour,
+      time.minute,
+      time.second,
+      time.millisecond,
+      time.microsecond,
+      time.nanosecond
+    );
+    if (!calendar) calendar = 'iso8601';
+    calendar = CanonicalizeCalendar(calendar);
+    GetTemporalOverflowOption(GetOptionsObject(options));
+    isoDate = { year, month, day };
   }
-  return CreateTemporalDateTime(year, month, day, hour, minute, second, millisecond, microsecond, nanosecond, calendar);
+  const isoDateTime = CombineISODateAndTimeRecord(isoDate, time);
+  return CreateTemporalDateTime(isoDateTime, calendar);
 }
 
 export function ToTemporalDuration(item: DurationParams['from'][0]) {
-  if (IsTemporalDuration(item)) return item;
-  let { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } =
-    ToTemporalDurationRecord(item);
   const TemporalDuration = GetIntrinsic('%Temporal.Duration%');
+  if (IsTemporalDuration(item)) {
+    return new TemporalDuration(
+      GetSlot(item, YEARS),
+      GetSlot(item, MONTHS),
+      GetSlot(item, WEEKS),
+      GetSlot(item, DAYS),
+      GetSlot(item, HOURS),
+      GetSlot(item, MINUTES),
+      GetSlot(item, SECONDS),
+      GetSlot(item, MILLISECONDS),
+      GetSlot(item, MICROSECONDS),
+      GetSlot(item, NANOSECONDS)
+    );
+  }
+  if (!IsObject(item)) {
+    return ParseTemporalDurationString(RequireString(item));
+  }
+  const result = {
+    years: 0,
+    months: 0,
+    weeks: 0,
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+    milliseconds: 0,
+    microseconds: 0,
+    nanoseconds: 0
+  };
+  let partial = ToTemporalPartialDurationRecord(item);
+  for (let index = 0; index < DURATION_FIELDS.length; index++) {
+    const property = DURATION_FIELDS[index];
+    const value = partial[property];
+    if (value !== undefined) {
+      result[property] = value;
+    }
+  }
   return new TemporalDuration(
-    years,
-    months,
-    weeks,
-    days,
-    hours,
-    minutes,
-    seconds,
-    milliseconds,
-    microseconds,
-    nanoseconds
+    result.years,
+    result.months,
+    result.weeks,
+    result.days,
+    result.hours,
+    result.minutes,
+    result.seconds,
+    result.milliseconds,
+    result.microseconds,
+    result.nanoseconds
   );
 }
 
-export function ToTemporalInstant(item: InstantParams['from'][0]) {
-  if (IsTemporalInstant(item)) return item;
-  if (IsTemporalZonedDateTime(item)) {
-    const TemporalInstant = GetIntrinsic('%Temporal.Instant%');
-    return new TemporalInstant(GetSlot(item, EPOCHNANOSECONDS));
-  }
-  const ns = ParseTemporalInstant(ToString(item));
-  const TemporalInstant = GetIntrinsic('%Temporal.Instant%');
-  return new TemporalInstant(ns);
-}
-
-export function ToTemporalMonthDay(
-  itemParam: PlainMonthDayParams['from'][0],
-  options?: PlainMonthDayParams['from'][1]
-) {
-  let item = itemParam;
-  if (IsObject(item)) {
-    if (IsTemporalMonthDay(item)) return item;
-    let calendar: Temporal.CalendarProtocol, calendarAbsent: boolean;
-    if (HasSlot(item, CALENDAR)) {
-      calendar = GetSlot(item, CALENDAR);
-      calendarAbsent = false;
-    } else {
-      let maybeStringCalendar = item.calendar;
-      calendarAbsent = maybeStringCalendar === undefined;
-      if (maybeStringCalendar === undefined) maybeStringCalendar = GetISO8601Calendar();
-      calendar = ToTemporalCalendar(maybeStringCalendar);
+export function ToTemporalInstant(itemParam: InstantParams['from'][0]) {
+  let item: string | number;
+  if (IsObject(itemParam)) {
+    if (IsTemporalInstant(itemParam) || IsTemporalZonedDateTime(itemParam)) {
+      return CreateTemporalInstant(GetSlot(itemParam, EPOCHNANOSECONDS));
     }
-    // HasSlot above adjusts the type of 'item' to include
-    // TypesWithCalendarUnits, which causes type-inference failures below.
-    // This is probably indicative of problems with HasSlot's typing.
-    item = item as Temporal.PlainMonthDayLike;
-    const fieldNames = CalendarFields(calendar, ['day', 'month', 'monthCode', 'year'] as const);
-    const fields = PrepareTemporalFields(item, fieldNames, []);
-    // Callers who omit the calendar are not writing calendar-independent
-    // code. In that case, `monthCode`/`year` can be omitted; `month` and
-    // `day` are sufficient. Add a `year` to satisfy calendar validation.
-    if (calendarAbsent && fields.month !== undefined && fields.monthCode === undefined && fields.year === undefined) {
-      fields.year = 1972;
-    }
-    return CalendarMonthDayFromFields(calendar, fields, options);
-  }
-
-  ToTemporalOverflow(options); // validate and ignore
-  let { month, day, referenceISOYear, calendar: maybeStringCalendar } = ParseTemporalMonthDayString(ToString(item));
-  let calendar: Temporal.CalendarProtocol | string | undefined = maybeStringCalendar;
-  if (calendar === undefined) calendar = GetISO8601Calendar();
-  calendar = ToTemporalCalendar(calendar);
-
-  if (referenceISOYear === undefined) {
-    RejectISODate(1972, month, day);
-    return CreateTemporalMonthDay(month, day, calendar);
-  }
-  const result = CreateTemporalMonthDay(month, day, calendar, referenceISOYear);
-  return CalendarMonthDayFromFields(calendar, result);
-}
-
-export function ToTemporalTime(
-  itemParam: PlainTimeParams['from'][0],
-  overflow: NonNullable<PlainTimeParams['from'][1]>['overflow'] = 'constrain'
-) {
-  let item = itemParam;
-  let hour, minute, second, millisecond, microsecond, nanosecond, calendar;
-  if (IsObject(item)) {
-    if (IsTemporalTime(item)) return item;
-    if (IsTemporalZonedDateTime(item)) {
-      item = BuiltinTimeZoneGetPlainDateTimeFor(
-        GetSlot(item, TIME_ZONE),
-        GetSlot(item, INSTANT),
-        GetSlot(item, CALENDAR)
-      );
-    }
-    if (IsTemporalDateTime(item)) {
-      const TemporalPlainTime = GetIntrinsic('%Temporal.PlainTime%');
-      return new TemporalPlainTime(
-        GetSlot(item, ISO_HOUR),
-        GetSlot(item, ISO_MINUTE),
-        GetSlot(item, ISO_SECOND),
-        GetSlot(item, ISO_MILLISECOND),
-        GetSlot(item, ISO_MICROSECOND),
-        GetSlot(item, ISO_NANOSECOND)
-      );
-    }
-    calendar = GetTemporalCalendarWithISODefault(item);
-    if (ToString(calendar) !== 'iso8601') {
-      throw new RangeError('PlainTime can only have iso8601 calendar');
-    }
-    ({ hour, minute, second, millisecond, microsecond, nanosecond } = ToTemporalTimeRecord(item));
-    ({ hour, minute, second, millisecond, microsecond, nanosecond } = RegulateTime(
-      hour,
-      minute,
-      second,
-      millisecond,
-      microsecond,
-      nanosecond,
-      overflow
-    ));
+    item = ToPrimitive(itemParam, String);
   } else {
-    ({ hour, minute, second, millisecond, microsecond, nanosecond, calendar } = ParseTemporalTimeString(
-      ToString(item)
-    ));
-    RejectTime(hour, minute, second, millisecond, microsecond, nanosecond);
-    if (calendar !== undefined && calendar !== 'iso8601') {
-      throw new RangeError('PlainTime can only have iso8601 calendar');
-    }
+    item = itemParam;
   }
-  const TemporalPlainTime = GetIntrinsic('%Temporal.PlainTime%');
-  return new TemporalPlainTime(hour, minute, second, millisecond, microsecond, nanosecond);
-}
+  const { year, month, day, time, offset, z } = ParseTemporalInstantString(RequireString(item));
+  const {
+    hour = 0,
+    minute = 0,
+    second = 0,
+    millisecond = 0,
+    microsecond = 0,
+    nanosecond = 0
+  } = time === 'start-of-day' ? {} : time;
 
-export function ToTemporalYearMonth(
-  item: PlainYearMonthParams['from'][0],
-  options?: PlainYearMonthParams['from'][1]
-): Temporal.PlainYearMonth {
-  if (IsObject(item)) {
-    if (IsTemporalYearMonth(item)) return item;
-    const calendar = GetTemporalCalendarWithISODefault(item);
-    const fieldNames = CalendarFields(calendar, ['month', 'monthCode', 'year'] as const);
-    const fields = PrepareTemporalFields(item, fieldNames, []);
-    return CalendarYearMonthFromFields(calendar, fields, options);
-  }
-
-  ToTemporalOverflow(options); // validate and ignore
-  let { year, month, referenceISODay, calendar: maybeStringCalendar } = ParseTemporalYearMonthString(ToString(item));
-  // TODO: replace with ternary?
-  let calendar: Temporal.CalendarProtocol | string = maybeStringCalendar;
-  if (calendar === undefined) calendar = GetISO8601Calendar();
-  calendar = ToTemporalCalendar(calendar);
-
-  if (referenceISODay === undefined) {
-    RejectISODate(year, month, 1);
-    return CreateTemporalYearMonth(year, month, calendar);
-  }
-  const result = CreateTemporalYearMonth(year, month, calendar, referenceISODay);
-  return CalendarYearMonthFromFields(calendar, result);
-}
-
-type OffsetBehaviour = 'wall' | 'exact' | 'option';
-
-export function InterpretISODateTimeOffset(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-  second: number,
-  millisecond: number,
-  microsecond: number,
-  nanosecond: number,
-  offsetBehaviour: OffsetBehaviour,
-  offsetNs: number,
-  timeZone: Temporal.TimeZoneProtocol,
-  disambiguation: NonNullable<Temporal.ToInstantOptions['disambiguation']>,
-  offsetOpt: Temporal.OffsetDisambiguationOptions['offset'],
-  matchMinute: boolean
-) {
-  const DateTime = GetIntrinsic('%Temporal.PlainDateTime%');
-  const dt = new DateTime(year, month, day, hour, minute, second, millisecond, microsecond, nanosecond);
-
-  if (offsetBehaviour === 'wall' || offsetOpt === 'ignore') {
-    // Simple case: ISO string without a TZ offset (or caller wants to ignore
-    // the offset), so just convert DateTime to Instant in the given time zone
-    const instant = BuiltinTimeZoneGetInstantFor(timeZone, dt, disambiguation);
-    return GetSlot(instant, EPOCHNANOSECONDS);
-  }
-
-  // The caller wants the offset to always win ('use') OR the caller is OK
-  // with the offset winning ('prefer' or 'reject') as long as it's valid
-  // for this timezone and date/time.
-  if (offsetBehaviour === 'exact' || offsetOpt === 'use') {
-    // Calculate the instant for the input's date/time and offset
-    const epochNs = GetEpochFromISOParts(year, month, day, hour, minute, second, millisecond, microsecond, nanosecond);
-    if (epochNs === null) throw new RangeError('ZonedDateTime outside of supported range');
-    return JSBI.subtract(epochNs, JSBI.BigInt(offsetNs));
-  }
-
-  // "prefer" or "reject"
-  const possibleInstants = GetPossibleInstantsFor(timeZone, dt);
-  for (const candidate of possibleInstants) {
-    const candidateOffset = GetOffsetNanosecondsFor(timeZone, candidate);
-    const roundedCandidateOffset = JSBI.toNumber(
-      RoundNumberToIncrement(JSBI.BigInt(candidateOffset), 60e9, 'halfExpand')
-    );
-    if (candidateOffset === offsetNs || (matchMinute && roundedCandidateOffset === offsetNs)) {
-      return GetSlot(candidate, EPOCHNANOSECONDS);
-    }
-  }
-
-  // the user-provided offset doesn't match any instants for this time
-  // zone and date/time.
-  if (offsetOpt === 'reject') {
-    const offsetStr = FormatTimeZoneOffsetString(offsetNs);
-    const timeZoneString = IsTemporalTimeZone(timeZone) ? GetSlot(timeZone, TIMEZONE_ID) : 'time zone';
-    // The tsc emit for this line rewrites to invoke the PlainDateTime's valueOf method, NOT
-    // toString (which is invoked by Node when using template literals directly).
-    // See https://github.com/microsoft/TypeScript/issues/39744 for the proposed fix in tsc emit
-    throw new RangeError(`Offset ${offsetStr} is invalid for ${dt.toString()} in ${timeZoneString}`);
-  }
-  // fall through: offsetOpt === 'prefer', but the offset doesn't match
-  // so fall back to use the time zone instead.
-  const instant = DisambiguatePossibleInstants(possibleInstants, timeZone, dt, disambiguation);
-  return GetSlot(instant, EPOCHNANOSECONDS);
-}
-
-export function ToTemporalZonedDateTime(
-  item: ZonedDateTimeParams['from'][0],
-  options?: ZonedDateTimeParams['from'][1]
-) {
-  let year: number,
-    month: number,
-    day: number,
-    hour: number,
-    minute: number,
-    second: number,
-    millisecond: number,
-    microsecond: number,
-    nanosecond: number,
-    timeZone,
-    offset: string | undefined,
-    calendar: string | Temporal.CalendarProtocol;
-  let matchMinute = false;
-  let offsetBehaviour: OffsetBehaviour = 'option';
-  if (IsObject(item)) {
-    if (IsTemporalZonedDateTime(item)) return item;
-    calendar = GetTemporalCalendarWithISODefault(item);
-    const fieldNames = CalendarFields(calendar, [
-      'day',
-      'hour',
-      'microsecond',
-      'millisecond',
-      'minute',
-      'month',
-      'monthCode',
-      'nanosecond',
-      'second',
-      'year'
-    ] as const);
-    const fieldNamesWithTzAndOffset = ArrayPush(fieldNames, 'timeZone', 'offset');
-    const fields = PrepareTemporalFields(item, fieldNamesWithTzAndOffset, ['timeZone']);
-    ({ year, month, day, hour, minute, second, millisecond, microsecond, nanosecond } = InterpretTemporalDateTimeFields(
-      calendar,
-      fields,
-      options
-    ));
-    timeZone = ToTemporalTimeZone(fields.timeZone);
-    offset = fields.offset;
-    if (offset === undefined) {
-      offsetBehaviour = 'wall';
-    } else {
-      offset = ToString(offset);
-    }
-  } else {
-    ToTemporalOverflow(options); // validate and ignore
-    let ianaName, z;
-    ({ year, month, day, hour, minute, second, millisecond, microsecond, nanosecond, ianaName, offset, z, calendar } =
-      ParseTemporalZonedDateTimeString(ToString(item)));
-    if (!ianaName) throw new RangeError('time zone ID required in brackets');
-    if (z) {
-      offsetBehaviour = 'exact';
-    } else if (!offset) {
-      offsetBehaviour = 'wall';
-    }
-    const TemporalTimeZone = GetIntrinsic('%Temporal.TimeZone%');
-    timeZone = new TemporalTimeZone(ianaName);
-    if (!calendar) calendar = GetISO8601Calendar();
-    calendar = ToTemporalCalendar(calendar);
-    matchMinute = true; // ISO strings may specify offset with less precision
-  }
-  let offsetNs = 0;
-  // The code above guarantees that if offsetBehaviour === 'option', then
-  // `offset` is not undefined.
-  if (offsetBehaviour === 'option') offsetNs = ParseTimeZoneOffsetString(offset as string);
-  const disambiguation = ToTemporalDisambiguation(options);
-  const offsetOpt = ToTemporalOffset(options, 'reject');
-  const epochNanoseconds = InterpretISODateTimeOffset(
+  // ParseTemporalInstantString ensures that either `z` is true or or `offset` is non-undefined
+  const offsetNanoseconds = z ? 0 : ParseDateTimeUTCOffset(castExists(offset));
+  const balanced = BalanceISODateTime(
     year,
     month,
     day,
@@ -1782,7 +1543,250 @@ export function ToTemporalZonedDateTime(
     second,
     millisecond,
     microsecond,
-    nanosecond,
+    nanosecond - offsetNanoseconds
+  );
+  CheckISODaysRange(balanced.isoDate);
+  const epochNanoseconds = GetUTCEpochNanoseconds(balanced);
+  return CreateTemporalInstant(epochNanoseconds);
+}
+
+export function ToTemporalMonthDay(item: PlainMonthDayParams['from'][0], options?: PlainMonthDayParams['from'][1]) {
+  if (IsObject(item)) {
+    if (IsTemporalMonthDay(item)) {
+      GetTemporalOverflowOption(GetOptionsObject(options));
+      return CreateTemporalMonthDay(GetSlot(item, ISO_DATE), GetSlot(item, CALENDAR));
+    }
+    let calendar;
+    if (HasSlot(item, CALENDAR)) {
+      calendar = GetSlot(item, CALENDAR);
+    } else {
+      calendar = item.calendar;
+      if (calendar === undefined) calendar = 'iso8601';
+      calendar = ToTemporalCalendarIdentifier(calendar);
+    }
+    const fields = PrepareCalendarFields(calendar, item, ['year', 'month', 'monthCode', 'day'], [], []);
+    const overflow = GetTemporalOverflowOption(GetOptionsObject(options));
+    const isoDate = CalendarMonthDayFromFields(calendar, fields, overflow);
+    return CreateTemporalMonthDay(isoDate, calendar);
+  }
+
+  let { month, day, referenceISOYear, calendar } = ParseTemporalMonthDayString(RequireString(item));
+  if (calendar === undefined) calendar = 'iso8601';
+  calendar = CanonicalizeCalendar(calendar);
+  uncheckedAssertNarrowedType<BuiltinCalendarId>(calendar, 'lowercased and canonicalized');
+
+  GetTemporalOverflowOption(GetOptionsObject(options));
+  if (calendar === 'iso8601') {
+    const isoCalendarReferenceYear = 1972; // First leap year after Unix epoch
+    return CreateTemporalMonthDay({ year: isoCalendarReferenceYear, month, day }, calendar);
+  }
+  assertExists(referenceISOYear);
+  let isoDate = { year: referenceISOYear, month, day };
+  RejectDateRange(isoDate);
+  const result = ISODateToFields(calendar, isoDate, 'month-day');
+  isoDate = CalendarMonthDayFromFields(calendar, result, 'constrain');
+  return CreateTemporalMonthDay(isoDate, calendar);
+}
+
+export function ToTemporalTime(item: PlainTimeParams['from'][0], options?: PlainTimeParams['from'][1]) {
+  let time;
+  if (IsObject(item)) {
+    if (IsTemporalTime(item)) {
+      GetTemporalOverflowOption(GetOptionsObject(options));
+      return CreateTemporalTime(GetSlot(item, TIME));
+    }
+    if (IsTemporalDateTime(item)) {
+      GetTemporalOverflowOption(GetOptionsObject(options));
+      return CreateTemporalTime(GetSlot(item, ISO_DATE_TIME).time);
+    }
+    if (IsTemporalZonedDateTime(item)) {
+      const isoDateTime = GetISODateTimeFor(GetSlot(item, TIME_ZONE), GetSlot(item, EPOCHNANOSECONDS));
+      GetTemporalOverflowOption(GetOptionsObject(options));
+      return CreateTemporalTime(isoDateTime.time);
+    }
+    const { hour, minute, second, millisecond, microsecond, nanosecond } = ToTemporalTimeRecord(item);
+    const overflow = GetTemporalOverflowOption(GetOptionsObject(options));
+    time = RegulateTime(hour, minute, second, millisecond, microsecond, nanosecond, overflow);
+  } else {
+    time = ParseTemporalTimeString(RequireString(item));
+    GetTemporalOverflowOption(GetOptionsObject(options));
+  }
+  return CreateTemporalTime(time);
+}
+
+export function ToTimeRecordOrMidnight(item: PlainTimeParams['from'][0] | undefined) {
+  if (item === undefined) return MidnightTimeRecord();
+  return GetSlot(ToTemporalTime(item), TIME);
+}
+
+export function ToTemporalYearMonth(
+  item: PlainYearMonthParams['from'][0],
+  options?: PlainYearMonthParams['from'][1]
+): Temporal.PlainYearMonth {
+  if (IsObject(item)) {
+    if (IsTemporalYearMonth(item)) {
+      GetTemporalOverflowOption(GetOptionsObject(options));
+      return CreateTemporalYearMonth(GetSlot(item, ISO_DATE), GetSlot(item, CALENDAR));
+    }
+    const calendar = GetTemporalCalendarIdentifierWithISODefault(item);
+    const fields = PrepareCalendarFields(calendar, item, ['year', 'month', 'monthCode'], [], []);
+    const overflow = GetTemporalOverflowOption(GetOptionsObject(options));
+    const isoDate = CalendarYearMonthFromFields(calendar, fields, overflow);
+    return CreateTemporalYearMonth(isoDate, calendar);
+  }
+
+  let { year, month, referenceISODay, calendar } = ParseTemporalYearMonthString(RequireString(item));
+  if (calendar === undefined) calendar = 'iso8601';
+  calendar = CanonicalizeCalendar(calendar);
+  uncheckedAssertNarrowedType<BuiltinCalendarId>(calendar, 'lowercased and canonicalized');
+
+  GetTemporalOverflowOption(GetOptionsObject(options));
+  let isoDate = { year, month, day: referenceISODay };
+  RejectYearMonthRange(isoDate);
+  const result = ISODateToFields(calendar, isoDate, 'year-month');
+  isoDate = CalendarYearMonthFromFields(calendar, result, 'constrain');
+  return CreateTemporalYearMonth(isoDate, calendar);
+}
+
+type OffsetBehaviour = 'wall' | 'exact' | 'option';
+
+export function InterpretISODateTimeOffset(
+  isoDate: ISODate,
+  time: 'start-of-day' | TimeRecord,
+  offsetBehaviour: OffsetBehaviour,
+  offsetNs: number,
+  timeZone: string,
+  disambiguation: NonNullable<Temporal.ToInstantOptions['disambiguation']>,
+  offsetOpt: Temporal.OffsetDisambiguationOptions['offset'],
+  matchMinute: boolean
+) {
+  // start-of-day signifies that we had a string such as YYYY-MM-DD[Zone]. It is
+  // grammatically not possible to specify a UTC offset in that string, so the
+  // behaviour collapses into ~WALL~, which is equivalent to offset: "ignore".
+  if (time === 'start-of-day') {
+    assert(offsetBehaviour === 'wall', 'offset cannot be provided in YYYY-MM-DD[Zone] string');
+    assert(offsetNs === 0, 'offset cannot be provided in YYYY-MM-DD[Zone] string');
+    return GetStartOfDay(timeZone, isoDate);
+  }
+
+  const dt = CombineISODateAndTimeRecord(isoDate, time);
+
+  if (offsetBehaviour === 'wall' || offsetOpt === 'ignore') {
+    // Simple case: ISO string without a TZ offset (or caller wants to ignore
+    // the offset), so just convert DateTime to Instant in the given time zone
+    return GetEpochNanosecondsFor(timeZone, dt, disambiguation);
+  }
+
+  // The caller wants the offset to always win ('use') OR the caller is OK
+  // with the offset winning ('prefer' or 'reject') as long as it's valid
+  // for this timezone and date/time.
+  if (offsetBehaviour === 'exact' || offsetOpt === 'use') {
+    // Calculate the instant for the input's date/time and offset
+    const balanced = BalanceISODateTime(
+      isoDate.year,
+      isoDate.month,
+      isoDate.day,
+      time.hour,
+      time.minute,
+      time.second,
+      time.millisecond,
+      time.microsecond,
+      time.nanosecond - offsetNs
+    );
+    CheckISODaysRange(balanced.isoDate);
+    const epochNs = GetUTCEpochNanoseconds(balanced);
+    ValidateEpochNanoseconds(epochNs);
+    return epochNs;
+  }
+
+  CheckISODaysRange(isoDate);
+  const utcEpochNs = GetUTCEpochNanoseconds(dt);
+
+  // "prefer" or "reject"
+  const possibleEpochNs = GetPossibleEpochNanoseconds(timeZone, dt);
+  for (let index = 0; index < possibleEpochNs.length; index++) {
+    const candidate = possibleEpochNs[index];
+    const candidateOffset = JSBI.toNumber(JSBI.subtract(utcEpochNs, candidate));
+    const roundedCandidateOffset = RoundNumberToIncrement(candidateOffset, 60e9, 'halfExpand');
+    if (candidateOffset === offsetNs || (matchMinute && roundedCandidateOffset === offsetNs)) {
+      return candidate;
+    }
+  }
+
+  // the user-provided offset doesn't match any instants for this time
+  // zone and date/time.
+  if (offsetOpt === 'reject') {
+    const offsetStr = FormatUTCOffsetNanoseconds(offsetNs);
+    const dtStr = ISODateTimeToString(dt, 'iso8601', 'auto');
+    throw new RangeError(`Offset ${offsetStr} is invalid for ${dtStr} in ${timeZone}`);
+  }
+  // fall through: offsetOpt === 'prefer', but the offset doesn't match
+  // so fall back to use the time zone instead.
+  return DisambiguatePossibleEpochNanoseconds(possibleEpochNs, timeZone, dt, disambiguation);
+}
+
+export function ToTemporalZonedDateTime(
+  item: ZonedDateTimeParams['from'][0],
+  options?: ZonedDateTimeParams['from'][1]
+) {
+  let isoDate, time, timeZone, offset, calendar;
+  let matchMinute = false;
+  let offsetBehaviour: OffsetBehaviour = 'option';
+  let disambiguation, offsetOpt;
+  if (IsObject(item)) {
+    if (IsTemporalZonedDateTime(item)) {
+      const resolvedOptions = GetOptionsObject(options);
+      GetTemporalDisambiguationOption(resolvedOptions); // validate and ignore
+      GetTemporalOffsetOption(resolvedOptions, 'reject');
+      GetTemporalOverflowOption(resolvedOptions);
+      return CreateTemporalZonedDateTime(
+        GetSlot(item, EPOCHNANOSECONDS),
+        GetSlot(item, TIME_ZONE),
+        GetSlot(item, CALENDAR)
+      );
+    }
+    calendar = GetTemporalCalendarIdentifierWithISODefault(item);
+    const fields = PrepareCalendarFields(
+      calendar,
+      item,
+      ['year', 'month', 'monthCode', 'day'],
+      ['hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond', 'offset', 'timeZone'],
+      ['timeZone']
+    );
+    ({ offset, timeZone } = fields);
+    if (offset === undefined) {
+      offsetBehaviour = 'wall';
+    }
+    const resolvedOptions = GetOptionsObject(options);
+    disambiguation = GetTemporalDisambiguationOption(resolvedOptions);
+    offsetOpt = GetTemporalOffsetOption(resolvedOptions, 'reject');
+    const overflow = GetTemporalOverflowOption(resolvedOptions);
+    ({ isoDate, time } = InterpretTemporalDateTimeFields(calendar, fields, overflow));
+  } else {
+    let tzAnnotation, z, year, month, day;
+    ({ year, month, day, time, tzAnnotation, offset, z, calendar } = ParseTemporalZonedDateTimeString(
+      RequireString(item)
+    ));
+    timeZone = ToTemporalTimeZoneIdentifier(tzAnnotation);
+    if (z) {
+      offsetBehaviour = 'exact';
+    } else if (!offset) {
+      offsetBehaviour = 'wall';
+    }
+    if (!calendar) calendar = 'iso8601';
+    calendar = CanonicalizeCalendar(calendar);
+    matchMinute = true; // ISO strings may specify offset with less precision
+    const resolvedOptions = GetOptionsObject(options);
+    disambiguation = GetTemporalDisambiguationOption(resolvedOptions);
+    offsetOpt = GetTemporalOffsetOption(resolvedOptions, 'reject');
+    GetTemporalOverflowOption(resolvedOptions); // validate and ignore
+    isoDate = { year, month, day };
+  }
+  let offsetNs = 0;
+  if (offsetBehaviour === 'option') offsetNs = ParseDateTimeUTCOffset(castExists(offset));
+  const epochNanoseconds = InterpretISODateTimeOffset(
+    isoDate,
+    time,
     offsetBehaviour,
     offsetNs,
     timeZone,
@@ -1793,26 +1797,18 @@ export function ToTemporalZonedDateTime(
   return CreateTemporalZonedDateTime(epochNanoseconds, timeZone, calendar);
 }
 
-export function CreateTemporalDateSlots(
-  result: Temporal.PlainDate,
-  isoYear: number,
-  isoMonth: number,
-  isoDay: number,
-  calendar: Temporal.CalendarProtocol
-) {
-  RejectISODate(isoYear, isoMonth, isoDay);
-  RejectDateRange(isoYear, isoMonth, isoDay);
+export function CreateTemporalDateSlots(result: Temporal.PlainDate, isoDate: ISODate, calendar: BuiltinCalendarId) {
+  RejectDateRange(isoDate);
 
   CreateSlots(result);
-  SetSlot(result, ISO_YEAR, isoYear);
-  SetSlot(result, ISO_MONTH, isoMonth);
-  SetSlot(result, ISO_DAY, isoDay);
+  SetSlot(result, ISO_DATE, isoDate);
   SetSlot(result, CALENDAR, calendar);
   SetSlot(result, DATE_BRAND, true);
 
   if (DEBUG) {
-    ObjectDefineProperty(result, '_repr_', {
-      value: `${result[Symbol.toStringTag]} <${TemporalDateToString(result)}>`,
+    const repr = TemporalDateToString(result, 'auto');
+    Object.defineProperty(result, '_repr_', {
+      value: `Temporal.PlainDate <${repr}>`,
       writable: false,
       enumerable: false,
       configurable: false
@@ -1820,49 +1816,28 @@ export function CreateTemporalDateSlots(
   }
 }
 
-export function CreateTemporalDate(
-  isoYear: number,
-  isoMonth: number,
-  isoDay: number,
-  calendar: Temporal.CalendarProtocol = GetISO8601Calendar()
-) {
+export function CreateTemporalDate(isoDate: ISODate, calendar: BuiltinCalendarId) {
   const TemporalPlainDate = GetIntrinsic('%Temporal.PlainDate%');
-  const result = ObjectCreate(TemporalPlainDate.prototype);
-  CreateTemporalDateSlots(result, isoYear, isoMonth, isoDay, calendar);
+  const result = Object.create(TemporalPlainDate.prototype);
+  CreateTemporalDateSlots(result, isoDate, calendar);
   return result;
 }
 
 export function CreateTemporalDateTimeSlots(
   result: Temporal.PlainDateTime,
-  isoYear: number,
-  isoMonth: number,
-  isoDay: number,
-  h: number,
-  min: number,
-  s: number,
-  ms: number,
-  µs: number,
-  ns: number,
-  calendar: Temporal.CalendarProtocol
+  isoDateTime: ISODateTime,
+  calendar: BuiltinCalendarId
 ) {
-  RejectDateTime(isoYear, isoMonth, isoDay, h, min, s, ms, µs, ns);
-  RejectDateTimeRange(isoYear, isoMonth, isoDay, h, min, s, ms, µs, ns);
+  RejectDateTimeRange(isoDateTime);
 
   CreateSlots(result);
-  SetSlot(result, ISO_YEAR, isoYear);
-  SetSlot(result, ISO_MONTH, isoMonth);
-  SetSlot(result, ISO_DAY, isoDay);
-  SetSlot(result, ISO_HOUR, h);
-  SetSlot(result, ISO_MINUTE, min);
-  SetSlot(result, ISO_SECOND, s);
-  SetSlot(result, ISO_MILLISECOND, ms);
-  SetSlot(result, ISO_MICROSECOND, µs);
-  SetSlot(result, ISO_NANOSECOND, ns);
+  SetSlot(result, ISO_DATE_TIME, isoDateTime);
   SetSlot(result, CALENDAR, calendar);
 
   if (DEBUG) {
+    let repr = ISODateTimeToString(isoDateTime, calendar, 'auto');
     Object.defineProperty(result, '_repr_', {
-      value: `${result[Symbol.toStringTag]} <${TemporalDateTimeToString(result, 'auto')}>`,
+      value: `Temporal.PlainDateTime <${repr}>`,
       writable: false,
       enumerable: false,
       configurable: false
@@ -1870,44 +1845,29 @@ export function CreateTemporalDateTimeSlots(
   }
 }
 
-export function CreateTemporalDateTime(
-  isoYear: number,
-  isoMonth: number,
-  isoDay: number,
-  h: number,
-  min: number,
-  s: number,
-  ms: number,
-  µs: number,
-  ns: number,
-  calendar: Temporal.CalendarProtocol = GetISO8601Calendar()
-) {
+export function CreateTemporalDateTime(isoDateTime: ISODateTime, calendar: BuiltinCalendarId) {
   const TemporalPlainDateTime = GetIntrinsic('%Temporal.PlainDateTime%');
-  const result = ObjectCreate(TemporalPlainDateTime.prototype);
-  CreateTemporalDateTimeSlots(result, isoYear, isoMonth, isoDay, h, min, s, ms, µs, ns, calendar);
-  return result as Temporal.PlainDateTime;
+  const result = Object.create(TemporalPlainDateTime.prototype);
+  CreateTemporalDateTimeSlots(result, isoDateTime, calendar);
+  return result;
 }
 
 export function CreateTemporalMonthDaySlots(
   result: Temporal.PlainMonthDay,
-  isoMonth: number,
-  isoDay: number,
-  calendar: Temporal.CalendarProtocol,
-  referenceISOYear: number
+  isoDate: ISODate,
+  calendar: BuiltinCalendarId
 ) {
-  RejectISODate(referenceISOYear, isoMonth, isoDay);
-  RejectDateRange(referenceISOYear, isoMonth, isoDay);
+  RejectDateRange(isoDate);
 
   CreateSlots(result);
-  SetSlot(result, ISO_MONTH, isoMonth);
-  SetSlot(result, ISO_DAY, isoDay);
-  SetSlot(result, ISO_YEAR, referenceISOYear);
+  SetSlot(result, ISO_DATE, isoDate);
   SetSlot(result, CALENDAR, calendar);
   SetSlot(result, MONTH_DAY_BRAND, true);
 
   if (DEBUG) {
+    const repr = TemporalMonthDayToString(result, 'auto');
     Object.defineProperty(result, '_repr_', {
-      value: `${result[Symbol.toStringTag]} <${TemporalMonthDayToString(result)}>`,
+      value: `Temporal.PlainMonthDay <${repr}>`,
       writable: false,
       enumerable: false,
       configurable: false
@@ -1915,38 +1875,50 @@ export function CreateTemporalMonthDaySlots(
   }
 }
 
-export function CreateTemporalMonthDay(
-  isoMonth: number,
-  isoDay: number,
-  calendar: Temporal.CalendarProtocol = GetISO8601Calendar(),
-  referenceISOYear = 1972
-) {
+export function CreateTemporalMonthDay(isoDate: ISODate, calendar: BuiltinCalendarId) {
   const TemporalPlainMonthDay = GetIntrinsic('%Temporal.PlainMonthDay%');
-  const result = ObjectCreate(TemporalPlainMonthDay.prototype);
-  CreateTemporalMonthDaySlots(result, isoMonth, isoDay, calendar, referenceISOYear);
+  const result = Object.create(TemporalPlainMonthDay.prototype);
+  CreateTemporalMonthDaySlots(result, isoDate, calendar);
+  return result;
+}
+
+export function CreateTemporalTimeSlots(result: Temporal.PlainTime, time: TimeRecord) {
+  CreateSlots(result);
+  SetSlot(result, TIME, time);
+
+  if (DEBUG) {
+    Object.defineProperty(result, '_repr_', {
+      value: `Temporal.PlainTime <${TimeRecordToString(time, 'auto')}>`,
+      writable: false,
+      enumerable: false,
+      configurable: false
+    });
+  }
+}
+
+export function CreateTemporalTime(time: TimeRecord) {
+  const TemporalPlainTime = GetIntrinsic('%Temporal.PlainTime%');
+  const result = Object.create(TemporalPlainTime.prototype);
+  CreateTemporalTimeSlots(result, time);
   return result;
 }
 
 export function CreateTemporalYearMonthSlots(
   result: Temporal.PlainYearMonth,
-  isoYear: number,
-  isoMonth: number,
-  calendar: Temporal.CalendarProtocol,
-  referenceISODay: number
+  isoDate: ISODate,
+  calendar: BuiltinCalendarId
 ) {
-  RejectISODate(isoYear, isoMonth, referenceISODay);
-  RejectYearMonthRange(isoYear, isoMonth);
+  RejectYearMonthRange(isoDate);
 
   CreateSlots(result);
-  SetSlot(result, ISO_YEAR, isoYear);
-  SetSlot(result, ISO_MONTH, isoMonth);
-  SetSlot(result, ISO_DAY, referenceISODay);
+  SetSlot(result, ISO_DATE, isoDate);
   SetSlot(result, CALENDAR, calendar);
   SetSlot(result, YEAR_MONTH_BRAND, true);
 
   if (DEBUG) {
+    const repr = TemporalYearMonthToString(result, 'auto');
     Object.defineProperty(result, '_repr_', {
-      value: `${result[Symbol.toStringTag]} <${TemporalYearMonthToString(result)}>`,
+      value: `Temporal.PlainYearMonth <${repr}>`,
       writable: false,
       enumerable: false,
       configurable: false
@@ -1954,23 +1926,42 @@ export function CreateTemporalYearMonthSlots(
   }
 }
 
-export function CreateTemporalYearMonth(
-  isoYear: number,
-  isoMonth: number,
-  calendar: Temporal.CalendarProtocol = GetISO8601Calendar(),
-  referenceISODay = 1
-) {
+export function CreateTemporalYearMonth(isoDate: ISODate, calendar: BuiltinCalendarId) {
   const TemporalPlainYearMonth = GetIntrinsic('%Temporal.PlainYearMonth%');
-  const result = ObjectCreate(TemporalPlainYearMonth.prototype);
-  CreateTemporalYearMonthSlots(result, isoYear, isoMonth, calendar, referenceISODay);
+  const result = Object.create(TemporalPlainYearMonth.prototype);
+  CreateTemporalYearMonthSlots(result, isoDate, calendar);
+  return result;
+}
+
+export function CreateTemporalInstantSlots(result: Temporal.Instant, epochNanoseconds: JSBI) {
+  ValidateEpochNanoseconds(epochNanoseconds);
+  CreateSlots(result);
+  SetSlot(result, EPOCHNANOSECONDS, epochNanoseconds);
+
+  if (DEBUG) {
+    const iso = GetISOPartsFromEpoch(epochNanoseconds);
+    const repr = ISODateTimeToString(iso, 'iso8601', 'auto', 'never') + 'Z';
+    Object.defineProperty(result, '_repr_', {
+      value: `${result[Symbol.toStringTag]} <${repr}>`,
+      writable: false,
+      enumerable: false,
+      configurable: false
+    });
+  }
+}
+
+export function CreateTemporalInstant(epochNanoseconds: JSBI) {
+  const TemporalInstant = GetIntrinsic('%Temporal.Instant%');
+  const result: Temporal.Instant = Object.create(TemporalInstant.prototype);
+  CreateTemporalInstantSlots(result, epochNanoseconds);
   return result;
 }
 
 export function CreateTemporalZonedDateTimeSlots(
   result: Temporal.ZonedDateTime,
   epochNanoseconds: JSBI,
-  timeZone: Temporal.TimeZoneProtocol,
-  calendar: Temporal.CalendarProtocol
+  timeZone: string,
+  calendar: BuiltinCalendarId
 ) {
   ValidateEpochNanoseconds(epochNanoseconds);
 
@@ -1979,13 +1970,10 @@ export function CreateTemporalZonedDateTimeSlots(
   SetSlot(result, TIME_ZONE, timeZone);
   SetSlot(result, CALENDAR, calendar);
 
-  const TemporalInstant = GetIntrinsic('%Temporal.Instant%');
-  const instant = new TemporalInstant(GetSlot(result, EPOCHNANOSECONDS));
-  SetSlot(result, INSTANT, instant);
-
   if (DEBUG) {
+    const repr = TemporalZonedDateTimeToString(result, 'auto');
     Object.defineProperty(result, '_repr_', {
-      value: `${result[Symbol.toStringTag]} <${TemporalZonedDateTimeToString(result, 'auto')}>`,
+      value: `Temporal.ZonedDateTime <${repr}>`,
       writable: false,
       enumerable: false,
       configurable: false
@@ -1995,730 +1983,492 @@ export function CreateTemporalZonedDateTimeSlots(
 
 export function CreateTemporalZonedDateTime(
   epochNanoseconds: JSBI,
-  timeZone: Temporal.TimeZoneProtocol,
-  calendar: Temporal.CalendarProtocol = GetISO8601Calendar()
+  timeZone: string,
+  calendar: BuiltinCalendarId = 'iso8601'
 ) {
   const TemporalZonedDateTime = GetIntrinsic('%Temporal.ZonedDateTime%');
-  const result = ObjectCreate(TemporalZonedDateTime.prototype);
+  const result: Temporal.ZonedDateTime = Object.create(TemporalZonedDateTime.prototype);
   CreateTemporalZonedDateTimeSlots(result, epochNanoseconds, timeZone, calendar);
   return result;
 }
 
-export function GetISO8601Calendar() {
-  const TemporalCalendar = GetIntrinsic('%Temporal.Calendar%');
-  return new TemporalCalendar('iso8601');
+function CalendarFieldKeysPresent(fields: Record<FieldKey, unknown>) {
+  return CALENDAR_FIELD_KEYS.filter((key) => fields[key] !== undefined);
 }
 
-// TODO: should (can?) we make this generic so the field names are checked
-// against the type that the calendar is a property of?
-export function CalendarFields<F extends Iterable<string>>(calendar: Temporal.CalendarProtocol, fieldNamesParam: F) {
-  let fieldNames = fieldNamesParam;
-  if (calendar.fields) {
-    fieldNames = calendar.fields(fieldNames) as F;
-  }
-  const result: string[] = [];
-  for (const name of fieldNames) {
-    if (typeof name !== 'string') throw new TypeError('bad return from calendar.fields()');
-    ArrayPrototypePush.call(result, name);
-  }
-  return result as unknown as F;
-}
-
-export function CalendarMergeFields(
-  calendar: Temporal.CalendarProtocol,
-  fields: Record<string, unknown>,
-  additionalFields: Record<string, unknown>
+export function CalendarMergeFields<Base extends Record<string, unknown>, ToAdd extends Record<string, unknown>>(
+  calendar: BuiltinCalendarId,
+  fields: Base,
+  additionalFields: ToAdd
 ) {
-  const calMergeFields = calendar.mergeFields;
-  if (!calMergeFields) {
-    return { ...fields, ...additionalFields };
+  const additionalKeys = CalendarFieldKeysPresent(additionalFields);
+  const overriddenKeys = calendarImplForID(calendar).fieldKeysToIgnore(additionalKeys);
+  const merged = Object.create(null);
+  const fieldsKeys = CalendarFieldKeysPresent(fields);
+  for (let ix = 0; ix < CALENDAR_FIELD_KEYS.length; ix++) {
+    let propValue = undefined;
+    const key = CALENDAR_FIELD_KEYS[ix];
+    if (fieldsKeys.includes(key) && !overriddenKeys.includes(key)) {
+      propValue = fields[key];
+    }
+    if (additionalKeys.includes(key)) {
+      propValue = additionalFields[key];
+    }
+    if (propValue !== undefined) merged[key] = propValue;
   }
-  const result = Reflect.apply(calMergeFields, calendar, [fields, additionalFields]);
-  if (!IsObject(result)) throw new TypeError('bad return from calendar.mergeFields()');
-  return result;
+  return merged as Base & ToAdd;
 }
 
 export function CalendarDateAdd(
-  calendar: Temporal.CalendarProtocol,
-  date: CalendarProtocolParams['dateAdd'][0],
-  duration: CalendarProtocolParams['dateAdd'][1],
-  options: CalendarProtocolParams['dateAdd'][2],
-  dateAddParam?: Temporal.CalendarProtocol['dateAdd']
+  calendar: BuiltinCalendarId,
+  isoDate: ISODate,
+  dateDuration: Partial<DateDuration>,
+  overflow: Overflow
 ) {
-  let dateAdd = dateAddParam;
-  if (dateAdd === undefined) {
-    dateAdd = calendar.dateAdd;
-  }
-  const result = ReflectApply(dateAdd, calendar, [date, duration, options]);
-  if (!IsTemporalDate(result)) throw new TypeError('invalid result');
+  const result = calendarImplForID(calendar).dateAdd(isoDate, dateDuration, overflow);
+  RejectDateRange(result);
   return result;
 }
 
 function CalendarDateUntil(
-  calendar: Temporal.CalendarProtocol,
-  date: CalendarProtocolParams['dateUntil'][0],
-  otherDate: CalendarProtocolParams['dateUntil'][1],
-  options: CalendarProtocolParams['dateUntil'][2],
-  dateUntilParam?: Temporal.CalendarProtocol['dateUntil']
+  calendar: BuiltinCalendarId,
+  isoDate: ISODate,
+  isoOtherDate: ISODate,
+  largestUnit: Temporal.DateUnit
 ) {
-  let dateUntil = dateUntilParam;
-  if (dateUntil === undefined) {
-    dateUntil = calendar.dateUntil;
-  }
-  const result = ReflectApply(dateUntil, calendar, [date, otherDate, options]);
-  if (!IsTemporalDuration(result)) throw new TypeError('invalid result');
-  return result;
+  return calendarImplForID(calendar).dateUntil(isoDate, isoOtherDate, largestUnit);
 }
 
-export function CalendarYear(calendar: Temporal.CalendarProtocol, dateLike: CalendarProtocolParams['year'][0]) {
-  const result = calendar.year(dateLike);
-  if (result === undefined) {
-    throw new RangeError('calendar year result must be an integer');
-  }
-  return ToIntegerThrowOnInfinity(result);
-}
-
-export function CalendarMonth(calendar: Temporal.CalendarProtocol, dateLike: CalendarProtocolParams['month'][0]) {
-  const result = calendar.month(dateLike);
-  if (result === undefined) {
-    throw new RangeError('calendar month result must be a positive integer');
-  }
-  return ToPositiveInteger(result);
-}
-
-export function CalendarMonthCode(
-  calendar: Temporal.CalendarProtocol,
-  dateLike: CalendarProtocolParams['monthCode'][0]
-) {
-  const result = calendar.monthCode(dateLike);
-  if (result === undefined) {
-    throw new RangeError('calendar monthCode result must be a string');
-  }
-  return ToString(result);
-}
-
-export function CalendarDay(calendar: Temporal.CalendarProtocol, dateLike: CalendarProtocolParams['day'][0]) {
-  const result = calendar.day(dateLike);
-  if (result === undefined) {
-    throw new RangeError('calendar day result must be a positive integer');
-  }
-  return ToPositiveInteger(result);
-}
-
-export function CalendarEra(calendar: Temporal.CalendarProtocol, dateLike: CalendarProtocolParams['era'][0]) {
-  let result = calendar.era(dateLike);
-  if (result !== undefined) {
-    result = ToString(result);
-  }
-  return result;
-}
-
-export function CalendarEraYear(calendar: Temporal.CalendarProtocol, dateLike: CalendarProtocolParams['eraYear'][0]) {
-  let result = calendar.eraYear(dateLike);
-  if (result !== undefined) {
-    result = ToIntegerThrowOnInfinity(result);
-  }
-  return result;
-}
-
-export function CalendarDayOfWeek(
-  calendar: Temporal.CalendarProtocol,
-  dateLike: CalendarProtocolParams['dayOfWeek'][0]
-) {
-  return calendar.dayOfWeek(dateLike);
-}
-
-export function CalendarDayOfYear(
-  calendar: Temporal.CalendarProtocol,
-  dateLike: CalendarProtocolParams['dayOfYear'][0]
-) {
-  return calendar.dayOfYear(dateLike);
-}
-
-export function CalendarWeekOfYear(
-  calendar: Temporal.CalendarProtocol,
-  dateLike: CalendarProtocolParams['weekOfYear'][0]
-) {
-  return calendar.weekOfYear(dateLike);
-}
-
-export function CalendarDaysInWeek(
-  calendar: Temporal.CalendarProtocol,
-  dateLike: CalendarProtocolParams['daysInWeek'][0]
-) {
-  return calendar.daysInWeek(dateLike);
-}
-
-export function CalendarDaysInMonth(
-  calendar: Temporal.CalendarProtocol,
-  dateLike: CalendarProtocolParams['daysInMonth'][0]
-) {
-  return calendar.daysInMonth(dateLike);
-}
-
-export function CalendarDaysInYear(
-  calendar: Temporal.CalendarProtocol,
-  dateLike: CalendarProtocolParams['daysInYear'][0]
-) {
-  return calendar.daysInYear(dateLike);
-}
-
-export function CalendarMonthsInYear(
-  calendar: Temporal.CalendarProtocol,
-  dateLike: CalendarProtocolParams['monthsInYear'][0]
-) {
-  return calendar.monthsInYear(dateLike);
-}
-
-export function CalendarInLeapYear(
-  calendar: Temporal.CalendarProtocol,
-  dateLike: CalendarProtocolParams['inLeapYear'][0]
-) {
-  return calendar.inLeapYear(dateLike);
-}
-
-export function ToTemporalCalendar(calendarLikeParam: CalendarParams['from'][0]) {
-  let calendarLike = calendarLikeParam;
+export function ToTemporalCalendarIdentifier(calendarLike: Temporal.CalendarLike): BuiltinCalendarId {
   if (IsObject(calendarLike)) {
     if (HasSlot(calendarLike, CALENDAR)) return GetSlot(calendarLike, CALENDAR);
-    if (!('calendar' in calendarLike)) return calendarLike;
-    calendarLike = (calendarLike as { calendar: Temporal.CalendarProtocol | string }).calendar;
-    if (IsObject(calendarLike) && !('calendar' in calendarLike)) return calendarLike;
   }
-  const identifier = ToString(calendarLike);
-  const TemporalCalendar = GetIntrinsic('%Temporal.Calendar%');
-  if (IsBuiltinCalendar(identifier)) return new TemporalCalendar(identifier);
+  const identifier = RequireString(calendarLike);
+  try {
+    // Fast path: identifier is a calendar type, no ISO string parsing needed
+    return CanonicalizeCalendar(identifier);
+  } catch {
+    // fall through
+  }
   let calendar;
   try {
     ({ calendar } = ParseISODateTime(identifier));
   } catch {
-    throw new RangeError(`Invalid calendar: ${identifier}`);
+    try {
+      ({ calendar } = ParseTemporalTimeString(identifier));
+    } catch {
+      try {
+        ({ calendar } = ParseTemporalYearMonthString(identifier));
+      } catch {
+        ({ calendar } = ParseTemporalMonthDayString(identifier));
+      }
+    }
   }
   if (!calendar) calendar = 'iso8601';
-  return new TemporalCalendar(calendar);
+  return CanonicalizeCalendar(calendar);
 }
 
-function GetTemporalCalendarWithISODefault(
-  item: Temporal.CalendarProtocol | { calendar?: Temporal.PlainDateLike['calendar'] }
-): Temporal.Calendar | Temporal.CalendarProtocol {
+function GetTemporalCalendarIdentifierWithISODefault(item: { calendar?: Temporal.CalendarLike }) {
   if (HasSlot(item, CALENDAR)) return GetSlot(item, CALENDAR);
-  const { calendar } = item as Exclude<typeof item, Temporal.CalendarProtocol>;
-  if (calendar === undefined) return GetISO8601Calendar();
-  return ToTemporalCalendar(calendar);
+  const { calendar } = item;
+  if (calendar === undefined) return 'iso8601';
+  return ToTemporalCalendarIdentifier(calendar);
 }
 
-export function CalendarEquals(one: Temporal.CalendarProtocol, two: Temporal.CalendarProtocol) {
-  if (one === two) return true;
-  const cal1 = ToString(one);
-  const cal2 = ToString(two);
-  return cal1 === cal2;
+export function CalendarEquals(one: BuiltinCalendarId, two: BuiltinCalendarId) {
+  return CanonicalizeCalendar(one) === CanonicalizeCalendar(two);
 }
 
-export function ConsolidateCalendars(one: Temporal.CalendarProtocol, two: Temporal.CalendarProtocol) {
-  if (one === two) return two;
-  const sOne = ToString(one);
-  const sTwo = ToString(two);
-  if (sOne === sTwo || sOne === 'iso8601') {
-    return two;
-  } else if (sTwo === 'iso8601') {
-    return one;
-  } else {
-    throw new RangeError('irreconcilable calendars');
-  }
-}
-
-export function CalendarDateFromFields(
-  calendar: Temporal.CalendarProtocol,
-  fields: CalendarProtocolParams['dateFromFields'][0],
-  options?: Partial<CalendarProtocolParams['dateFromFields'][1]>
-) {
-  const result = calendar.dateFromFields(fields, options);
-  if (!IsTemporalDate(result)) throw new TypeError('invalid result');
+export function CalendarDateFromFields(calendar: BuiltinCalendarId, fields: CalendarFieldsRecord, overflow: Overflow) {
+  const calendarImpl: CalendarImpl = calendarImplForID(calendar);
+  calendarImpl.resolveFields(fields, 'date');
+  const result = calendarImpl.dateToISO(fields, overflow);
+  RejectDateRange(result);
   return result;
 }
 
 export function CalendarYearMonthFromFields(
-  calendar: Temporal.CalendarProtocol,
-  fields: CalendarProtocolParams['yearMonthFromFields'][0],
-  options?: CalendarProtocolParams['yearMonthFromFields'][1]
+  calendar: BuiltinCalendarId,
+  fields: CalendarFieldsRecord,
+  overflow: Overflow
 ) {
-  const result = calendar.yearMonthFromFields(fields, options);
-  if (!IsTemporalYearMonth(result)) throw new TypeError('invalid result');
+  const calendarImpl: CalendarImpl = calendarImplForID(calendar);
+  calendarImpl.resolveFields(fields, 'year-month');
+  fields.day = 1;
+  const result = calendarImpl.dateToISO(fields, overflow);
+  RejectYearMonthRange(result);
   return result;
 }
 
 export function CalendarMonthDayFromFields(
-  calendar: Temporal.CalendarProtocol,
-  fields: CalendarProtocolParams['monthDayFromFields'][0],
-  options?: CalendarProtocolParams['monthDayFromFields'][1]
+  calendar: BuiltinCalendarId,
+  fields: MonthDayFromFieldsObject,
+  overflow: Overflow
 ) {
-  const result = calendar.monthDayFromFields(fields, options);
-  if (!IsTemporalMonthDay(result)) throw new TypeError('invalid result');
+  const calendarImpl: CalendarImpl = calendarImplForID(calendar);
+  calendarImpl.resolveFields(fields, 'month-day');
+  const result = calendarImpl.monthDayToISOReferenceDate(fields, overflow);
+  RejectDateRange(result);
   return result;
 }
 
-export function ToTemporalTimeZone(temporalTimeZoneLikeParam: TimeZoneParams['from'][0]) {
-  let temporalTimeZoneLike = temporalTimeZoneLikeParam;
+export function ToTemporalTimeZoneIdentifier(temporalTimeZoneLike: unknown): string {
   if (IsObject(temporalTimeZoneLike)) {
     if (IsTemporalZonedDateTime(temporalTimeZoneLike)) return GetSlot(temporalTimeZoneLike, TIME_ZONE);
-    if (!('timeZone' in temporalTimeZoneLike)) return temporalTimeZoneLike;
-    temporalTimeZoneLike = (temporalTimeZoneLike as { timeZone: Temporal.TimeZoneProtocol | string }).timeZone;
-    if (IsObject(temporalTimeZoneLike) && !('timeZone' in temporalTimeZoneLike)) {
-      return temporalTimeZoneLike;
-    }
   }
-  const identifier = ToString(temporalTimeZoneLike);
-  const timeZone = ParseTemporalTimeZone(identifier);
-  const TemporalTimeZone = GetIntrinsic('%Temporal.TimeZone%');
-  return new TemporalTimeZone(timeZone);
+  const timeZoneString = RequireString(temporalTimeZoneLike);
+  if (timeZoneString === 'UTC') return 'UTC'; // UTC fast path
+
+  const { tzName, offsetMinutes } = ParseTemporalTimeZoneString(timeZoneString);
+  if (offsetMinutes !== undefined) {
+    return FormatOffsetTimeZoneIdentifier(offsetMinutes);
+  }
+  // if offsetMinutes is undefined, then tzName must be present
+  const record = GetAvailableNamedTimeZoneIdentifier(castExists(tzName));
+  if (!record) throw new RangeError(`Unrecognized time zone ${tzName}`);
+  return record.identifier;
 }
 
-export function TimeZoneEquals(one: Temporal.TimeZoneProtocol, two: Temporal.TimeZoneProtocol) {
+export function TimeZoneEquals(one: string, two: string) {
   if (one === two) return true;
-  const tz1 = ToString(one);
-  const tz2 = ToString(two);
-  return tz1 === tz2;
-}
-
-export function TemporalDateTimeToDate(dateTime: Temporal.PlainDateTime) {
-  return CreateTemporalDate(
-    GetSlot(dateTime, ISO_YEAR),
-    GetSlot(dateTime, ISO_MONTH),
-    GetSlot(dateTime, ISO_DAY),
-    GetSlot(dateTime, CALENDAR)
-  );
-}
-
-export function TemporalDateTimeToTime(dateTime: Temporal.PlainDateTime) {
-  const Time = GetIntrinsic('%Temporal.PlainTime%');
-  return new Time(
-    GetSlot(dateTime, ISO_HOUR),
-    GetSlot(dateTime, ISO_MINUTE),
-    GetSlot(dateTime, ISO_SECOND),
-    GetSlot(dateTime, ISO_MILLISECOND),
-    GetSlot(dateTime, ISO_MICROSECOND),
-    GetSlot(dateTime, ISO_NANOSECOND)
-  );
-}
-
-export function GetOffsetNanosecondsFor(
-  timeZone: Temporal.TimeZoneProtocol,
-  instant: TimeZoneProtocolParams['getOffsetNanosecondsFor'][0]
-) {
-  let getOffsetNanosecondsFor = timeZone.getOffsetNanosecondsFor;
-  if (typeof getOffsetNanosecondsFor !== 'function') {
-    throw new TypeError('getOffsetNanosecondsFor not callable');
+  const offsetMinutes1 = ParseTimeZoneIdentifier(one).offsetMinutes;
+  const offsetMinutes2 = ParseTimeZoneIdentifier(two).offsetMinutes;
+  if (offsetMinutes1 === undefined && offsetMinutes2 === undefined) {
+    // Calling GetAvailableNamedTimeZoneIdentifier is costly, so (unlike the
+    // spec) the polyfill will early-return if one of them isn't recognized. Try
+    // the second ID first because it's more likely to be unknown, because it
+    // can come from the argument of TimeZone.p.equals as opposed to the first
+    // ID which comes from the receiver.
+    const idRecord2 = GetAvailableNamedTimeZoneIdentifier(two);
+    if (!idRecord2) return false;
+    const idRecord1 = GetAvailableNamedTimeZoneIdentifier(one);
+    if (!idRecord1) return false;
+    return idRecord1.primaryIdentifier === idRecord2.primaryIdentifier;
+  } else {
+    return offsetMinutes1 === offsetMinutes2;
   }
-  const offsetNs = Reflect.apply(getOffsetNanosecondsFor, timeZone, [instant]);
-  if (typeof offsetNs !== 'number') {
-    throw new TypeError('bad return from getOffsetNanosecondsFor');
-  }
-  if (!IsInteger(offsetNs) || MathAbs(offsetNs) > 86400e9) {
-    throw new RangeError('out-of-range return from getOffsetNanosecondsFor');
-  }
-  return offsetNs;
 }
 
-export function BuiltinTimeZoneGetOffsetStringFor(timeZone: Temporal.TimeZoneProtocol, instant: Temporal.Instant) {
-  const offsetNs = GetOffsetNanosecondsFor(timeZone, instant);
-  return FormatTimeZoneOffsetString(offsetNs);
+export function GetOffsetNanosecondsFor(timeZone: string, epochNs: JSBI) {
+  const offsetMinutes = ParseTimeZoneIdentifier(timeZone).offsetMinutes;
+  if (offsetMinutes !== undefined) return offsetMinutes * 60e9;
+
+  return GetNamedTimeZoneOffsetNanoseconds(timeZone, epochNs);
 }
 
-export function BuiltinTimeZoneGetPlainDateTimeFor(
-  timeZone: Temporal.TimeZoneProtocol,
-  instant: Temporal.Instant,
-  calendar: Temporal.CalendarProtocol
-) {
-  const ns = GetSlot(instant, EPOCHNANOSECONDS);
-  const offsetNs = GetOffsetNanosecondsFor(timeZone, instant);
-  let { year, month, day, hour, minute, second, millisecond, microsecond, nanosecond } = GetISOPartsFromEpoch(ns);
-  ({ year, month, day, hour, minute, second, millisecond, microsecond, nanosecond } = BalanceISODateTime(
-    year,
-    month,
-    day,
-    hour,
-    minute,
-    second,
-    millisecond,
-    microsecond,
-    nanosecond + offsetNs
-  ));
-  return CreateTemporalDateTime(year, month, day, hour, minute, second, millisecond, microsecond, nanosecond, calendar);
+export function FormatUTCOffsetNanoseconds(offsetNs: number): string {
+  const sign = offsetNs < 0 ? '-' : '+';
+  const absoluteNs = Math.abs(offsetNs);
+  const hour = Math.floor(absoluteNs / 3600e9);
+  const minute = Math.floor(absoluteNs / 60e9) % 60;
+  const second = Math.floor(absoluteNs / 1e9) % 60;
+  const subSecondNs = absoluteNs % 1e9;
+  const precision = second === 0 && subSecondNs === 0 ? 'minute' : 'auto';
+  const timeString = FormatTimeString(hour, minute, second, subSecondNs, precision);
+  return `${sign}${timeString}`;
 }
 
-export function BuiltinTimeZoneGetInstantFor(
-  timeZone: Temporal.TimeZoneProtocol,
-  dateTime: Temporal.PlainDateTime,
+export function GetISODateTimeFor(timeZone: string, epochNs: JSBI) {
+  const offsetNs = GetOffsetNanosecondsFor(timeZone, epochNs);
+  let {
+    isoDate: { year, month, day },
+    time: { hour, minute, second, millisecond, microsecond, nanosecond }
+  } = GetISOPartsFromEpoch(epochNs);
+  return BalanceISODateTime(year, month, day, hour, minute, second, millisecond, microsecond, nanosecond + offsetNs);
+}
+
+export function GetEpochNanosecondsFor(
+  timeZone: string,
+  isoDateTime: ISODateTime,
   disambiguation: NonNullable<Temporal.ToInstantOptions['disambiguation']>
 ) {
-  const possibleInstants = GetPossibleInstantsFor(timeZone, dateTime);
-  return DisambiguatePossibleInstants(possibleInstants, timeZone, dateTime, disambiguation);
+  const possibleEpochNs = GetPossibleEpochNanoseconds(timeZone, isoDateTime);
+  return DisambiguatePossibleEpochNanoseconds(possibleEpochNs, timeZone, isoDateTime, disambiguation);
 }
 
-function DisambiguatePossibleInstants(
-  possibleInstants: Temporal.Instant[],
-  timeZone: Temporal.TimeZoneProtocol,
-  dateTime: Temporal.PlainDateTime,
+// TODO: See if this logic can be removed in favour of GetNamedTimeZoneEpochNanoseconds
+function DisambiguatePossibleEpochNanoseconds(
+  possibleEpochNs: JSBI[],
+  timeZone: string,
+  isoDateTime: ISODateTime,
   disambiguation: NonNullable<Temporal.ToInstantOptions['disambiguation']>
 ) {
-  const Instant = GetIntrinsic('%Temporal.Instant%');
-  const numInstants = possibleInstants.length;
+  const numInstants = possibleEpochNs.length;
 
-  if (numInstants === 1) return possibleInstants[0];
+  if (numInstants === 1) return possibleEpochNs[0];
   if (numInstants) {
     switch (disambiguation) {
       case 'compatible':
       // fall through because 'compatible' means 'earlier' for "fall back" transitions
       case 'earlier':
-        return possibleInstants[0];
+        return possibleEpochNs[0];
       case 'later':
-        return possibleInstants[numInstants - 1];
+        return possibleEpochNs[numInstants - 1];
       case 'reject': {
         throw new RangeError('multiple instants found');
       }
     }
   }
 
-  const year = GetSlot(dateTime, ISO_YEAR);
-  const month = GetSlot(dateTime, ISO_MONTH);
-  const day = GetSlot(dateTime, ISO_DAY);
-  const hour = GetSlot(dateTime, ISO_HOUR);
-  const minute = GetSlot(dateTime, ISO_MINUTE);
-  const second = GetSlot(dateTime, ISO_SECOND);
-  const millisecond = GetSlot(dateTime, ISO_MILLISECOND);
-  const microsecond = GetSlot(dateTime, ISO_MICROSECOND);
-  const nanosecond = GetSlot(dateTime, ISO_NANOSECOND);
-  const utcns = GetEpochFromISOParts(year, month, day, hour, minute, second, millisecond, microsecond, nanosecond);
-  if (utcns === null) throw new RangeError('DateTime outside of supported range');
-  const dayBefore = new Instant(JSBI.subtract(utcns, DAY_NANOS));
-  const dayAfter = new Instant(JSBI.add(utcns, DAY_NANOS));
+  if (disambiguation === 'reject') throw new RangeError('multiple instants found');
+  const utcns = GetUTCEpochNanoseconds(isoDateTime);
+
+  const dayBefore = JSBI.subtract(utcns, DAY_NANOS_JSBI);
+  ValidateEpochNanoseconds(dayBefore);
   const offsetBefore = GetOffsetNanosecondsFor(timeZone, dayBefore);
+  const dayAfter = JSBI.add(utcns, DAY_NANOS_JSBI);
+  ValidateEpochNanoseconds(dayAfter);
   const offsetAfter = GetOffsetNanosecondsFor(timeZone, dayAfter);
   const nanoseconds = offsetAfter - offsetBefore;
+  assert(Math.abs(nanoseconds) <= DAY_NANOS, 'UTC offset shift longer than 24 hours');
+
   switch (disambiguation) {
     case 'earlier': {
-      const calendar = GetSlot(dateTime, CALENDAR);
-      const PlainDateTime = GetIntrinsic('%Temporal.PlainDateTime%');
-      const earlier = AddDateTime(
-        year,
-        month,
-        day,
-        hour,
-        minute,
-        second,
-        millisecond,
-        microsecond,
-        nanosecond,
-        calendar,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        -nanoseconds,
-        undefined
+      const timeDuration = TimeDuration.fromComponents(0, 0, 0, 0, 0, -nanoseconds);
+      const earlierTime = AddTime(isoDateTime.time, timeDuration);
+      const earlierDate = BalanceISODate(
+        isoDateTime.isoDate.year,
+        isoDateTime.isoDate.month,
+        isoDateTime.isoDate.day + earlierTime.deltaDays
       );
-      const earlierPlainDateTime = new PlainDateTime(
-        earlier.year,
-        earlier.month,
-        earlier.day,
-        earlier.hour,
-        earlier.minute,
-        earlier.second,
-        earlier.millisecond,
-        earlier.microsecond,
-        earlier.nanosecond,
-        calendar
-      );
-      return GetPossibleInstantsFor(timeZone, earlierPlainDateTime)[0];
+      const earlier = CombineISODateAndTimeRecord(earlierDate, earlierTime);
+      return GetPossibleEpochNanoseconds(timeZone, earlier)[0];
     }
     case 'compatible':
     // fall through because 'compatible' means 'later' for "spring forward" transitions
     case 'later': {
-      const calendar = GetSlot(dateTime, CALENDAR);
-      const PlainDateTime = GetIntrinsic('%Temporal.PlainDateTime%');
-      const later = AddDateTime(
-        year,
-        month,
-        day,
-        hour,
-        minute,
-        second,
-        millisecond,
-        microsecond,
-        nanosecond,
-        calendar,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        nanoseconds,
-        undefined
+      const timeDuration = TimeDuration.fromComponents(0, 0, 0, 0, 0, nanoseconds);
+      const laterTime = AddTime(isoDateTime.time, timeDuration);
+      const laterDate = BalanceISODate(
+        isoDateTime.isoDate.year,
+        isoDateTime.isoDate.month,
+        isoDateTime.isoDate.day + laterTime.deltaDays
       );
-      const laterPlainDateTime = new PlainDateTime(
-        later.year,
-        later.month,
-        later.day,
-        later.hour,
-        later.minute,
-        later.second,
-        later.millisecond,
-        later.microsecond,
-        later.nanosecond,
-        calendar
-      );
-      const possible = GetPossibleInstantsFor(timeZone, laterPlainDateTime);
+      const later = CombineISODateAndTimeRecord(laterDate, laterTime);
+      const possible = GetPossibleEpochNanoseconds(timeZone, later);
       return possible[possible.length - 1];
-    }
-    case 'reject': {
-      throw new RangeError('no such instant found');
     }
   }
 }
 
-function GetPossibleInstantsFor(
-  timeZone: Temporal.TimeZoneProtocol,
-  dateTime: TimeZoneProtocolParams['getPossibleInstantsFor'][0]
-) {
-  const possibleInstants = timeZone.getPossibleInstantsFor(dateTime);
-  const result: Temporal.Instant[] = [];
-  for (const instant of possibleInstants) {
-    if (!IsTemporalInstant(instant)) {
-      throw new TypeError('bad return from getPossibleInstantsFor');
-    }
-    ArrayPrototypePush.call(result, instant);
+function GetPossibleEpochNanoseconds(timeZone: string, isoDateTime: ISODateTime) {
+  // UTC fast path
+  if (timeZone === 'UTC') {
+    CheckISODaysRange(isoDateTime.isoDate);
+    return [GetUTCEpochNanoseconds(isoDateTime)];
   }
-  return result;
+
+  const offsetMinutes = ParseTimeZoneIdentifier(timeZone).offsetMinutes;
+  if (offsetMinutes !== undefined) {
+    const balanced = BalanceISODateTime(
+      isoDateTime.isoDate.year,
+      isoDateTime.isoDate.month,
+      isoDateTime.isoDate.day,
+      isoDateTime.time.hour,
+      isoDateTime.time.minute - offsetMinutes,
+      isoDateTime.time.second,
+      isoDateTime.time.millisecond,
+      isoDateTime.time.microsecond,
+      isoDateTime.time.nanosecond
+    );
+    CheckISODaysRange(balanced.isoDate);
+    const epochNs = GetUTCEpochNanoseconds(balanced);
+    ValidateEpochNanoseconds(epochNs);
+    return [epochNs];
+  }
+
+  CheckISODaysRange(isoDateTime.isoDate);
+  return GetNamedTimeZoneEpochNanoseconds(timeZone, isoDateTime);
+}
+
+export function GetStartOfDay(timeZone: string, isoDate: ISODate) {
+  const isoDateTime = CombineISODateAndTimeRecord(isoDate, MidnightTimeRecord());
+  const possibleEpochNs = GetPossibleEpochNanoseconds(timeZone, isoDateTime);
+  // If not a DST gap, return the single or earlier epochNs
+  if (possibleEpochNs.length) return possibleEpochNs[0];
+
+  // Otherwise, 00:00:00 lies within a DST gap. Compute an epochNs that's
+  // guaranteed to be before the transition
+  assert(!IsOffsetTimeZoneIdentifier(timeZone), 'should only be reached with named time zone');
+
+  const utcns = GetUTCEpochNanoseconds(isoDateTime);
+  const dayBefore = JSBI.subtract(utcns, DAY_NANOS_JSBI);
+  ValidateEpochNanoseconds(dayBefore);
+  return castExists(GetNamedTimeZoneNextTransition(timeZone, dayBefore));
 }
 
 export function ISOYearString(year: number) {
   let yearString;
   if (year < 0 || year > 9999) {
     const sign = year < 0 ? '-' : '+';
-    const yearNumber = MathAbs(year);
-    yearString = sign + `000000${yearNumber}`.slice(-6);
+    const yearNumber = Math.abs(year);
+    yearString = sign + ToZeroPaddedDecimalString(yearNumber, 6);
   } else {
-    yearString = `0000${year}`.slice(-4);
+    yearString = ToZeroPaddedDecimalString(year, 4);
   }
   return yearString;
 }
 
 export function ISODateTimePartString(part: number) {
-  return `00${part}`.slice(-2);
+  return ToZeroPaddedDecimalString(part, 2);
 }
-export function FormatSecondsStringPart(
-  second: number,
-  millisecond: number,
-  microsecond: number,
-  nanosecond: number,
-  precision: ReturnType<typeof ToSecondsStringPrecision>['precision']
-) {
-  if (precision === 'minute') return '';
 
-  const secs = `:${ISODateTimePartString(second)}`;
-  let fractionNumber = millisecond * 1e6 + microsecond * 1e3 + nanosecond;
-  let fraction: string;
-
+function FormatFractionalSeconds(
+  subSecondNanoseconds: number,
+  precision: Exclude<SecondsStringPrecisionRecord['precision'], 'minute'>
+): string {
+  let fraction;
   if (precision === 'auto') {
-    if (fractionNumber === 0) return secs;
-    fraction = `${fractionNumber}`.padStart(9, '0');
-    while (fraction[fraction.length - 1] === '0') fraction = fraction.slice(0, -1);
+    if (subSecondNanoseconds === 0) return '';
+    const fractionFullPrecision = ToZeroPaddedDecimalString(subSecondNanoseconds, 9);
+    // now remove any trailing zeroes
+    fraction = fractionFullPrecision.replace(/0+$/, '');
   } else {
-    if (precision === 0) return secs;
-    fraction = `${fractionNumber}`.padStart(9, '0').slice(0, precision);
+    if (precision === 0) return '';
+    const fractionFullPrecision = ToZeroPaddedDecimalString(subSecondNanoseconds, 9);
+    fraction = fractionFullPrecision.slice(0, precision);
   }
-  return `${secs}.${fraction}`;
+  return `.${fraction}`;
+}
+
+function FormatTimeString(
+  hour: number,
+  minute: number,
+  second: number,
+  subSecondNanoseconds: number,
+  precision: SecondsStringPrecisionRecord['precision']
+): string {
+  let result = `${ISODateTimePartString(hour)}:${ISODateTimePartString(minute)}`;
+  if (precision === 'minute') return result;
+
+  result += `:${ISODateTimePartString(second)}`;
+  result += FormatFractionalSeconds(subSecondNanoseconds, precision);
+  return result;
 }
 
 export function TemporalInstantToString(
   instant: Temporal.Instant,
-  timeZone: Temporal.TimeZoneProtocol | undefined,
-  precision: ReturnType<typeof ToSecondsStringPrecision>['precision']
+  timeZone: string | undefined,
+  precision: SecondsStringPrecisionRecord['precision']
 ) {
   let outputTimeZone = timeZone;
-  if (outputTimeZone === undefined) {
-    const TemporalTimeZone = GetIntrinsic('%Temporal.TimeZone%');
-    outputTimeZone = new TemporalTimeZone('UTC');
-  }
-  const iso = GetISO8601Calendar();
-  const dateTime = BuiltinTimeZoneGetPlainDateTimeFor(outputTimeZone, instant, iso);
-  const year = ISOYearString(GetSlot(dateTime, ISO_YEAR));
-  const month = ISODateTimePartString(GetSlot(dateTime, ISO_MONTH));
-  const day = ISODateTimePartString(GetSlot(dateTime, ISO_DAY));
-  const hour = ISODateTimePartString(GetSlot(dateTime, ISO_HOUR));
-  const minute = ISODateTimePartString(GetSlot(dateTime, ISO_MINUTE));
-  const seconds = FormatSecondsStringPart(
-    GetSlot(dateTime, ISO_SECOND),
-    GetSlot(dateTime, ISO_MILLISECOND),
-    GetSlot(dateTime, ISO_MICROSECOND),
-    GetSlot(dateTime, ISO_NANOSECOND),
-    precision
-  );
+  if (outputTimeZone === undefined) outputTimeZone = 'UTC';
+  const epochNs = GetSlot(instant, EPOCHNANOSECONDS);
+  const iso = GetISODateTimeFor(outputTimeZone, epochNs);
+  const dateTimeString = ISODateTimeToString(iso, 'iso8601', precision, 'never');
   let timeZoneString = 'Z';
   if (timeZone !== undefined) {
-    const offsetNs = GetOffsetNanosecondsFor(outputTimeZone, instant);
-    timeZoneString = FormatISOTimeZoneOffsetString(offsetNs);
+    const offsetNs = GetOffsetNanosecondsFor(outputTimeZone, epochNs);
+    timeZoneString = FormatDateTimeUTCOffsetRounded(offsetNs);
   }
-  return `${year}-${month}-${day}T${hour}:${minute}${seconds}${timeZoneString}`;
+  return `${dateTimeString}${timeZoneString}`;
 }
 
 interface ToStringOptions {
-  unit: ReturnType<typeof ToSecondsStringPrecision>['unit'];
+  unit: SecondsStringPrecisionRecord['unit'];
   increment: number;
-  roundingMode: ReturnType<typeof ToTemporalRoundingMode>;
+  roundingMode: ReturnType<typeof GetRoundingModeOption>;
 }
 
 export function TemporalDurationToString(
   duration: Temporal.Duration,
-  precision: Temporal.ToStringPrecisionOptions['fractionalSecondDigits'] = 'auto',
-  options: ToStringOptions | undefined = undefined
+  precision: Exclude<SecondsStringPrecisionRecord['precision'], 'minute'>
 ) {
-  function formatNumber(num: number) {
-    if (num <= NumberMaxSafeInteger) return num.toString(10);
-    return JSBI.BigInt(num).toString(10);
-  }
-
   const years = GetSlot(duration, YEARS);
   const months = GetSlot(duration, MONTHS);
   const weeks = GetSlot(duration, WEEKS);
   const days = GetSlot(duration, DAYS);
   const hours = GetSlot(duration, HOURS);
   const minutes = GetSlot(duration, MINUTES);
-  let seconds = GetSlot(duration, SECONDS);
-  let ms = GetSlot(duration, MILLISECONDS);
-  let µs = GetSlot(duration, MICROSECONDS);
-  let ns = GetSlot(duration, NANOSECONDS);
-  const sign = DurationSign(years, months, weeks, days, hours, minutes, seconds, ms, µs, ns);
+  const sign = DurationSign(duration);
 
-  if (options) {
-    const { unit, increment, roundingMode } = options;
-    ({
-      seconds,
-      milliseconds: ms,
-      microseconds: µs,
-      nanoseconds: ns
-    } = RoundDuration(0, 0, 0, 0, 0, 0, seconds, ms, µs, ns, increment, unit, roundingMode));
+  let datePart = '';
+  if (years !== 0) datePart += `${Math.abs(years)}Y`;
+  if (months !== 0) datePart += `${Math.abs(months)}M`;
+  if (weeks !== 0) datePart += `${Math.abs(weeks)}W`;
+  if (days !== 0) datePart += `${Math.abs(days)}D`;
+
+  let timePart = '';
+  if (hours !== 0) timePart += `${Math.abs(hours)}H`;
+  if (minutes !== 0) timePart += `${Math.abs(minutes)}M`;
+
+  // Keeping sub-second units separate avoids losing precision after resolving
+  // any overflows from rounding
+  const secondsDuration = TimeDuration.fromComponents(
+    0,
+    0,
+    GetSlot(duration, SECONDS),
+    GetSlot(duration, MILLISECONDS),
+    GetSlot(duration, MICROSECONDS),
+    GetSlot(duration, NANOSECONDS)
+  );
+  if (
+    !secondsDuration.isZero() ||
+    ['second', 'millisecond', 'microsecond', 'nanosecond'].includes(DefaultTemporalLargestUnit(duration)) ||
+    precision !== 'auto'
+  ) {
+    const secondsPart = Math.abs(secondsDuration.sec);
+    const subSecondsPart = FormatFractionalSeconds(Math.abs(secondsDuration.subsec), precision);
+    timePart += `${secondsPart}${subSecondsPart}S`;
   }
-
-  const dateParts = [];
-  if (years) dateParts.push(`${formatNumber(MathAbs(years))}Y`);
-  if (months) dateParts.push(`${formatNumber(MathAbs(months))}M`);
-  if (weeks) dateParts.push(`${formatNumber(MathAbs(weeks))}W`);
-  if (days) dateParts.push(`${formatNumber(MathAbs(days))}D`);
-
-  const timeParts = [];
-  if (hours) timeParts.push(`${formatNumber(MathAbs(hours))}H`);
-  if (minutes) timeParts.push(`${formatNumber(MathAbs(minutes))}M`);
-
-  const secondParts = [];
-  let total = TotalDurationNanoseconds(0, 0, 0, seconds, ms, µs, ns, 0);
-  let nsBigInt: JSBI, µsBigInt: JSBI, msBigInt: JSBI, secondsBigInt: JSBI;
-  ({ quotient: total, remainder: nsBigInt } = divmod(total, THOUSAND));
-  ({ quotient: total, remainder: µsBigInt } = divmod(total, THOUSAND));
-  ({ quotient: secondsBigInt, remainder: msBigInt } = divmod(total, THOUSAND));
-  const fraction =
-    MathAbs(JSBI.toNumber(msBigInt)) * 1e6 + MathAbs(JSBI.toNumber(µsBigInt)) * 1e3 + MathAbs(JSBI.toNumber(nsBigInt));
-  let decimalPart;
-  if (precision === 'auto') {
-    if (fraction !== 0) {
-      decimalPart = `${fraction}`.padStart(9, '0');
-      while (decimalPart[decimalPart.length - 1] === '0') {
-        decimalPart = decimalPart.slice(0, -1);
-      }
-    }
-  } else if (precision !== 0) {
-    decimalPart = `${fraction}`.padStart(9, '0').slice(0, precision);
-  }
-  if (decimalPart) secondParts.unshift('.', decimalPart);
-  if (!JSBI.equal(secondsBigInt, ZERO) || secondParts.length || precision !== 'auto') {
-    secondParts.unshift(abs(secondsBigInt).toString());
-  }
-  if (secondParts.length) timeParts.push(`${secondParts.join('')}S`);
-  if (timeParts.length) timeParts.unshift('T');
-  if (!dateParts.length && !timeParts.length) return 'PT0S';
-  return `${sign < 0 ? '-' : ''}P${dateParts.join('')}${timeParts.join('')}`;
+  let result = `${sign < 0 ? '-' : ''}P${datePart}`;
+  if (timePart) result = `${result}T${timePart}`;
+  return result;
 }
 
 export function TemporalDateToString(
   date: Temporal.PlainDate,
   showCalendar: Temporal.ShowCalendarOption['calendarName'] = 'auto'
 ) {
-  const year = ISOYearString(GetSlot(date, ISO_YEAR));
-  const month = ISODateTimePartString(GetSlot(date, ISO_MONTH));
-  const day = ISODateTimePartString(GetSlot(date, ISO_DAY));
-  const calendarID = ToString(GetSlot(date, CALENDAR));
-  const calendar = FormatCalendarAnnotation(calendarID, showCalendar);
-  return `${year}-${month}-${day}${calendar}`;
-}
-
-export function TemporalDateTimeToString(
-  dateTime: Temporal.PlainDateTime,
-  precision: ReturnType<typeof ToSecondsStringPrecision>['precision'],
-  showCalendar: ReturnType<typeof ToShowCalendarOption> = 'auto',
-  options: ToStringOptions | undefined = undefined
-) {
-  let year = GetSlot(dateTime, ISO_YEAR);
-  let month = GetSlot(dateTime, ISO_MONTH);
-  let day = GetSlot(dateTime, ISO_DAY);
-  let hour = GetSlot(dateTime, ISO_HOUR);
-  let minute = GetSlot(dateTime, ISO_MINUTE);
-  let second = GetSlot(dateTime, ISO_SECOND);
-  let millisecond = GetSlot(dateTime, ISO_MILLISECOND);
-  let microsecond = GetSlot(dateTime, ISO_MICROSECOND);
-  let nanosecond = GetSlot(dateTime, ISO_NANOSECOND);
-
-  if (options) {
-    const { unit, increment, roundingMode } = options;
-    ({ year, month, day, hour, minute, second, millisecond, microsecond, nanosecond } = RoundISODateTime(
-      year,
-      month,
-      day,
-      hour,
-      minute,
-      second,
-      millisecond,
-      microsecond,
-      nanosecond,
-      increment,
-      unit,
-      roundingMode
-    ));
-  }
-
+  const { year, month, day } = GetSlot(date, ISO_DATE);
   const yearString = ISOYearString(year);
   const monthString = ISODateTimePartString(month);
   const dayString = ISODateTimePartString(day);
-  const hourString = ISODateTimePartString(hour);
-  const minuteString = ISODateTimePartString(minute);
-  const secondsString = FormatSecondsStringPart(second, millisecond, microsecond, nanosecond, precision);
-  const calendarID = ToString(GetSlot(dateTime, CALENDAR));
-  const calendar = FormatCalendarAnnotation(calendarID, showCalendar);
-  return `${yearString}-${monthString}-${dayString}T${hourString}:${minuteString}${secondsString}${calendar}`;
+  const calendar = FormatCalendarAnnotation(GetSlot(date, CALENDAR), showCalendar);
+  return `${yearString}-${monthString}-${dayString}${calendar}`;
+}
+
+export function TimeRecordToString(
+  { hour, minute, second, millisecond, microsecond, nanosecond }: TimeRecord,
+  precision: SecondsStringPrecisionRecord['precision']
+) {
+  const subSecondNanoseconds = millisecond * 1e6 + microsecond * 1e3 + nanosecond;
+  return FormatTimeString(hour, minute, second, subSecondNanoseconds, precision);
+}
+
+export function ISODateTimeToString(
+  isoDateTime: ISODateTime,
+  calendar: BuiltinCalendarId,
+  precision: SecondsStringPrecisionRecord['precision'],
+  showCalendar: ReturnType<typeof GetTemporalShowCalendarNameOption> = 'auto'
+) {
+  const {
+    isoDate: { year, month, day },
+    time: { hour, minute, second, millisecond, microsecond, nanosecond }
+  } = isoDateTime;
+  const yearString = ISOYearString(year);
+  const monthString = ISODateTimePartString(month);
+  const dayString = ISODateTimePartString(day);
+  const subSecondNanoseconds = millisecond * 1e6 + microsecond * 1e3 + nanosecond;
+  const timeString = FormatTimeString(hour, minute, second, subSecondNanoseconds, precision);
+  const calendarString = FormatCalendarAnnotation(calendar, showCalendar);
+  return `${yearString}-${monthString}-${dayString}T${timeString}${calendarString}`;
 }
 
 export function TemporalMonthDayToString(
   monthDay: Temporal.PlainMonthDay,
   showCalendar: Temporal.ShowCalendarOption['calendarName'] = 'auto'
 ) {
-  const month = ISODateTimePartString(GetSlot(monthDay, ISO_MONTH));
-  const day = ISODateTimePartString(GetSlot(monthDay, ISO_DAY));
-  let resultString = `${month}-${day}`;
+  const { year, month, day } = GetSlot(monthDay, ISO_DATE);
+  const monthString = ISODateTimePartString(month);
+  const dayString = ISODateTimePartString(day);
+  let resultString = `${monthString}-${dayString}`;
   const calendar = GetSlot(monthDay, CALENDAR);
-  const calendarID = ToString(calendar);
-  if (showCalendar === 'always' || calendarID !== 'iso8601') {
-    const year = ISOYearString(GetSlot(monthDay, ISO_YEAR));
-    resultString = `${year}-${resultString}`;
+  if (showCalendar === 'always' || showCalendar === 'critical' || calendar !== 'iso8601') {
+    const yearString = ISOYearString(year);
+    resultString = `${yearString}-${resultString}`;
   }
-  const calendarString = FormatCalendarAnnotation(calendarID, showCalendar);
+  const calendarString = FormatCalendarAnnotation(calendar, showCalendar);
   if (calendarString) resultString += calendarString;
   return resultString;
 }
@@ -2727,169 +2477,238 @@ export function TemporalYearMonthToString(
   yearMonth: Temporal.PlainYearMonth,
   showCalendar: Temporal.ShowCalendarOption['calendarName'] = 'auto'
 ) {
-  const year = ISOYearString(GetSlot(yearMonth, ISO_YEAR));
-  const month = ISODateTimePartString(GetSlot(yearMonth, ISO_MONTH));
-  let resultString = `${year}-${month}`;
+  const { year, month, day } = GetSlot(yearMonth, ISO_DATE);
+  const yearString = ISOYearString(year);
+  const monthString = ISODateTimePartString(month);
+  let resultString = `${yearString}-${monthString}`;
   const calendar = GetSlot(yearMonth, CALENDAR);
-  const calendarID = ToString(calendar);
-  if (showCalendar === 'always' || calendarID !== 'iso8601') {
-    const day = ISODateTimePartString(GetSlot(yearMonth, ISO_DAY));
-    resultString += `-${day}`;
+  if (showCalendar === 'always' || showCalendar === 'critical' || calendar !== 'iso8601') {
+    const dayString = ISODateTimePartString(day);
+    resultString += `-${dayString}`;
   }
-  const calendarString = FormatCalendarAnnotation(calendarID, showCalendar);
+  const calendarString = FormatCalendarAnnotation(calendar, showCalendar);
   if (calendarString) resultString += calendarString;
   return resultString;
 }
 
 export function TemporalZonedDateTimeToString(
   zdt: Temporal.ZonedDateTime,
-  precision: ReturnType<typeof ToSecondsStringPrecision>['precision'],
-  showCalendar: ReturnType<typeof ToShowCalendarOption> = 'auto',
-  showTimeZone: ReturnType<typeof ToShowTimeZoneNameOption> = 'auto',
-  showOffset: ReturnType<typeof ToShowOffsetOption> = 'auto',
+  precision: SecondsStringPrecisionRecord['precision'],
+  showCalendar: ReturnType<typeof GetTemporalShowCalendarNameOption> = 'auto',
+  showTimeZone: ReturnType<typeof GetTemporalShowTimeZoneNameOption> = 'auto',
+  showOffset: ReturnType<typeof GetTemporalShowOffsetOption> = 'auto',
   options: ToStringOptions | undefined = undefined
 ) {
-  let instant = GetSlot(zdt, INSTANT);
+  let epochNs = GetSlot(zdt, EPOCHNANOSECONDS);
 
   if (options) {
     const { unit, increment, roundingMode } = options;
-    const ns = RoundInstant(GetSlot(zdt, EPOCHNANOSECONDS), increment, unit, roundingMode);
-    const TemporalInstant = GetIntrinsic('%Temporal.Instant%');
-    instant = new TemporalInstant(ns);
+    epochNs = RoundTemporalInstant(epochNs, increment, unit, roundingMode);
   }
 
   const tz = GetSlot(zdt, TIME_ZONE);
-  const iso = GetISO8601Calendar();
-  const dateTime = BuiltinTimeZoneGetPlainDateTimeFor(tz, instant, iso);
-
-  const year = ISOYearString(GetSlot(dateTime, ISO_YEAR));
-  const month = ISODateTimePartString(GetSlot(dateTime, ISO_MONTH));
-  const day = ISODateTimePartString(GetSlot(dateTime, ISO_DAY));
-  const hour = ISODateTimePartString(GetSlot(dateTime, ISO_HOUR));
-  const minute = ISODateTimePartString(GetSlot(dateTime, ISO_MINUTE));
-  const seconds = FormatSecondsStringPart(
-    GetSlot(dateTime, ISO_SECOND),
-    GetSlot(dateTime, ISO_MILLISECOND),
-    GetSlot(dateTime, ISO_MICROSECOND),
-    GetSlot(dateTime, ISO_NANOSECOND),
-    precision
-  );
-  let result = `${year}-${month}-${day}T${hour}:${minute}${seconds}`;
+  const offsetNs = GetOffsetNanosecondsFor(tz, epochNs);
+  const iso = GetISODateTimeFor(tz, epochNs);
+  let dateTimeString = ISODateTimeToString(iso, 'iso8601', precision, 'never');
   if (showOffset !== 'never') {
-    const offsetNs = GetOffsetNanosecondsFor(tz, instant);
-    result += FormatISOTimeZoneOffsetString(offsetNs);
+    dateTimeString += FormatDateTimeUTCOffsetRounded(offsetNs);
   }
-  if (showTimeZone !== 'never') result += `[${tz}]`;
-  const calendarID = ToString(GetSlot(zdt, CALENDAR));
-  result += FormatCalendarAnnotation(calendarID, showCalendar);
-  return result;
+  if (showTimeZone !== 'never') {
+    const flag = showTimeZone === 'critical' ? '!' : '';
+    dateTimeString += `[${flag}${tz}]`;
+  }
+  dateTimeString += FormatCalendarAnnotation(GetSlot(zdt, CALENDAR), showCalendar);
+  return dateTimeString;
 }
 
-export function TestTimeZoneOffsetString(string: string) {
-  return OFFSET.test(StringCtor(string));
+export function IsOffsetTimeZoneIdentifier(string: string) {
+  return OFFSET_IDENTIFIER.test(string);
 }
 
-export function ParseTimeZoneOffsetString(string: string): number {
-  const match = OFFSET.exec(StringCtor(string));
+export function ParseDateTimeUTCOffset(string: string): number {
+  const match = OFFSET_WITH_PARTS.exec(string);
   if (!match) {
-    throw new RangeError(`invalid time zone offset: ${string}`);
+    throw new RangeError(`invalid time zone offset: ${string}; must match ±HH:MM[:SS.SSSSSSSSS]`);
   }
-  const sign = match[1] === '-' || match[1] === '\u2212' ? -1 : +1;
+  const sign = match[1] === '-' ? -1 : +1;
   const hours = +match[2];
   const minutes = +(match[3] || 0);
   const seconds = +(match[4] || 0);
   const nanoseconds = +((match[5] || 0) + '000000000').slice(0, 9);
-  return sign * (((hours * 60 + minutes) * 60 + seconds) * 1e9 + nanoseconds);
+  const offsetNanoseconds = sign * (((hours * 60 + minutes) * 60 + seconds) * 1e9 + nanoseconds);
+  return offsetNanoseconds;
 }
 
-export function GetCanonicalTimeZoneIdentifier(timeZoneIdentifier: string): string {
-  if (TestTimeZoneOffsetString(timeZoneIdentifier)) {
-    const offsetNs = ParseTimeZoneOffsetString(timeZoneIdentifier);
-    return FormatTimeZoneOffsetString(offsetNs);
+let canonicalTimeZoneIdsCache: Map<string, string> | undefined | null = undefined;
+const isTZIDSep = Object.assign(Object.create(null), { '/': true, '-': true, _: true });
+
+export function GetAvailableNamedTimeZoneIdentifier(
+  identifier: string
+): { identifier: string; primaryIdentifier: string } | undefined {
+  // The most common case is when the identifier is a canonical time zone ID.
+  // Fast-path that case by caching all canonical IDs. For old ECMAScript
+  // implementations lacking this API, set the cache to `null` to avoid retries.
+  if (canonicalTimeZoneIdsCache === undefined) {
+    const canonicalTimeZoneIds = Intl.supportedValuesOf?.('timeZone');
+    if (canonicalTimeZoneIds) {
+      canonicalTimeZoneIdsCache = new Map();
+      for (let ix = 0; ix < canonicalTimeZoneIds.length; ix++) {
+        const id = canonicalTimeZoneIds[ix];
+        canonicalTimeZoneIdsCache.set(ASCIILowercase(id), id);
+      }
+    } else {
+      canonicalTimeZoneIdsCache = null;
+    }
   }
-  const formatter = getIntlDateTimeFormatEnUsForTimeZone(StringCtor(timeZoneIdentifier));
-  return formatter.resolvedOptions().timeZone;
-}
 
-export function GetIANATimeZoneOffsetNanoseconds(epochNanoseconds: JSBI, id: string) {
-  const { year, month, day, hour, minute, second, millisecond, microsecond, nanosecond } = GetIANATimeZoneDateTimeParts(
-    epochNanoseconds,
-    id
-  );
-  const utc = GetEpochFromISOParts(year, month, day, hour, minute, second, millisecond, microsecond, nanosecond);
-  if (utc === null) throw new RangeError('Date outside of supported range');
-  return JSBI.toNumber(JSBI.subtract(utc, epochNanoseconds));
-}
+  const lower = ASCIILowercase(identifier);
+  let primaryIdentifier = canonicalTimeZoneIdsCache?.get(lower);
+  if (primaryIdentifier) return { identifier: primaryIdentifier, primaryIdentifier };
 
-function FormatTimeZoneOffsetString(offsetNanosecondsParam: number): string {
-  const sign = offsetNanosecondsParam < 0 ? '-' : '+';
-  const offsetNanoseconds = MathAbs(offsetNanosecondsParam);
-  const nanoseconds = offsetNanoseconds % 1e9;
-  const seconds = MathFloor(offsetNanoseconds / 1e9) % 60;
-  const minutes = MathFloor(offsetNanoseconds / 60e9) % 60;
-  const hours = MathFloor(offsetNanoseconds / 3600e9);
-
-  const hourString = ISODateTimePartString(hours);
-  const minuteString = ISODateTimePartString(minutes);
-  const secondString = ISODateTimePartString(seconds);
-  let post = '';
-  if (nanoseconds) {
-    let fraction = `${nanoseconds}`.padStart(9, '0');
-    while (fraction[fraction.length - 1] === '0') fraction = fraction.slice(0, -1);
-    post = `:${secondString}.${fraction}`;
-  } else if (seconds) {
-    post = `:${secondString}`;
+  // It's not already a primary identifier, so get its primary identifier (or
+  // return if it's not an available named time zone ID).
+  try {
+    const formatter = getIntlDateTimeFormatEnUsForTimeZone(identifier);
+    primaryIdentifier = formatter.resolvedOptions().timeZone;
+  } catch {
+    return undefined;
   }
-  return `${sign}${hourString}:${minuteString}${post}`;
+
+  // Special case this legacy identifier that is listed both in `backzone` and
+  // `backward` in the TZDB. Work around implementations that incorrectly use
+  // the `backward` data.
+  if (lower === 'antarctica/south_pole') primaryIdentifier = 'Antarctica/McMurdo';
+
+  // Some legacy identifiers are aliases in ICU but not legal IANA identifiers.
+  // Reject them even if the implementation's Intl supports them, as they are
+  // not present in the IANA time zone database.
+  if (ICU_LEGACY_TIME_ZONE_IDS.has(identifier)) {
+    throw new RangeError(`${identifier} is a legacy time zone identifier from ICU. Use ${primaryIdentifier} instead`);
+  }
+
+  // The identifier is an alias (a deprecated identifier that's a synonym for a
+  // primary identifier), so we need to case-normalize the identifier to match
+  // the IANA TZDB, e.g. america/new_york => America/New_York. There's no
+  // built-in way to do this using Intl.DateTimeFormat, but the we can normalize
+  // almost all aliases (modulo a few special cases) using the TZDB's basic
+  // capitalization pattern:
+  // 1. capitalize the first letter of the identifier
+  // 2. capitalize the letter after every slash, dash, or underscore delimiter
+  const chars = [...lower].map((c, i) => (i === 0 || isTZIDSep[lower[i - 1]] ? c.toUpperCase() : c));
+  const standardCase = chars.join('');
+  const segments = standardCase.split('/');
+
+  if (segments.length === 1) {
+    // If a single-segment legacy ID is 2-3 chars or contains a number or dash, then
+    // (except for the "GB-Eire" special case) the case-normalized form is uppercase.
+    // These are: GMT+0, GMT-0, GB, NZ, PRC, ROC, ROK, UCT, GMT, GMT0, CET, CST6CDT,
+    // EET, EST, HST, MET, MST, MST7MDT, PST8PDT, WET, NZ-CHAT, and W-SU.
+    // Otherwise it's standard form: first letter capitalized, e.g. Iran, Egypt, Hongkong
+    if (lower === 'gb-eire') return { identifier: 'GB-Eire', primaryIdentifier };
+    return {
+      identifier: lower.length <= 3 || /[-0-9]/.test(lower) ? lower.toUpperCase() : segments[0],
+      primaryIdentifier
+    };
+  }
+
+  // All Etc zone names are uppercase except three exceptions.
+  if (segments[0] === 'Etc') {
+    const etcName = ['Zulu', 'Greenwich', 'Universal'].includes(segments[1]) ? segments[1] : segments[1].toUpperCase();
+    return { identifier: `Etc/${etcName}`, primaryIdentifier };
+  }
+
+  // Legacy US identifiers like US/Alaska or US/Indiana-Starke are 2 segments and use standard form.
+  if (segments[0] === 'Us') return { identifier: `US/${segments[1]}`, primaryIdentifier };
+
+  // For multi-segment IDs, there's a few special cases in the second/third segments
+  const specialCases = new Map([
+    ['Act', 'ACT'],
+    ['Lhi', 'LHI'],
+    ['Nsw', 'NSW'],
+    ['Dar_Es_Salaam', 'Dar_es_Salaam'],
+    ['Port_Of_Spain', 'Port_of_Spain'],
+    ['Port-Au-Prince', 'Port-au-Prince'],
+    ['Isle_Of_Man', 'Isle_of_Man'],
+    ['Comodrivadavia', 'ComodRivadavia'],
+    ['Knox_In', 'Knox_IN'],
+    ['Dumontdurville', 'DumontDUrville'],
+    ['Mcmurdo', 'McMurdo'],
+    ['Denoronha', 'DeNoronha'],
+    ['Easterisland', 'EasterIsland'],
+    ['Bajanorte', 'BajaNorte'],
+    ['Bajasur', 'BajaSur']
+  ]);
+  segments[1] = specialCases.get(segments[1]) ?? segments[1];
+  if (segments.length > 2) segments[2] = specialCases.get(segments[2]) ?? segments[2];
+  return { identifier: segments.join('/'), primaryIdentifier };
 }
 
-function FormatISOTimeZoneOffsetString(offsetNanosecondsParam: number): string {
-  let offsetNanoseconds = JSBI.toNumber(
-    RoundNumberToIncrement(JSBI.BigInt(offsetNanosecondsParam), 60e9, 'halfExpand')
-  );
-  const sign = offsetNanoseconds < 0 ? '-' : '+';
-  offsetNanoseconds = MathAbs(offsetNanoseconds);
-  const minutes = (offsetNanoseconds / 60e9) % 60;
-  const hours = MathFloor(offsetNanoseconds / 3600e9);
-
-  const hourString = ISODateTimePartString(hours);
-  const minuteString = ISODateTimePartString(minutes);
-  return `${sign}${hourString}:${minuteString}`;
+function GetNamedTimeZoneOffsetNanosecondsImpl(id: string, epochMilliseconds: number) {
+  const { year, month, day, hour, minute, second } = GetFormatterParts(id, epochMilliseconds);
+  let millisecond = epochMilliseconds % 1000;
+  if (millisecond < 0) millisecond += 1000;
+  const utc = GetUTCEpochMilliseconds({ isoDate: { year, month, day }, time: { hour, minute, second, millisecond } });
+  return (utc - epochMilliseconds) * 1e6;
 }
-export function GetEpochFromISOParts(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-  second: number,
-  millisecond: number,
-  microsecond: number,
-  nanosecond: number
-) {
+
+function GetNamedTimeZoneOffsetNanoseconds(id: string, epochNanoseconds: JSBI) {
+  // Optimization: We get the offset nanoseconds only with millisecond
+  // resolution, assuming that time zone offset changes don't happen in the
+  // middle of a millisecond
+  return GetNamedTimeZoneOffsetNanosecondsImpl(id, epochNsToMs(epochNanoseconds, 'floor'));
+}
+
+export function FormatOffsetTimeZoneIdentifier(offsetMinutes: number): string {
+  const sign = offsetMinutes < 0 ? '-' : '+';
+  const absoluteMinutes = Math.abs(offsetMinutes);
+  const hour = Math.floor(absoluteMinutes / 60);
+  const minute = absoluteMinutes % 60;
+  const timeString = FormatTimeString(hour, minute, 0, 0, 'minute');
+  return `${sign}${timeString}`;
+}
+
+function FormatDateTimeUTCOffsetRounded(offsetNanosecondsParam: number): string {
+  const offsetNanoseconds = RoundNumberToIncrement(offsetNanosecondsParam, MINUTE_NANOS, 'halfExpand');
+  return FormatOffsetTimeZoneIdentifier(offsetNanoseconds / 60e9);
+}
+
+function GetUTCEpochMilliseconds({
+  isoDate: { year, month, day },
+  time: { hour, minute, second, millisecond }
+}: {
+  isoDate: ISODate;
+  time: Omit<TimeRecord, 'microsecond' | 'nanosecond'>;
+}) {
+  // The pattern of leap years in the ISO 8601 calendar repeats every 400
+  // years. To avoid overflowing at the edges of the range, we reduce the year
+  // to the remainder after dividing by 400, and then add back all the
+  // nanoseconds from the multiples of 400 years at the end.
+  const reducedYear = year % 400;
+  const yearCycles = (year - reducedYear) / 400;
+
   // Note: Date.UTC() interprets one and two-digit years as being in the
   // 20th century, so don't use it
   const legacyDate = new Date();
   legacyDate.setUTCHours(hour, minute, second, millisecond);
-  legacyDate.setUTCFullYear(year, month - 1, day);
+  legacyDate.setUTCFullYear(reducedYear, month - 1, day);
   const ms = legacyDate.getTime();
-  if (NumberIsNaN(ms)) return null;
-  let ns = JSBI.multiply(JSBI.BigInt(ms), MILLION);
-  ns = JSBI.add(ns, JSBI.multiply(JSBI.BigInt(microsecond), THOUSAND));
-  ns = JSBI.add(ns, JSBI.BigInt(nanosecond));
-  if (JSBI.lessThan(ns, NS_MIN) || JSBI.greaterThan(ns, NS_MAX)) return null;
-  return ns;
+  return ms + MS_IN_400_YEAR_CYCLE * yearCycles;
+}
+
+function GetUTCEpochNanoseconds(isoDateTime: ISODateTime) {
+  const ms = GetUTCEpochMilliseconds(isoDateTime);
+  const subMs = isoDateTime.time.microsecond * 1e3 + isoDateTime.time.nanosecond;
+  return JSBI.add(epochMsToNs(ms), JSBI.BigInt(subMs));
 }
 
 function GetISOPartsFromEpoch(epochNanoseconds: JSBI) {
-  const { quotient, remainder } = divmod(epochNanoseconds, MILLION);
-  let epochMilliseconds = JSBI.toNumber(quotient);
-  let nanos = JSBI.toNumber(remainder);
+  let epochMilliseconds = epochNsToMs(epochNanoseconds, 'trunc');
+  let nanos = JSBI.toNumber(JSBI.remainder(epochNanoseconds, MILLION));
   if (nanos < 0) {
     nanos += 1e6;
     epochMilliseconds -= 1;
   }
-  const microsecond = MathFloor(nanos / 1e3) % 1e3;
+  const microsecond = Math.floor(nanos / 1e3) % 1e3;
   const nanosecond = nanos % 1e3;
 
   const item = new Date(epochMilliseconds);
@@ -2901,157 +2720,150 @@ function GetISOPartsFromEpoch(epochNanoseconds: JSBI) {
   const second = item.getUTCSeconds();
   const millisecond = item.getUTCMilliseconds();
 
-  return { epochMilliseconds, year, month, day, hour, minute, second, millisecond, microsecond, nanosecond };
+  return {
+    epochMilliseconds,
+    isoDate: { year, month, day },
+    time: { hour, minute, second, millisecond, microsecond, nanosecond }
+  };
 }
 
 // ts-prune-ignore-next TODO: remove this after tests are converted to TS
-export function GetIANATimeZoneDateTimeParts(epochNanoseconds: JSBI, id: string) {
-  const { epochMilliseconds, millisecond, microsecond, nanosecond } = GetISOPartsFromEpoch(epochNanoseconds);
+export function GetNamedTimeZoneDateTimeParts(id: string, epochNanoseconds: JSBI) {
+  const {
+    epochMilliseconds,
+    time: { millisecond, microsecond, nanosecond }
+  } = GetISOPartsFromEpoch(epochNanoseconds);
   const { year, month, day, hour, minute, second } = GetFormatterParts(id, epochMilliseconds);
   return BalanceISODateTime(year, month, day, hour, minute, second, millisecond, microsecond, nanosecond);
 }
 
-function maxJSBI(one: JSBI, two: JSBI) {
-  return JSBI.lessThan(one, two) ? two : one;
-}
+export function GetNamedTimeZoneNextTransition(id: string, epochNanoseconds: JSBI): JSBI | null {
+  if (id === 'UTC') return null; // UTC fast path
 
-/**
- * Our best guess at how far in advance new rules will be put into the TZDB for
- * future offset transitions. We'll pick 10 years but can always revise it if
- * we find that countries are being unusually proactive in their announcing
- * of offset changes.
- */
-function afterLatestPossibleTzdbRuleChange() {
-  return JSBI.add(SystemUTCEpochNanoSeconds(), ABOUT_TEN_YEARS_NANOS);
-}
+  // Optimization: we floor the instant to the previous millisecond boundary
+  // so that we can do Number math instead of BigInt math. This assumes that
+  // time zone transitions don't happen in the middle of a millisecond.
+  const epochMilliseconds = epochNsToMs(epochNanoseconds, 'floor');
+  if (epochMilliseconds < BEFORE_FIRST_DST) {
+    return GetNamedTimeZoneNextTransition(id, epochMsToNs(BEFORE_FIRST_DST));
+  }
 
-export function GetIANATimeZoneNextTransition(epochNanoseconds: JSBI, id: string): JSBI | null {
-  // Decide how far in the future after `epochNanoseconds` we'll look for an
-  // offset change. There are two cases:
-  // 1. If it's a past date (or a date in the near future) then it's possible
-  //    that the time zone may have newly added DST in the next few years. So
-  //    we'll have to look from the provided time until a few years after the
-  //    current system time. (Changes to DST policy are usually announced a few
-  //    years in the future.) Note that the first DST anywhere started in 1847,
-  //    so we'll start checks in 1847 instead of wasting cycles on years where
-  //    there will never be transitions.
-  // 2. If it's a future date beyond the next few years, then we'll just assume
-  //    that the latest DST policy in TZDB will still be in effect.  In this
-  //    case, we only need to look one year in the future to see if there are
-  //    any DST transitions.  We actually only need to look 9-10 months because
-  //    DST has two transitions per year, but we'll use a year just to be safe.
-  const oneYearLater = JSBI.add(epochNanoseconds, ABOUT_ONE_YEAR_NANOS);
-  const uppercap = maxJSBI(afterLatestPossibleTzdbRuleChange(), oneYearLater);
-  // The first transition (in any timezone) recorded in the TZDB was in 1847, so
-  // start there if an earlier date is supplied.
-  let leftNanos = maxJSBI(BEFORE_FIRST_OFFSET_TRANSITION, epochNanoseconds);
-  const leftOffsetNs = GetIANATimeZoneOffsetNanoseconds(leftNanos, id);
-  let rightNanos = leftNanos;
+  // Optimization: the farthest that we'll look for a next transition is 3 years
+  // after the later of epochNanoseconds or the current time. If there are no
+  // transitions found before then, we'll assume that there will not be any more
+  // transitions after that.
+  const now = Date.now();
+  const base = Math.max(epochMilliseconds, now);
+  const uppercap = base + DAY_MS * 366 * 3;
+  let leftMs = epochMilliseconds;
+  let leftOffsetNs = GetNamedTimeZoneOffsetNanosecondsImpl(id, leftMs);
+  let rightMs = leftMs;
   let rightOffsetNs = leftOffsetNs;
-  while (leftOffsetNs === rightOffsetNs && JSBI.lessThan(JSBI.BigInt(leftNanos), uppercap)) {
-    rightNanos = JSBI.add(leftNanos, TWO_WEEKS_NANOS);
-    rightOffsetNs = GetIANATimeZoneOffsetNanoseconds(rightNanos, id);
+  while (leftOffsetNs === rightOffsetNs && leftMs < uppercap) {
+    rightMs = leftMs + DAY_MS * 2 * 7;
+    if (rightMs > MS_MAX) return null;
+    rightOffsetNs = GetNamedTimeZoneOffsetNanosecondsImpl(id, rightMs);
     if (leftOffsetNs === rightOffsetNs) {
-      leftNanos = rightNanos;
+      leftMs = rightMs;
     }
   }
   if (leftOffsetNs === rightOffsetNs) return null;
   const result = bisect(
-    (epochNs: JSBI) => GetIANATimeZoneOffsetNanoseconds(epochNs, id),
-    leftNanos,
-    rightNanos,
+    (epochMs: number) => GetNamedTimeZoneOffsetNanosecondsImpl(id, epochMs),
+    leftMs,
+    rightMs,
     leftOffsetNs,
     rightOffsetNs
   );
-  return result;
+  return epochMsToNs(result);
 }
 
-export function GetIANATimeZonePreviousTransition(epochNanoseconds: JSBI, id: string): JSBI | null {
-  // If a time zone uses DST (at the time of `epochNanoseconds`), then we only
-  // have to look back one year to find a transition. But if it doesn't use DST,
-  // then we need to look all the way back to 1847 (the earliest rule in the
-  // TZDB) to see if it had other offset transitions in the past. Looping back
-  // from a far-future date to 1847 is very slow (minutes of 100% CPU!), and is
-  // also unnecessary because DST rules aren't put into the TZDB more than a few
-  // years in the future because the political changes in time zones happen with
-  // only a few years' warning. Therefore, if a far-future date is provided,
-  // then we'll run the check in two parts:
-  // 1. First, we'll look back for up to one year to see if the latest TZDB
-  //    rules have DST.
-  // 2. If not, then we'll "fast-reverse" back to a few years later than the
-  //    current system time, and then look back to 1847. This reduces the
-  //    worst-case loop from 273K years to 175 years, for a ~1500x improvement
-  //    in worst-case perf.
-  const afterLatestRule = afterLatestPossibleTzdbRuleChange();
-  const isFarFuture = JSBI.greaterThan(epochNanoseconds, afterLatestRule);
-  const lowercap = isFarFuture ? JSBI.subtract(epochNanoseconds, ABOUT_ONE_YEAR_NANOS) : BEFORE_FIRST_OFFSET_TRANSITION;
-  let rightNanos = JSBI.subtract(epochNanoseconds, ONE);
-  const rightOffsetNs = GetIANATimeZoneOffsetNanoseconds(rightNanos, id);
-  let leftNanos = rightNanos;
+export function GetNamedTimeZonePreviousTransition(id: string, epochNanoseconds: JSBI): JSBI | null {
+  if (id === 'UTC') return null; // UTC fast path
+
+  // Optimization: we raise the instant to the next millisecond boundary so
+  // that we can do Number math instead of BigInt math. This assumes that time
+  // zone transitions don't happen in the middle of a millisecond.
+  const epochMilliseconds = epochNsToMs(epochNanoseconds, 'ceil');
+
+  // Optimization: if the instant is more than 3 years in the future and there
+  // are no transitions between the present day and 3 years from now, assume
+  // there are none after.
+  const now = Date.now();
+  const lookahead = now + DAY_MS * 366 * 3;
+  if (epochMilliseconds > lookahead) {
+    const prevBeforeLookahead = GetNamedTimeZonePreviousTransition(id, epochMsToNs(lookahead));
+    if (prevBeforeLookahead === null || JSBI.lessThan(prevBeforeLookahead, epochMsToNs(now))) {
+      return prevBeforeLookahead;
+    }
+  }
+
+  // We assume most time zones either have regular DST rules that extend
+  // indefinitely into the future, or they have no DST transitions between now
+  // and next year. Africa/Casablanca and Africa/El_Aaiun are unique cases
+  // that fit neither of these. Their irregular DST transitions are
+  // precomputed until 2087 in the current time zone database, so requesting
+  // the previous transition for an instant far in the future may take an
+  // extremely long time as it loops backward 2 weeks at a time.
+  if (id === 'Africa/Casablanca' || id === 'Africa/El_Aaiun') {
+    const lastPrecomputed = Date.UTC(2088, 0, 1); // 2088-01-01T00Z
+    if (lastPrecomputed < epochMilliseconds) {
+      return GetNamedTimeZonePreviousTransition(id, epochMsToNs(lastPrecomputed));
+    }
+  }
+
+  let rightMs = epochMilliseconds - 1;
+  if (rightMs < BEFORE_FIRST_DST) return null;
+  let rightOffsetNs = GetNamedTimeZoneOffsetNanosecondsImpl(id, rightMs);
+  let leftMs = rightMs;
   let leftOffsetNs = rightOffsetNs;
-  while (rightOffsetNs === leftOffsetNs && JSBI.greaterThan(rightNanos, lowercap)) {
-    leftNanos = JSBI.subtract(rightNanos, TWO_WEEKS_NANOS);
-    leftOffsetNs = GetIANATimeZoneOffsetNanoseconds(leftNanos, id);
+  while (rightOffsetNs === leftOffsetNs && rightMs > BEFORE_FIRST_DST) {
+    leftMs = rightMs - DAY_MS * 2 * 7;
+    if (leftMs < BEFORE_FIRST_DST) return null;
+    leftOffsetNs = GetNamedTimeZoneOffsetNanosecondsImpl(id, leftMs);
     if (rightOffsetNs === leftOffsetNs) {
-      rightNanos = leftNanos;
+      rightMs = leftMs;
     }
   }
-  if (rightOffsetNs === leftOffsetNs) {
-    if (isFarFuture) {
-      // There was no DST after looking back one year, which means that the most
-      // recent TZDB rules don't have any recurring transitions. To check for
-      // transitions in older rules, back up to a few years after the current
-      // date and then look all the way back to 1847. Note that we move back one
-      // day from the latest possible rule so that when the recursion runs it
-      // won't consider the new time to be "far future" because the system clock
-      // has advanced in the meantime.
-      const newTimeToCheck = JSBI.subtract(afterLatestRule, DAY_NANOS);
-      return GetIANATimeZonePreviousTransition(newTimeToCheck, id);
-    }
-    return null;
-  }
+  if (rightOffsetNs === leftOffsetNs) return null;
   const result = bisect(
-    (epochNs: JSBI) => GetIANATimeZoneOffsetNanoseconds(epochNs, id),
-    leftNanos,
-    rightNanos,
+    (epochMs: number) => GetNamedTimeZoneOffsetNanosecondsImpl(id, epochMs),
+    leftMs,
+    rightMs,
     leftOffsetNs,
     rightOffsetNs
   );
-  return result;
+  return epochMsToNs(result);
 }
 
 // ts-prune-ignore-next TODO: remove this after tests are converted to TS
 export function parseFromEnUsFormat(datetime: string) {
-  const parts = datetime.split(/[^\w]+/);
+  const splits = datetime.split(/[^\w]+/);
 
-  if (parts.length !== 7) {
+  if (splits.length !== 7) {
     throw new RangeError(`expected 7 parts in "${datetime}`);
   }
 
-  const month = +parts[0];
-  const day = +parts[1];
-  let year = +parts[2];
-  const era = parts[3].toUpperCase();
-  if (era === 'B' || era === 'BC') {
+  const month = +splits[0];
+  const day = +splits[1];
+  let year = +splits[2];
+  const era = splits[3];
+  if (era[0] === 'b' || era[0] === 'B') {
     year = -year + 1;
-  } else if (era !== 'A' && era !== 'AD') {
+  } else if (era[0] !== 'a' && era[0] !== 'A') {
     throw new RangeError(`Unknown era ${era} in "${datetime}`);
   }
-  let hour = +parts[4];
-  if (hour === 24) {
-    // bugs.chromium.org/p/chromium/issues/detail?id=1045791
-    hour = 0;
-  }
-  const minute = +parts[5];
-  const second = +parts[6];
+  const hour = splits[4] === '24' ? 0 : +splits[4]; // bugs.chromium.org/p/chromium/issues/detail?id=1045791
+  const minute = +splits[5];
+  const second = +splits[6];
 
   if (
-    !NumberIsFinite(year) ||
-    !NumberIsFinite(month) ||
-    !NumberIsFinite(day) ||
-    !NumberIsFinite(hour) ||
-    !NumberIsFinite(minute) ||
-    !NumberIsFinite(second)
+    !Number.isFinite(year) ||
+    !Number.isFinite(month) ||
+    !Number.isFinite(day) ||
+    !Number.isFinite(hour) ||
+    !Number.isFinite(minute) ||
+    !Number.isFinite(second)
   ) {
     throw new RangeError(`Invalid number in "${datetime}`);
   }
@@ -3062,52 +2874,42 @@ export function parseFromEnUsFormat(datetime: string) {
 // ts-prune-ignore-next TODO: remove this after tests are converted to TS
 export function GetFormatterParts(timeZone: string, epochMilliseconds: number) {
   const formatter = getIntlDateTimeFormatEnUsForTimeZone(timeZone);
-  // Using `format` instead of `formatToParts` for compatibility with older clients
-  const datetime = formatter.format(new Date(epochMilliseconds));
+  // Using `format` instead of `formatToParts` for compatibility with older
+  // clients and because it is twice as fast
+  const datetime = formatter.format(epochMilliseconds);
   return parseFromEnUsFormat(datetime);
 }
 
-export function GetIANATimeZoneEpochValue(
-  id: string,
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-  second: number,
-  millisecond: number,
-  microsecond: number,
-  nanosecond: number
-) {
-  const ns = GetEpochFromISOParts(year, month, day, hour, minute, second, millisecond, microsecond, nanosecond);
-  if (ns === null) throw new RangeError('DateTime outside of supported range');
-  let nsEarlier = JSBI.subtract(ns, DAY_NANOS);
+// The goal of this function is to find the exact time(s) that correspond to a
+// calendar date and clock time in a particular time zone. Normally there will
+// be only one match. But for repeated clock times after backwards transitions
+// (like when DST ends) there may be two matches. And for skipped clock times
+// after forward transitions, there will be no matches.
+function GetNamedTimeZoneEpochNanoseconds(id: string, isoDateTime: ISODateTime) {
+  // Get the offset of one day before and after the requested calendar date and
+  // clock time, avoiding overflows if near the edge of the Instant range.
+  let ns = GetUTCEpochNanoseconds(isoDateTime);
+  let nsEarlier = JSBI.subtract(ns, DAY_NANOS_JSBI);
   if (JSBI.lessThan(nsEarlier, NS_MIN)) nsEarlier = ns;
-  let nsLater = JSBI.add(ns, DAY_NANOS);
+  let nsLater = JSBI.add(ns, DAY_NANOS_JSBI);
   if (JSBI.greaterThan(nsLater, NS_MAX)) nsLater = ns;
-  const earliest = GetIANATimeZoneOffsetNanoseconds(nsEarlier, id);
-  const latest = GetIANATimeZoneOffsetNanoseconds(nsLater, id);
-  const found = earliest === latest ? [earliest] : [earliest, latest];
-  return found
-    .map((offsetNanoseconds) => {
-      const epochNanoseconds = JSBI.subtract(ns, JSBI.BigInt(offsetNanoseconds));
-      const parts = GetIANATimeZoneDateTimeParts(epochNanoseconds, id);
-      if (
-        year !== parts.year ||
-        month !== parts.month ||
-        day !== parts.day ||
-        hour !== parts.hour ||
-        minute !== parts.minute ||
-        second !== parts.second ||
-        millisecond !== parts.millisecond ||
-        microsecond !== parts.microsecond ||
-        nanosecond !== parts.nanosecond
-      ) {
-        return undefined;
-      }
-      return epochNanoseconds;
-    })
-    .filter((x) => x !== undefined) as JSBI[];
+  const earlierOffsetNs = GetNamedTimeZoneOffsetNanoseconds(id, nsEarlier);
+  const laterOffsetNs = GetNamedTimeZoneOffsetNanoseconds(id, nsLater);
+
+  // If before and after offsets are the same, then we assume there was no
+  // offset transition in between, and therefore only one exact time can
+  // correspond to the provided calendar date and clock time. But if they're
+  // different, then there was an offset transition in between, so test both
+  // offsets to see which one(s) will yield a matching exact time.
+  const found = earlierOffsetNs === laterOffsetNs ? [earlierOffsetNs] : [earlierOffsetNs, laterOffsetNs];
+  const candidates = found.map((offsetNanoseconds) => {
+    const epochNanoseconds = JSBI.subtract(ns, JSBI.BigInt(offsetNanoseconds));
+    const parts = GetNamedTimeZoneDateTimeParts(id, epochNanoseconds);
+    if (CompareISODateTime(isoDateTime, parts) !== 0) return undefined;
+    ValidateEpochNanoseconds(epochNanoseconds);
+    return epochNanoseconds;
+  });
+  return candidates.filter((x) => x !== undefined) as JSBI[];
 }
 
 export function LeapYear(year: number) {
@@ -3126,91 +2928,71 @@ export function ISODaysInMonth(year: number, month: number) {
   return DoM[LeapYear(year) ? 'leapyear' : 'standard'][month - 1];
 }
 
-export function DayOfWeek(year: number, month: number, day: number) {
-  const m = month + (month < 3 ? 10 : -2);
-  const Y = year - (month < 3 ? 1 : 0);
-
-  const c = MathFloor(Y / 100);
-  const y = Y - c * 100;
-  const d = day;
-
-  const pD = d;
-  const pM = MathFloor(2.6 * m - 0.2);
-  const pY = y + MathFloor(y / 4);
-  const pC = MathFloor(c / 4) - 2 * c;
-
-  const dow = (pD + pM + pY + pC) % 7;
-
-  return dow + (dow <= 0 ? 7 : 0);
-}
-
-export function DayOfYear(year: number, month: number, day: number) {
-  let days = day;
-  for (let m = month - 1; m > 0; m--) {
-    days += ISODaysInMonth(year, m);
-  }
-  return days;
-}
-
-export function WeekOfYear(year: number, month: number, day: number) {
-  const doy = DayOfYear(year, month, day);
-  const dow = DayOfWeek(year, month, day) || 7;
-  const doj = DayOfWeek(year, 1, 1);
-
-  const week = MathFloor((doy - dow + 10) / 7);
-
-  if (week < 1) {
-    if (doj === 5 || (doj === 6 && LeapYear(year - 1))) {
-      return 53;
-    } else {
-      return 52;
-    }
-  }
-  if (week === 53) {
-    if ((LeapYear(year) ? 366 : 365) - doy < 4 - dow) {
-      return 1;
-    }
-  }
-
-  return week;
-}
-
-export function DurationSign(
-  y: number,
-  mon: number,
-  w: number,
-  d: number,
-  h: number,
-  min: number,
-  s: number,
-  ms: number,
-  µs: number,
-  ns: number
-) {
-  for (const prop of [y, mon, w, d, h, min, s, ms, µs, ns]) {
+export function DurationSign(duration: Temporal.Duration) {
+  const fields = [
+    GetSlot(duration, YEARS),
+    GetSlot(duration, MONTHS),
+    GetSlot(duration, WEEKS),
+    GetSlot(duration, DAYS),
+    GetSlot(duration, HOURS),
+    GetSlot(duration, MINUTES),
+    GetSlot(duration, SECONDS),
+    GetSlot(duration, MILLISECONDS),
+    GetSlot(duration, MICROSECONDS),
+    GetSlot(duration, NANOSECONDS)
+  ];
+  for (let index = 0; index < fields.length; index++) {
+    const prop = fields[index];
     if (prop !== 0) return prop < 0 ? -1 : 1;
   }
   return 0;
 }
 
-function BalanceISOYearMonth(yearParam: number, monthParam: number) {
+function DateDurationSign(dateDuration: DateDuration) {
+  const fieldNames = ['years', 'months', 'weeks', 'days'] as const;
+  for (let index = 0; index < fieldNames.length; index++) {
+    const prop = dateDuration[fieldNames[index]];
+    if (prop !== 0) return prop < 0 ? -1 : 1;
+  }
+  return 0;
+}
+
+function InternalDurationSign(duration: InternalDuration) {
+  const dateSign = DateDurationSign(duration.date);
+  if (dateSign !== 0) return dateSign;
+  return duration.time.sign();
+}
+
+export function BalanceISOYearMonth(yearParam: number, monthParam: number) {
   let year = yearParam;
   let month = monthParam;
-  if (!NumberIsFinite(year) || !NumberIsFinite(month)) throw new RangeError('infinity is out of range');
+  if (!Number.isFinite(year) || !Number.isFinite(month)) throw new RangeError('infinity is out of range');
   month -= 1;
-  year += MathFloor(month / 12);
+  year += Math.floor(month / 12);
   month %= 12;
   if (month < 0) month += 12;
   month += 1;
   return { year, month };
 }
 
-function BalanceISODate(yearParam: number, monthParam: number, dayParam: number) {
+export function BalanceISODate(yearParam: number, monthParam: number, dayParam: number) {
   let year = yearParam;
   let month = monthParam;
   let day = dayParam;
-  if (!NumberIsFinite(day)) throw new RangeError('infinity is out of range');
+  if (!Number.isFinite(day)) throw new RangeError('infinity is out of range');
   ({ year, month } = BalanceISOYearMonth(year, month));
+
+  // The pattern of leap years in the ISO 8601 calendar repeats every 400
+  // years. So if we have more than 400 years in days, there's no need to
+  // convert days to a year 400 times. We can convert a multiple of 400 all at
+  // once.
+  const daysIn400YearCycle = 400 * 365 + 97;
+  if (Math.abs(day) > daysIn400YearCycle) {
+    const nCycles = Math.trunc(day / daysIn400YearCycle);
+    year += 400 * nCycles;
+    day -= nCycles * daysIn400YearCycle;
+  }
+
   let daysInYear = 0;
   let testYear = month > 2 ? year : year - 1;
   while (((daysInYear = LeapYear(testYear) ? 366 : 365), day < -daysInYear)) {
@@ -3238,26 +3020,19 @@ function BalanceISODate(yearParam: number, monthParam: number, dayParam: number)
 }
 
 function BalanceISODateTime(
-  yearParam: number,
-  monthParam: number,
-  dayParam: number,
-  hourParam: number,
-  minuteParam: number,
-  secondParam: number,
-  millisecondParam: number,
-  microsecondParam: number,
-  nanosecondParam: number
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  second: number,
+  millisecond: number,
+  microsecond: number,
+  nanosecond: number
 ) {
-  const { deltaDays, hour, minute, second, millisecond, microsecond, nanosecond } = BalanceTime(
-    hourParam,
-    minuteParam,
-    secondParam,
-    millisecondParam,
-    microsecondParam,
-    nanosecondParam
-  );
-  const { year, month, day } = BalanceISODate(yearParam, monthParam, dayParam + deltaDays);
-  return { year, month, day, hour, minute, second, millisecond, microsecond, nanosecond };
+  const time = BalanceTime(hour, minute, second, millisecond, microsecond, nanosecond);
+  const isoDate = BalanceISODate(year, month, day + time.deltaDays);
+  return CombineISODateAndTimeRecord(isoDate, time);
 }
 
 function BalanceTime(
@@ -3274,493 +3049,74 @@ function BalanceTime(
   let millisecond = millisecondParam;
   let microsecond = microsecondParam;
   let nanosecond = nanosecondParam;
-  if (
-    !NumberIsFinite(hour) ||
-    !NumberIsFinite(minute) ||
-    !NumberIsFinite(second) ||
-    !NumberIsFinite(millisecond) ||
-    !NumberIsFinite(microsecond) ||
-    !NumberIsFinite(nanosecond)
-  ) {
-    throw new RangeError('infinity is out of range');
+  let div;
+
+  ({ div, mod: nanosecond } = TruncatingDivModByPowerOf10(nanosecond, 3));
+  microsecond += div;
+  if (nanosecond < 0) {
+    microsecond -= 1;
+    nanosecond += 1000;
   }
 
-  microsecond += MathFloor(nanosecond / 1000);
-  nanosecond = NonNegativeModulo(nanosecond, 1000);
+  ({ div, mod: microsecond } = TruncatingDivModByPowerOf10(microsecond, 3));
+  millisecond += div;
+  if (microsecond < 0) {
+    millisecond -= 1;
+    microsecond += 1000;
+  }
 
-  millisecond += MathFloor(microsecond / 1000);
-  microsecond = NonNegativeModulo(microsecond, 1000);
+  second += Math.trunc(millisecond / 1000);
+  millisecond %= 1000;
+  if (millisecond < 0) {
+    second -= 1;
+    millisecond += 1000;
+  }
 
-  second += MathFloor(millisecond / 1000);
-  millisecond = NonNegativeModulo(millisecond, 1000);
+  minute += Math.trunc(second / 60);
+  second %= 60;
+  if (second < 0) {
+    minute -= 1;
+    second += 60;
+  }
 
-  minute += MathFloor(second / 60);
-  second = NonNegativeModulo(second, 60);
+  hour += Math.trunc(minute / 60);
+  minute %= 60;
+  if (minute < 0) {
+    hour -= 1;
+    minute += 60;
+  }
 
-  hour += MathFloor(minute / 60);
-  minute = NonNegativeModulo(minute, 60);
+  let deltaDays = Math.trunc(hour / 24);
+  hour %= 24;
+  if (hour < 0) {
+    deltaDays -= 1;
+    hour += 24;
+  }
 
-  const deltaDays = MathFloor(hour / 24);
-  hour = NonNegativeModulo(hour, 24);
+  // Results are possibly -0 at this point, but these are mathematical values in
+  // the spec. Force -0 to +0.
+  deltaDays += 0;
+  hour += 0;
+  minute += 0;
+  second += 0;
+  millisecond += 0;
+  microsecond += 0;
+  nanosecond += 0;
 
   return { deltaDays, hour, minute, second, millisecond, microsecond, nanosecond };
 }
 
-export function TotalDurationNanoseconds(
-  daysParam: number,
-  hoursParam: number,
-  minutesParam: number,
-  secondsParam: number,
-  millisecondsParam: number,
-  microsecondsParam: number,
-  nanosecondsParam: number,
-  offsetShift: number
-) {
-  const days: JSBI = JSBI.BigInt(daysParam);
-  let nanoseconds: JSBI = JSBI.BigInt(nanosecondsParam);
-  if (daysParam !== 0) nanoseconds = JSBI.subtract(JSBI.BigInt(nanosecondsParam), JSBI.BigInt(offsetShift));
-  const hours = JSBI.add(JSBI.BigInt(hoursParam), JSBI.multiply(days, JSBI.BigInt(24)));
-  const minutes = JSBI.add(JSBI.BigInt(minutesParam), JSBI.multiply(hours, SIXTY));
-  const seconds = JSBI.add(JSBI.BigInt(secondsParam), JSBI.multiply(minutes, SIXTY));
-  const milliseconds = JSBI.add(JSBI.BigInt(millisecondsParam), JSBI.multiply(seconds, THOUSAND));
-  const microseconds = JSBI.add(JSBI.BigInt(microsecondsParam), JSBI.multiply(milliseconds, THOUSAND));
-  return JSBI.add(JSBI.BigInt(nanoseconds), JSBI.multiply(microseconds, THOUSAND));
-}
+export function DateDurationDays(dateDuration: DateDuration, plainRelativeTo: Temporal.PlainDate) {
+  const yearsMonthsWeeksDuration = AdjustDateDurationRecord(dateDuration, 0);
+  if (DateDurationSign(yearsMonthsWeeksDuration) === 0) return dateDuration.days;
 
-function NanosecondsToDays(nanosecondsParam: JSBI, relativeTo: ReturnType<typeof ToRelativeTemporalObject>) {
-  const TemporalInstant = GetIntrinsic('%Temporal.Instant%');
-  const sign = MathSign(JSBI.toNumber(nanosecondsParam));
-  let nanoseconds = JSBI.BigInt(nanosecondsParam);
-  let dayLengthNs = 86400e9;
-  if (sign === 0) return { days: 0, nanoseconds: ZERO, dayLengthNs };
-  if (!IsTemporalZonedDateTime(relativeTo)) {
-    let days: JSBI;
-    ({ quotient: days, remainder: nanoseconds } = divmod(nanoseconds, JSBI.BigInt(dayLengthNs)));
-    return { days: JSBI.toNumber(days), nanoseconds, dayLengthNs };
-  }
-
-  const startNs = GetSlot(relativeTo, EPOCHNANOSECONDS);
-  const start = GetSlot(relativeTo, INSTANT);
-  const endNs = JSBI.add(startNs, nanoseconds);
-  const end = new TemporalInstant(endNs);
-  const timeZone = GetSlot(relativeTo, TIME_ZONE);
-  const calendar = GetSlot(relativeTo, CALENDAR);
-
-  // Find the difference in days only.
-  const dtStart = BuiltinTimeZoneGetPlainDateTimeFor(timeZone, start, calendar);
-  const dtEnd = BuiltinTimeZoneGetPlainDateTimeFor(timeZone, end, calendar);
-  let { days } = DifferenceISODateTime(
-    GetSlot(dtStart, ISO_YEAR),
-    GetSlot(dtStart, ISO_MONTH),
-    GetSlot(dtStart, ISO_DAY),
-    GetSlot(dtStart, ISO_HOUR),
-    GetSlot(dtStart, ISO_MINUTE),
-    GetSlot(dtStart, ISO_SECOND),
-    GetSlot(dtStart, ISO_MILLISECOND),
-    GetSlot(dtStart, ISO_MICROSECOND),
-    GetSlot(dtStart, ISO_NANOSECOND),
-    GetSlot(dtEnd, ISO_YEAR),
-    GetSlot(dtEnd, ISO_MONTH),
-    GetSlot(dtEnd, ISO_DAY),
-    GetSlot(dtEnd, ISO_HOUR),
-    GetSlot(dtEnd, ISO_MINUTE),
-    GetSlot(dtEnd, ISO_SECOND),
-    GetSlot(dtEnd, ISO_MILLISECOND),
-    GetSlot(dtEnd, ISO_MICROSECOND),
-    GetSlot(dtEnd, ISO_NANOSECOND),
-    calendar,
-    'day',
-    ObjectCreate(null)
-  );
-  let intermediateNs = AddZonedDateTime(start, timeZone, calendar, 0, 0, 0, days, 0, 0, 0, 0, 0, 0);
-  // may disambiguate
-
-  // If clock time after addition was in the middle of a skipped period, the
-  // endpoint was disambiguated to a later clock time. So it's possible that
-  // the resulting disambiguated result is later than endNs. If so, then back
-  // up one day and try again. Repeat if necessary (some transitions are
-  // > 24 hours) until either there's zero days left or the date duration is
-  // back inside the period where it belongs. Note that this case only can
-  // happen for positive durations because the only direction that
-  // `disambiguation: 'compatible'` can change clock time is forwards.
-  if (sign === 1) {
-    while (days > 0 && JSBI.greaterThan(intermediateNs, endNs)) {
-      --days;
-      intermediateNs = AddZonedDateTime(start, timeZone, calendar, 0, 0, 0, days, 0, 0, 0, 0, 0, 0);
-      // may do disambiguation
-    }
-  }
-  nanoseconds = JSBI.subtract(endNs, intermediateNs);
-
-  let isOverflow = false;
-  let relativeInstant = new TemporalInstant(intermediateNs);
-  do {
-    // calculate length of the next day (day that contains the time remainder)
-    const oneDayFartherNs = AddZonedDateTime(relativeInstant, timeZone, calendar, 0, 0, 0, sign, 0, 0, 0, 0, 0, 0);
-    const relativeNs = GetSlot(relativeInstant, EPOCHNANOSECONDS);
-    dayLengthNs = JSBI.toNumber(JSBI.subtract(oneDayFartherNs, relativeNs));
-    isOverflow = JSBI.greaterThan(
-      JSBI.multiply(JSBI.subtract(nanoseconds, JSBI.BigInt(dayLengthNs)), JSBI.BigInt(sign)),
-      ZERO
-    );
-    if (isOverflow) {
-      nanoseconds = JSBI.subtract(nanoseconds, JSBI.BigInt(dayLengthNs));
-      relativeInstant = new TemporalInstant(oneDayFartherNs);
-      days += sign;
-    }
-  } while (isOverflow);
-  return { days, nanoseconds, dayLengthNs: MathAbs(dayLengthNs) };
-}
-
-export function BalanceDuration(
-  daysParam: number,
-  hoursParam: number,
-  minutesParam: number,
-  secondsParam: number,
-  millisecondsParam: number,
-  microsecondsParam: number,
-  nanosecondsParam: number,
-  largestUnit: Temporal.DateTimeUnit,
-  relativeTo: ReturnType<typeof ToRelativeTemporalObject> = undefined
-) {
-  let days = daysParam;
-  let nanosecondsBigInt: JSBI,
-    microsecondsBigInt: JSBI,
-    millisecondsBigInt: JSBI,
-    secondsBigInt: JSBI,
-    minutesBigInt: JSBI,
-    hoursBigInt: JSBI;
-  if (IsTemporalZonedDateTime(relativeTo)) {
-    const endNs = AddZonedDateTime(
-      GetSlot(relativeTo, INSTANT),
-      GetSlot(relativeTo, TIME_ZONE),
-      GetSlot(relativeTo, CALENDAR),
-      0,
-      0,
-      0,
-      days,
-      hoursParam,
-      minutesParam,
-      secondsParam,
-      millisecondsParam,
-      microsecondsParam,
-      nanosecondsParam
-    );
-    const startNs = GetSlot(relativeTo, EPOCHNANOSECONDS);
-    nanosecondsBigInt = JSBI.subtract(endNs, startNs);
-  } else {
-    nanosecondsBigInt = TotalDurationNanoseconds(
-      days,
-      hoursParam,
-      minutesParam,
-      secondsParam,
-      millisecondsParam,
-      microsecondsParam,
-      nanosecondsParam,
-      0
-    );
-  }
-  if (largestUnit === 'year' || largestUnit === 'month' || largestUnit === 'week' || largestUnit === 'day') {
-    ({ days, nanoseconds: nanosecondsBigInt } = NanosecondsToDays(nanosecondsBigInt, relativeTo));
-  } else {
-    days = 0;
-  }
-
-  const sign = JSBI.lessThan(nanosecondsBigInt, ZERO) ? -1 : 1;
-  nanosecondsBigInt = abs(nanosecondsBigInt);
-  microsecondsBigInt = millisecondsBigInt = secondsBigInt = minutesBigInt = hoursBigInt = ZERO;
-
-  switch (largestUnit) {
-    case 'year':
-    case 'month':
-    case 'week':
-    case 'day':
-    case 'hour':
-      ({ quotient: microsecondsBigInt, remainder: nanosecondsBigInt } = divmod(nanosecondsBigInt, THOUSAND));
-      ({ quotient: millisecondsBigInt, remainder: microsecondsBigInt } = divmod(microsecondsBigInt, THOUSAND));
-      ({ quotient: secondsBigInt, remainder: millisecondsBigInt } = divmod(millisecondsBigInt, THOUSAND));
-      ({ quotient: minutesBigInt, remainder: secondsBigInt } = divmod(secondsBigInt, SIXTY));
-      ({ quotient: hoursBigInt, remainder: minutesBigInt } = divmod(minutesBigInt, SIXTY));
-      break;
-    case 'minute':
-      ({ quotient: microsecondsBigInt, remainder: nanosecondsBigInt } = divmod(nanosecondsBigInt, THOUSAND));
-      ({ quotient: millisecondsBigInt, remainder: microsecondsBigInt } = divmod(microsecondsBigInt, THOUSAND));
-      ({ quotient: secondsBigInt, remainder: millisecondsBigInt } = divmod(millisecondsBigInt, THOUSAND));
-      ({ quotient: minutesBigInt, remainder: secondsBigInt } = divmod(secondsBigInt, SIXTY));
-      break;
-    case 'second':
-      ({ quotient: microsecondsBigInt, remainder: nanosecondsBigInt } = divmod(nanosecondsBigInt, THOUSAND));
-      ({ quotient: millisecondsBigInt, remainder: microsecondsBigInt } = divmod(microsecondsBigInt, THOUSAND));
-      ({ quotient: secondsBigInt, remainder: millisecondsBigInt } = divmod(millisecondsBigInt, THOUSAND));
-      break;
-    case 'millisecond':
-      ({ quotient: microsecondsBigInt, remainder: nanosecondsBigInt } = divmod(nanosecondsBigInt, THOUSAND));
-      ({ quotient: millisecondsBigInt, remainder: microsecondsBigInt } = divmod(microsecondsBigInt, THOUSAND));
-      break;
-    case 'microsecond':
-      ({ quotient: microsecondsBigInt, remainder: nanosecondsBigInt } = divmod(nanosecondsBigInt, THOUSAND));
-      break;
-    case 'nanosecond':
-      break;
-    default:
-      throw new Error('assert not reached');
-  }
-
-  const hours = JSBI.toNumber(hoursBigInt) * sign;
-  const minutes = JSBI.toNumber(minutesBigInt) * sign;
-  const seconds = JSBI.toNumber(secondsBigInt) * sign;
-  const milliseconds = JSBI.toNumber(millisecondsBigInt) * sign;
-  const microseconds = JSBI.toNumber(microsecondsBigInt) * sign;
-  const nanoseconds = JSBI.toNumber(nanosecondsBigInt) * sign;
-
-  return { days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds };
-}
-
-export function UnbalanceDurationRelative(
-  yearsParam: number,
-  monthsParam: number,
-  weeksParam: number,
-  daysParam: number,
-  largestUnit: Temporal.DateTimeUnit,
-  relativeToParam: ReturnType<typeof ToRelativeTemporalObject>
-) {
-  let years = yearsParam;
-  let months = monthsParam;
-  let weeks = weeksParam;
-  let days = daysParam;
-  const TemporalDuration = GetIntrinsic('%Temporal.Duration%');
-  const sign = DurationSign(years, months, weeks, days, 0, 0, 0, 0, 0, 0);
-
-  let calendar;
-  let relativeTo: Temporal.PlainDate | undefined;
-  if (relativeToParam) {
-    relativeTo = ToTemporalDate(relativeToParam);
-    calendar = GetSlot(relativeTo, CALENDAR);
-  }
-
-  const oneYear = new TemporalDuration(sign);
-  const oneMonth = new TemporalDuration(0, sign);
-  const oneWeek = new TemporalDuration(0, 0, sign);
-
-  switch (largestUnit) {
-    case 'year':
-      // no-op
-      break;
-    case 'month':
-      {
-        if (!calendar) throw new RangeError('a starting point is required for months balancing');
-        // balance years down to months
-        const dateAdd = calendar.dateAdd;
-        const dateUntil = calendar.dateUntil;
-        let relativeToDateOnly: Temporal.PlainDateLike = relativeTo as Temporal.PlainDateLike;
-        while (MathAbs(years) > 0) {
-          const newRelativeTo = CalendarDateAdd(calendar, relativeToDateOnly, oneYear, undefined, dateAdd);
-          const untilOptions = ObjectCreate(null);
-          untilOptions.largestUnit = 'month';
-          const untilResult = CalendarDateUntil(calendar, relativeToDateOnly, newRelativeTo, untilOptions, dateUntil);
-          const oneYearMonths = GetSlot(untilResult, MONTHS);
-          relativeToDateOnly = newRelativeTo;
-          months += oneYearMonths;
-          years -= sign;
-        }
-      }
-      break;
-    case 'week':
-      if (!calendar) throw new RangeError('a starting point is required for weeks balancing');
-      // balance years down to days
-      while (MathAbs(years) > 0) {
-        let oneYearDays;
-        ({ relativeTo, days: oneYearDays } = MoveRelativeDate(calendar, relativeTo as Temporal.PlainDate, oneYear));
-        days += oneYearDays;
-        years -= sign;
-      }
-
-      // balance months down to days
-      while (MathAbs(months) > 0) {
-        let oneMonthDays;
-        ({ relativeTo, days: oneMonthDays } = MoveRelativeDate(calendar, relativeTo as Temporal.PlainDate, oneMonth));
-        days += oneMonthDays;
-        months -= sign;
-      }
-      break;
-    default:
-      // balance years down to days
-      while (MathAbs(years) > 0) {
-        if (!calendar) throw new RangeError('a starting point is required for balancing calendar units');
-        let oneYearDays;
-        ({ relativeTo, days: oneYearDays } = MoveRelativeDate(calendar, relativeTo as Temporal.PlainDate, oneYear));
-        days += oneYearDays;
-        years -= sign;
-      }
-
-      // balance months down to days
-      while (MathAbs(months) > 0) {
-        if (!calendar) throw new RangeError('a starting point is required for balancing calendar units');
-        let oneMonthDays;
-        ({ relativeTo, days: oneMonthDays } = MoveRelativeDate(calendar, relativeTo as Temporal.PlainDate, oneMonth));
-        days += oneMonthDays;
-        months -= sign;
-      }
-
-      // balance weeks down to days
-      while (MathAbs(weeks) > 0) {
-        if (!calendar) throw new RangeError('a starting point is required for balancing calendar units');
-        let oneWeekDays;
-        ({ relativeTo, days: oneWeekDays } = MoveRelativeDate(calendar, relativeTo as Temporal.PlainDate, oneWeek));
-        days += oneWeekDays;
-        weeks -= sign;
-      }
-      break;
-  }
-
-  return { years, months, weeks, days };
-}
-
-export function BalanceDurationRelative(
-  yearsParam: number,
-  monthsParam: number,
-  weeksParam: number,
-  daysParam: number,
-  largestUnit: Temporal.DateTimeUnit,
-  relativeToParam: ReturnType<typeof ToRelativeTemporalObject>
-) {
-  let years = yearsParam;
-  let months = monthsParam;
-  let weeks = weeksParam;
-  let days = daysParam;
-  const TemporalDuration = GetIntrinsic('%Temporal.Duration%');
-  const sign = DurationSign(years, months, weeks, days, 0, 0, 0, 0, 0, 0);
-  if (sign === 0) return { years, months, weeks, days };
-
-  let calendar;
-  let relativeTo: Temporal.PlainDate | undefined;
-  if (relativeToParam) {
-    relativeTo = ToTemporalDate(relativeToParam);
-    calendar = GetSlot(relativeTo, CALENDAR);
-  }
-
-  const oneYear = new TemporalDuration(sign);
-  const oneMonth = new TemporalDuration(0, sign);
-  const oneWeek = new TemporalDuration(0, 0, sign);
-
-  switch (largestUnit) {
-    case 'year': {
-      if (!calendar) throw new RangeError('a starting point is required for years balancing');
-      // balance days up to years
-      let newRelativeTo, oneYearDays;
-      ({ relativeTo: newRelativeTo, days: oneYearDays } = MoveRelativeDate(
-        calendar,
-        relativeTo as Temporal.PlainDate,
-        oneYear
-      ));
-      while (MathAbs(days) >= MathAbs(oneYearDays)) {
-        days -= oneYearDays;
-        years += sign;
-        relativeTo = newRelativeTo;
-        ({ relativeTo: newRelativeTo, days: oneYearDays } = MoveRelativeDate(calendar, relativeTo, oneYear));
-      }
-
-      // balance days up to months
-      let oneMonthDays;
-      ({ relativeTo: newRelativeTo, days: oneMonthDays } = MoveRelativeDate(
-        calendar,
-        relativeTo as Temporal.PlainDate,
-        oneMonth
-      ));
-      while (MathAbs(days) >= MathAbs(oneMonthDays)) {
-        days -= oneMonthDays;
-        months += sign;
-        relativeTo = newRelativeTo;
-        ({ relativeTo: newRelativeTo, days: oneMonthDays } = MoveRelativeDate(calendar, relativeTo, oneMonth));
-      }
-
-      // balance months up to years
-      const dateAdd = calendar.dateAdd;
-      newRelativeTo = CalendarDateAdd(calendar, relativeTo as Temporal.PlainDate, oneYear, undefined, dateAdd);
-      const dateUntil = calendar.dateUntil;
-      const untilOptions = ObjectCreate(null);
-      untilOptions.largestUnit = 'month';
-      let untilResult = CalendarDateUntil(
-        calendar,
-        relativeTo as Temporal.PlainDate,
-        newRelativeTo,
-        untilOptions,
-        dateUntil
-      );
-      let oneYearMonths = GetSlot(untilResult, MONTHS);
-      while (MathAbs(months) >= MathAbs(oneYearMonths)) {
-        months -= oneYearMonths;
-        years += sign;
-        relativeTo = newRelativeTo;
-        newRelativeTo = CalendarDateAdd(calendar, relativeTo, oneYear, undefined, dateAdd);
-        const untilOptions = ObjectCreate(null);
-        untilOptions.largestUnit = 'month';
-        untilResult = CalendarDateUntil(calendar, relativeTo, newRelativeTo, untilOptions, dateUntil);
-        oneYearMonths = GetSlot(untilResult, MONTHS);
-      }
-      break;
-    }
-    case 'month': {
-      if (!calendar) throw new RangeError('a starting point is required for months balancing');
-      // balance days up to months
-      let newRelativeTo, oneMonthDays;
-      ({ relativeTo: newRelativeTo, days: oneMonthDays } = MoveRelativeDate(
-        calendar,
-        relativeTo as Temporal.PlainDate,
-        oneMonth
-      ));
-      while (MathAbs(days) >= MathAbs(oneMonthDays)) {
-        days -= oneMonthDays;
-        months += sign;
-        relativeTo = newRelativeTo;
-        ({ relativeTo: newRelativeTo, days: oneMonthDays } = MoveRelativeDate(calendar, relativeTo, oneMonth));
-      }
-      break;
-    }
-    case 'week': {
-      if (!calendar) throw new RangeError('a starting point is required for weeks balancing');
-      // balance days up to weeks
-      let newRelativeTo, oneWeekDays;
-      ({ relativeTo: newRelativeTo, days: oneWeekDays } = MoveRelativeDate(
-        calendar,
-        relativeTo as Temporal.PlainDate,
-        oneWeek
-      ));
-      while (MathAbs(days) >= MathAbs(oneWeekDays)) {
-        days -= oneWeekDays;
-        weeks += sign;
-        relativeTo = newRelativeTo;
-        ({ relativeTo: newRelativeTo, days: oneWeekDays } = MoveRelativeDate(calendar, relativeTo, oneWeek));
-      }
-      break;
-    }
-    default:
-      // no-op
-      break;
-  }
-
-  return { years, months, weeks, days };
-}
-
-export function CalculateOffsetShift(
-  relativeTo: ReturnType<typeof ToRelativeTemporalObject>,
-  y: number,
-  mon: number,
-  w: number,
-  d: number
-) {
-  if (IsTemporalZonedDateTime(relativeTo)) {
-    const instant = GetSlot(relativeTo, INSTANT);
-    const timeZone = GetSlot(relativeTo, TIME_ZONE);
-    const calendar = GetSlot(relativeTo, CALENDAR);
-    const offsetBefore = GetOffsetNanosecondsFor(timeZone, instant);
-    const after = AddZonedDateTime(instant, timeZone, calendar, y, mon, w, d, 0, 0, 0, 0, 0, 0);
-    const TemporalInstant = GetIntrinsic('%Temporal.Instant%');
-    const instantAfter = new TemporalInstant(after);
-    const offsetAfter = GetOffsetNanosecondsFor(timeZone, instantAfter);
-    return offsetAfter - offsetBefore;
-  }
-  return 0;
+  // balance years, months, and weeks down to days
+  const isoDate = GetSlot(plainRelativeTo, ISO_DATE);
+  const later = CalendarDateAdd(GetSlot(plainRelativeTo, CALENDAR), isoDate, yearsMonthsWeeksDuration, 'constrain');
+  const epochDaysEarlier = ISODateToEpochDays(isoDate.year, isoDate.month - 1, isoDate.day);
+  const epochDaysLater = ISODateToEpochDays(later.year, later.month - 1, later.day);
+  const yearsMonthsWeeksInDays = epochDaysLater - epochDaysEarlier;
+  return dateDuration.days + yearsMonthsWeeksInDays;
 }
 
 export function CreateNegatedTemporalDuration(duration: Temporal.Duration) {
@@ -3782,43 +3138,26 @@ export function CreateNegatedTemporalDuration(duration: Temporal.Duration) {
 export function ConstrainToRange(value: number | undefined, min: number, max: number) {
   // Math.Max accepts undefined values and returns NaN. Undefined values are
   // used for optional params in the method below.
-  return MathMin(max, MathMax(min, value as number));
+  return Math.min(max, Math.max(min, value as number));
 }
-function ConstrainISODate(year: number, monthParam: number, dayParam?: number) {
+export function ConstrainISODate(year: number, monthParam: number, dayParam?: number) {
   const month = ConstrainToRange(monthParam, 1, 12);
   const day = ConstrainToRange(dayParam, 1, ISODaysInMonth(year, month));
   return { year, month, day };
-}
-
-function ConstrainTime(
-  hourParam: number,
-  minuteParam: number,
-  secondParam: number,
-  millisecondParam: number,
-  microsecondParam: number,
-  nanosecondParam: number
-) {
-  const hour = ConstrainToRange(hourParam, 0, 23);
-  const minute = ConstrainToRange(minuteParam, 0, 59);
-  const second = ConstrainToRange(secondParam, 0, 59);
-  const millisecond = ConstrainToRange(millisecondParam, 0, 999);
-  const microsecond = ConstrainToRange(microsecondParam, 0, 999);
-  const nanosecond = ConstrainToRange(nanosecondParam, 0, 999);
-  return { hour, minute, second, millisecond, microsecond, nanosecond };
 }
 
 export function RejectToRange(value: number, min: number, max: number) {
   if (value < min || value > max) throw new RangeError(`value out of range: ${min} <= ${value} <= ${max}`);
 }
 
-function RejectISODate(year: number, month: number, day: number) {
+export function RejectISODate(year: number, month: number, day: number) {
   RejectToRange(month, 1, 12);
   RejectToRange(day, 1, ISODaysInMonth(year, month));
 }
 
-function RejectDateRange(year: number, month: number, day: number) {
+function RejectDateRange(isoDate: ISODate) {
   // Noon avoids trouble at edges of DateTime range (excludes midnight)
-  RejectDateTimeRange(year, month, day, 12, 0, 0, 0, 0, 0);
+  RejectDateTimeRange(CombineISODateAndTimeRecord(isoDate, NoonTimeRecord()));
 }
 
 export function RejectTime(
@@ -3837,7 +3176,7 @@ export function RejectTime(
   RejectToRange(nanosecond, 0, 999);
 }
 
-function RejectDateTime(
+export function RejectDateTime(
   year: number,
   month: number,
   day: number,
@@ -3852,38 +3191,35 @@ function RejectDateTime(
   RejectTime(hour, minute, second, millisecond, microsecond, nanosecond);
 }
 
-function RejectDateTimeRange(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-  second: number,
-  millisecond: number,
-  microsecond: number,
-  nanosecond: number
-) {
-  RejectToRange(year, YEAR_MIN, YEAR_MAX);
-  // Reject any DateTime 24 hours or more outside the Instant range
-  if (
-    (year === YEAR_MIN &&
-      null ==
-        GetEpochFromISOParts(year, month, day + 1, hour, minute, second, millisecond, microsecond, nanosecond - 1)) ||
-    (year === YEAR_MAX &&
-      null ==
-        GetEpochFromISOParts(year, month, day - 1, hour, minute, second, millisecond, microsecond, nanosecond + 1))
-  ) {
-    throw new RangeError('DateTime outside of supported range');
+export function RejectDateTimeRange(isoDateTime: ISODateTime) {
+  const ns = GetUTCEpochNanoseconds(isoDateTime);
+  if (JSBI.lessThan(ns, DATETIME_NS_MIN) || JSBI.greaterThan(ns, DATETIME_NS_MAX)) {
+    // Because PlainDateTime's range is wider than Instant's range, the line
+    // below will always throw. Calling `ValidateEpochNanoseconds` avoids
+    // repeating the same error message twice.
+    ValidateEpochNanoseconds(ns);
   }
 }
 
-export function ValidateEpochNanoseconds(epochNanoseconds: JSBI) {
+// Same as above, but throws a different, non-user-facing error
+function AssertISODateTimeWithinLimits(isoDateTime: ISODateTime) {
+  const ns = GetUTCEpochNanoseconds(isoDateTime);
+  assert(
+    JSBI.greaterThanOrEqual(ns, DATETIME_NS_MIN) && JSBI.lessThanOrEqual(ns, DATETIME_NS_MAX),
+    `${ISODateTimeToString(isoDateTime, 'iso8601', 'auto')} is outside the representable range`
+  );
+}
+
+// In the spec, IsValidEpochNanoseconds returns a boolean and call sites are
+// responsible for throwing. In the polyfill, ValidateEpochNanoseconds takes its
+// place so that we can DRY the throwing code.
+function ValidateEpochNanoseconds(epochNanoseconds: JSBI) {
   if (JSBI.lessThan(epochNanoseconds, NS_MIN) || JSBI.greaterThan(epochNanoseconds, NS_MAX)) {
-    throw new RangeError('Instant outside of supported range');
+    throw new RangeError('date/time value is outside of supported range');
   }
 }
 
-function RejectYearMonthRange(year: number, month: number) {
+function RejectYearMonthRange({ year, month }: Omit<ISODate, 'day'>) {
   RejectToRange(year, YEAR_MIN, YEAR_MAX);
   if (year === YEAR_MIN) {
     RejectToRange(month, 4, 12);
@@ -3904,372 +3240,895 @@ export function RejectDuration(
   µs: number,
   ns: number
 ) {
-  const sign = DurationSign(y, mon, w, d, h, min, s, ms, µs, ns);
-  for (const prop of [y, mon, w, d, h, min, s, ms, µs, ns]) {
-    if (!NumberIsFinite(prop)) throw new RangeError('infinite values not allowed as duration fields');
-    const propSign = MathSign(prop);
-    if (propSign !== 0 && propSign !== sign) throw new RangeError('mixed-sign values not allowed as duration fields');
+  let sign: -1 | 0 | 1 = 0;
+  const fields = [y, mon, w, d, h, min, s, ms, µs, ns];
+  for (let index = 0; index < fields.length; index++) {
+    const prop = fields[index];
+    if (prop === Infinity || prop === -Infinity) throw new RangeError('infinite values not allowed as duration fields');
+    if (prop !== 0) {
+      const propSign = prop < 0 ? -1 : 1;
+      if (sign !== 0 && propSign !== sign) throw new RangeError('mixed-sign values not allowed as duration fields');
+      sign = propSign;
+    }
+  }
+  if (Math.abs(y) >= 2 ** 32 || Math.abs(mon) >= 2 ** 32 || Math.abs(w) >= 2 ** 32) {
+    throw new RangeError('years, months, and weeks must be < 2³²');
+  }
+  const msResult = TruncatingDivModByPowerOf10(ms, 3);
+  const µsResult = TruncatingDivModByPowerOf10(µs, 6);
+  const nsResult = TruncatingDivModByPowerOf10(ns, 9);
+  const remainderSec = TruncatingDivModByPowerOf10(msResult.mod * 1e6 + µsResult.mod * 1e3 + nsResult.mod, 9).div;
+  const totalSec = d * 86400 + h * 3600 + min * 60 + s + msResult.div + µsResult.div + nsResult.div + remainderSec;
+  if (!Number.isSafeInteger(totalSec)) {
+    throw new RangeError('total of duration time units cannot exceed 9007199254740991.999999999 s');
   }
 }
 
-export function DifferenceISODate<Allowed extends Temporal.DateTimeUnit>(
-  y1: number,
-  m1: number,
-  d1: number,
-  y2: number,
-  m2: number,
-  d2: number,
-  largestUnit: Allowed
-) {
+export function ToInternalDurationRecord(duration: Temporal.Duration) {
+  const date = {
+    years: GetSlot(duration, YEARS),
+    months: GetSlot(duration, MONTHS),
+    weeks: GetSlot(duration, WEEKS),
+    days: GetSlot(duration, DAYS)
+  };
+  const time = TimeDuration.fromComponents(
+    GetSlot(duration, HOURS),
+    GetSlot(duration, MINUTES),
+    GetSlot(duration, SECONDS),
+    GetSlot(duration, MILLISECONDS),
+    GetSlot(duration, MICROSECONDS),
+    GetSlot(duration, NANOSECONDS)
+  );
+  return { date, time };
+}
+
+export function ToInternalDurationRecordWith24HourDays(duration: Temporal.Duration) {
+  const time = TimeDuration.fromComponents(
+    GetSlot(duration, HOURS),
+    GetSlot(duration, MINUTES),
+    GetSlot(duration, SECONDS),
+    GetSlot(duration, MILLISECONDS),
+    GetSlot(duration, MICROSECONDS),
+    GetSlot(duration, NANOSECONDS)
+  ).add24HourDays(GetSlot(duration, DAYS));
+  const date = {
+    years: GetSlot(duration, YEARS),
+    months: GetSlot(duration, MONTHS),
+    weeks: GetSlot(duration, WEEKS),
+    days: 0
+  };
+  return { date, time };
+}
+
+function ToDateDurationRecordWithoutTime(duration: Temporal.Duration) {
+  const internalDuration = ToInternalDurationRecordWith24HourDays(duration);
+  const days = Math.trunc(internalDuration.time.sec / 86400);
+  RejectDuration(
+    internalDuration.date.years,
+    internalDuration.date.months,
+    internalDuration.date.weeks,
+    days,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  );
+  return { ...internalDuration.date, days };
+}
+
+export function TemporalDurationFromInternal(internalDuration: InternalDuration, largestUnit: Temporal.DateTimeUnit) {
+  const sign = internalDuration.time.sign();
+  let nanoseconds = internalDuration.time.abs().subsec;
+  let microseconds = 0;
+  let milliseconds = 0;
+  let seconds = internalDuration.time.abs().sec;
+  let minutes = 0;
+  let hours = 0;
+  let days = 0;
+
   switch (largestUnit) {
     case 'year':
-    case 'month': {
-      const sign = -CompareISODate(y1, m1, d1, y2, m2, d2);
-      if (sign === 0) return { years: 0, months: 0, weeks: 0, days: 0 };
-
-      const start = { year: y1, month: m1, day: d1 };
-      const end = { year: y2, month: m2, day: d2 };
-
-      let years = end.year - start.year;
-      let mid = AddISODate(y1, m1, d1, years, 0, 0, 0, 'constrain');
-      let midSign = -CompareISODate(mid.year, mid.month, mid.day, y2, m2, d2);
-      if (midSign === 0) {
-        return largestUnit === 'year'
-          ? { years, months: 0, weeks: 0, days: 0 }
-          : { years: 0, months: years * 12, weeks: 0, days: 0 };
-      }
-      let months = end.month - start.month;
-      if (midSign !== sign) {
-        years -= sign;
-        months += sign * 12;
-      }
-      mid = AddISODate(y1, m1, d1, years, months, 0, 0, 'constrain');
-      midSign = -CompareISODate(mid.year, mid.month, mid.day, y2, m2, d2);
-      if (midSign === 0) {
-        return largestUnit === 'year'
-          ? { years, months, weeks: 0, days: 0 }
-          : { years: 0, months: months + years * 12, weeks: 0, days: 0 };
-      }
-      if (midSign !== sign) {
-        // The end date is later in the month than mid date (or earlier for
-        // negative durations). Back up one month.
-        months -= sign;
-        if (months === -sign) {
-          years -= sign;
-          months = 11 * sign;
-        }
-        mid = AddISODate(y1, m1, d1, years, months, 0, 0, 'constrain');
-      }
-
-      let days = 0;
-      // If we get here, months and years are correct (no overflow), and `mid`
-      // is within the range from `start` to `end`. To count the days between
-      // `mid` and `end`, there are 3 cases:
-      // 1) same month: use simple subtraction
-      // 2) end is previous month from intermediate (negative duration)
-      // 3) end is next month from intermediate (positive duration)
-      if (mid.month === end.month) {
-        // 1) same month: use simple subtraction
-        days = end.day - mid.day;
-      } else if (sign < 0) {
-        // 2) end is previous month from intermediate (negative duration)
-        // Example: intermediate: Feb 1, end: Jan 30, DaysInMonth = 31, days = -2
-        days = -mid.day - (ISODaysInMonth(end.year, end.month) - end.day);
-      } else {
-        // 3) end is next month from intermediate (positive duration)
-        // Example: intermediate: Jan 29, end: Feb 1, DaysInMonth = 31, days = 3
-        days = end.day + (ISODaysInMonth(mid.year, mid.month) - mid.day);
-      }
-
-      if (largestUnit === 'month') {
-        months += years * 12;
-        years = 0;
-      }
-      return { years, months, weeks: 0, days };
-    }
+    case 'month':
     case 'week':
-    case 'day': {
-      let larger, smaller, sign;
-      if (CompareISODate(y1, m1, d1, y2, m2, d2) < 0) {
-        smaller = { year: y1, month: m1, day: d1 };
-        larger = { year: y2, month: m2, day: d2 };
-        sign = 1;
-      } else {
-        smaller = { year: y2, month: m2, day: d2 };
-        larger = { year: y1, month: m1, day: d1 };
-        sign = -1;
-      }
-      let days = DayOfYear(larger.year, larger.month, larger.day) - DayOfYear(smaller.year, smaller.month, smaller.day);
-      for (let year = smaller.year; year < larger.year; ++year) {
-        days += LeapYear(year) ? 366 : 365;
-      }
-      let weeks = 0;
-      if (largestUnit === 'week') {
-        weeks = MathFloor(days / 7);
-        days %= 7;
-      }
-      weeks *= sign;
-      days *= sign;
-      return { years: 0, months: 0, weeks, days };
-    }
+    case 'day':
+      microseconds = Math.trunc(nanoseconds / 1000);
+      nanoseconds %= 1000;
+      milliseconds = Math.trunc(microseconds / 1000);
+      microseconds %= 1000;
+      seconds += Math.trunc(milliseconds / 1000);
+      milliseconds %= 1000;
+      minutes = Math.trunc(seconds / 60);
+      seconds %= 60;
+      hours = Math.trunc(minutes / 60);
+      minutes %= 60;
+      days = Math.trunc(hours / 24);
+      hours %= 24;
+      break;
+    case 'hour':
+      microseconds = Math.trunc(nanoseconds / 1000);
+      nanoseconds %= 1000;
+      milliseconds = Math.trunc(microseconds / 1000);
+      microseconds %= 1000;
+      seconds += Math.trunc(milliseconds / 1000);
+      milliseconds %= 1000;
+      minutes = Math.trunc(seconds / 60);
+      seconds %= 60;
+      hours = Math.trunc(minutes / 60);
+      minutes %= 60;
+      break;
+    case 'minute':
+      microseconds = Math.trunc(nanoseconds / 1000);
+      nanoseconds %= 1000;
+      milliseconds = Math.trunc(microseconds / 1000);
+      microseconds %= 1000;
+      seconds += Math.trunc(milliseconds / 1000);
+      milliseconds %= 1000;
+      minutes = Math.trunc(seconds / 60);
+      seconds %= 60;
+      break;
+    case 'second':
+      microseconds = Math.trunc(nanoseconds / 1000);
+      nanoseconds %= 1000;
+      milliseconds = Math.trunc(microseconds / 1000);
+      microseconds %= 1000;
+      seconds += Math.trunc(milliseconds / 1000);
+      milliseconds %= 1000;
+      break;
+    case 'millisecond':
+      microseconds = Math.trunc(nanoseconds / 1000);
+      nanoseconds %= 1000;
+      milliseconds = FMAPowerOf10(seconds, 3, Math.trunc(microseconds / 1000));
+      microseconds %= 1000;
+      seconds = 0;
+      break;
+    case 'microsecond':
+      microseconds = FMAPowerOf10(seconds, 6, Math.trunc(nanoseconds / 1000));
+      nanoseconds %= 1000;
+      seconds = 0;
+      break;
+    case 'nanosecond':
+      nanoseconds = FMAPowerOf10(seconds, 9, nanoseconds);
+      seconds = 0;
+      break;
     default:
-      throw new Error('assert not reached');
+      /* c8 ignore next */ assertNotReached();
+  }
+
+  const TemporalDuration = GetIntrinsic('%Temporal.Duration%');
+  return new TemporalDuration(
+    internalDuration.date.years,
+    internalDuration.date.months,
+    internalDuration.date.weeks,
+    internalDuration.date.days + sign * days,
+    sign * hours,
+    sign * minutes,
+    sign * seconds,
+    sign * milliseconds,
+    sign * microseconds,
+    sign * nanoseconds
+  );
+}
+
+export function CombineDateAndTimeDuration(dateDuration: DateDuration, timeDuration: TimeDuration) {
+  const dateSign = DateDurationSign(dateDuration);
+  const timeSign = timeDuration.sign();
+  assert(
+    dateSign === 0 || timeSign === 0 || dateSign === timeSign,
+    'should not be able to create mixed sign duration fields here'
+  );
+  return { date: dateDuration, time: timeDuration };
+}
+
+// Caution: month is 0-based
+export function ISODateToEpochDays(year: number, month: number, day: number) {
+  return (
+    GetUTCEpochMilliseconds({
+      isoDate: { year, month: month + 1, day },
+      time: { hour: 0, minute: 0, second: 0, millisecond: 0 }
+    }) / DAY_MS
+  );
+}
+
+// This is needed before calling GetUTCEpochNanoseconds, because it uses MakeDay
+// which is ill-defined in how it handles large year numbers. If the issue
+// https://github.com/tc39/ecma262/issues/1087 is fixed, this can be removed
+// with no observable changes.
+function CheckISODaysRange({ year, month, day }: ISODate) {
+  if (Math.abs(ISODateToEpochDays(year, month - 1, day)) > 1e8) {
+    throw new RangeError('date/time value is outside the supported range');
   }
 }
 
-function DifferenceTime(
-  h1: number,
-  min1: number,
-  s1: number,
-  ms1: number,
-  µs1: number,
-  ns1: number,
-  h2: number,
-  min2: number,
-  s2: number,
-  ms2: number,
-  µs2: number,
-  ns2: number
-) {
-  let hours = h2 - h1;
-  let minutes = min2 - min1;
-  let seconds = s2 - s1;
-  let milliseconds = ms2 - ms1;
-  let microseconds = µs2 - µs1;
-  let nanoseconds = ns2 - ns1;
-
-  const sign = DurationSign(0, 0, 0, 0, hours, minutes, seconds, milliseconds, microseconds, nanoseconds);
-  hours *= sign;
-  minutes *= sign;
-  seconds *= sign;
-  milliseconds *= sign;
-  microseconds *= sign;
-  nanoseconds *= sign;
-
-  let deltaDays = 0;
-  ({
-    deltaDays,
-    hour: hours,
-    minute: minutes,
-    second: seconds,
-    millisecond: milliseconds,
-    microsecond: microseconds,
-    nanosecond: nanoseconds
-  } = BalanceTime(hours, minutes, seconds, milliseconds, microseconds, nanoseconds));
-
-  if (deltaDays != 0) throw new Error('assertion failure in DifferenceTime: _bt_.[[Days]] should be 0');
-  hours *= sign;
-  minutes *= sign;
-  seconds *= sign;
-  milliseconds *= sign;
-  microseconds *= sign;
-  nanoseconds *= sign;
-
-  return { hours, minutes, seconds, milliseconds, microseconds, nanoseconds };
+function DifferenceTime(time1: TimeRecord, time2: TimeRecord) {
+  const hours = time2.hour - time1.hour;
+  const minutes = time2.minute - time1.minute;
+  const seconds = time2.second - time1.second;
+  const milliseconds = time2.millisecond - time1.millisecond;
+  const microseconds = time2.microsecond - time1.microsecond;
+  const nanoseconds = time2.nanosecond - time1.nanosecond;
+  const timeDuration = TimeDuration.fromComponents(hours, minutes, seconds, milliseconds, microseconds, nanoseconds);
+  assert(timeDuration.abs().sec < 86400, '_bt_.[[Days]] should be 0');
+  return timeDuration;
 }
 
 function DifferenceInstant(
   ns1: JSBI,
   ns2: JSBI,
   increment: number,
-  unit: keyof typeof nsPerTimeUnit,
+  smallestUnit: Temporal.TimeUnit,
   roundingMode: Temporal.RoundingMode
 ) {
-  const diff = JSBI.subtract(ns2, ns1);
-
-  const remainder = JSBI.remainder(diff, JSBI.BigInt(86400e9));
-  const wholeDays = JSBI.subtract(diff, remainder);
-  const roundedRemainder = RoundNumberToIncrement(remainder, nsPerTimeUnit[unit] * increment, roundingMode);
-  const roundedDiff = JSBI.add(wholeDays, roundedRemainder);
-
-  const nanoseconds = JSBI.toNumber(JSBI.remainder(roundedDiff, THOUSAND));
-  const microseconds = JSBI.toNumber(JSBI.remainder(JSBI.divide(roundedDiff, THOUSAND), THOUSAND));
-  const milliseconds = JSBI.toNumber(JSBI.remainder(JSBI.divide(roundedDiff, MILLION), THOUSAND));
-  const seconds = JSBI.toNumber(JSBI.divide(roundedDiff, BILLION));
-  return { seconds, milliseconds, microseconds, nanoseconds };
+  let timeDuration = TimeDuration.fromEpochNsDiff(ns2, ns1);
+  timeDuration = RoundTimeDuration(timeDuration, increment, smallestUnit, roundingMode);
+  return CombineDateAndTimeDuration(ZeroDateDuration(), timeDuration);
 }
 
 function DifferenceISODateTime(
-  y1Param: number,
-  mon1Param: number,
-  d1Param: number,
-  h1: number,
-  min1: number,
-  s1: number,
-  ms1: number,
-  µs1: number,
-  ns1: number,
-  y2: number,
-  mon2: number,
-  d2: number,
-  h2: number,
-  min2: number,
-  s2: number,
-  ms2: number,
-  µs2: number,
-  ns2: number,
-  calendar: Temporal.CalendarProtocol,
-  largestUnit: Temporal.DateTimeUnit,
-  options: Temporal.DifferenceOptions<Temporal.DateTimeUnit>
+  isoDateTime1: ISODateTime,
+  isoDateTime2: ISODateTime,
+  calendar: BuiltinCalendarId,
+  largestUnit: Temporal.DateTimeUnit
 ) {
-  let y1 = y1Param;
-  let mon1 = mon1Param;
-  let d1 = d1Param;
+  AssertISODateTimeWithinLimits(isoDateTime1);
+  AssertISODateTimeWithinLimits(isoDateTime2);
+  let timeDuration = DifferenceTime(isoDateTime1.time, isoDateTime2.time);
 
-  let { hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = DifferenceTime(
-    h1,
-    min1,
-    s1,
-    ms1,
-    µs1,
-    ns1,
-    h2,
-    min2,
-    s2,
-    ms2,
-    µs2,
-    ns2
-  );
+  const timeSign = timeDuration.sign();
+  const dateSign = CompareISODate(isoDateTime1.isoDate, isoDateTime2.isoDate);
 
-  const timeSign = DurationSign(0, 0, 0, 0, hours, minutes, seconds, milliseconds, microseconds, nanoseconds);
-  const dateSign = CompareISODate(y2, mon2, d2, y1, mon1, d1);
-  if (dateSign === -timeSign) {
-    ({ year: y1, month: mon1, day: d1 } = BalanceISODate(y1, mon1, d1 - timeSign));
-    ({ hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = BalanceDuration(
-      -timeSign,
-      hours,
-      minutes,
-      seconds,
-      milliseconds,
-      microseconds,
-      nanoseconds,
-      largestUnit
-    ));
+  // back-off a day from date2 so that the signs of the date and time diff match
+  let adjustedDate = isoDateTime2.isoDate;
+  if (dateSign === timeSign) {
+    adjustedDate = BalanceISODate(adjustedDate.year, adjustedDate.month, adjustedDate.day + timeSign);
+    timeDuration = timeDuration.add24HourDays(-timeSign);
   }
 
-  const date1 = CreateTemporalDate(y1, mon1, d1, calendar);
-  const date2 = CreateTemporalDate(y2, mon2, d2, calendar);
-  const dateLargestUnit = LargerOfTwoTemporalUnits('day', largestUnit);
-  const untilOptions = MergeLargestUnitOption(options, dateLargestUnit);
-  // TODO untilOptions doesn't want to compile as it seems that smallestUnit is not clamped?
-  // Type 'SmallestUnit<DateTimeUnit> | undefined' is not assignable to type
-  //      'SmallestUnit<"year" | "month" | "day" | "week"> | undefined'.
-  // Type '"hour"' is not assignable to type
-  //      'SmallestUnit<"year" | "month" | "day" | "week"> | undefined'.ts(2345)
-  let { years, months, weeks, days } = CalendarDateUntil(calendar, date1, date2, untilOptions as any);
-  // Signs of date part and time part may not agree; balance them together
-  ({ days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = BalanceDuration(
-    days,
-    hours,
-    minutes,
-    seconds,
-    milliseconds,
-    microseconds,
-    nanoseconds,
-    largestUnit
-  ));
-  return { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds };
+  const dateLargestUnit = LargerOfTwoTemporalUnits('day', largestUnit) as Temporal.DateUnit;
+  const dateDifference = CalendarDateUntil(calendar, isoDateTime1.isoDate, adjustedDate, dateLargestUnit);
+  if (largestUnit !== dateLargestUnit) {
+    // largestUnit < days, so add the days in to the internal duration
+    timeDuration = timeDuration.add24HourDays(dateDifference.days);
+    dateDifference.days = 0;
+  }
+  return CombineDateAndTimeDuration(dateDifference, timeDuration);
 }
 
 function DifferenceZonedDateTime(
   ns1: JSBI,
   ns2: JSBI,
-  timeZone: Temporal.TimeZoneProtocol,
-  calendar: Temporal.CalendarProtocol,
-  largestUnit: Temporal.DateTimeUnit,
-  options: Temporal.DifferenceOptions<Temporal.DateTimeUnit>
+  timeZone: string,
+  calendar: BuiltinCalendarId,
+  largestUnit: Temporal.DateTimeUnit
 ) {
   const nsDiff = JSBI.subtract(ns2, ns1);
-  if (JSBI.equal(nsDiff, ZERO)) {
-    return {
-      years: 0,
-      months: 0,
-      weeks: 0,
-      days: 0,
-      hours: 0,
-      minutes: 0,
-      seconds: 0,
-      milliseconds: 0,
-      microseconds: 0,
-      nanoseconds: 0
-    };
+  if (JSBI.equal(nsDiff, ZERO)) return { date: ZeroDateDuration(), time: TimeDuration.ZERO };
+  const sign = JSBI.lessThan(nsDiff, ZERO) ? -1 : 1;
+
+  // Convert start/end instants to datetimes
+  const isoDtStart = GetISODateTimeFor(timeZone, ns1);
+  const isoDtEnd = GetISODateTimeFor(timeZone, ns2);
+
+  // Simulate moving ns1 as many years/months/weeks/days as possible without
+  // surpassing ns2. This value is stored in intermediateDateTime/intermediateInstant/intermediateNs.
+  // We do not literally move years/months/weeks/days with calendar arithmetic,
+  // but rather assume intermediateDateTime will have the same time-parts as
+  // dtStart and the date-parts from dtEnd, and move backward from there.
+  // The number of days we move backward is stored in dayCorrection.
+  // Credit to Adam Shaw for devising this algorithm.
+  let dayCorrection = 0;
+  let intermediateDateTime: ISODateTime | undefined;
+
+  // The max number of allowed day corrections depends on the direction of travel.
+  // Both directions allow for 1 day correction due to an ISO wall-clock overshoot (see below).
+  // Only the forward direction allows for an additional 1 day correction caused by a push-forward
+  // 'compatible' DST transition causing the wall-clock to overshoot again.
+  // This max value is inclusive.
+  let maxDayCorrection = sign === 1 ? 2 : 1;
+
+  // Detect ISO wall-clock overshoot.
+  // If the diff of the ISO wall-clock times is opposite to the overall diff's sign,
+  // we are guaranteed to need at least one day correction.
+  let timeDuration = DifferenceTime(isoDtStart.time, isoDtEnd.time);
+  if (timeDuration.sign() === -sign) {
+    dayCorrection++;
   }
 
-  // Find the difference in dates only.
-  const TemporalInstant = GetIntrinsic('%Temporal.Instant%');
-  const start = new TemporalInstant(ns1);
-  const end = new TemporalInstant(ns2);
-  const dtStart = BuiltinTimeZoneGetPlainDateTimeFor(timeZone, start, calendar);
-  const dtEnd = BuiltinTimeZoneGetPlainDateTimeFor(timeZone, end, calendar);
-  let { years, months, weeks, days } = DifferenceISODateTime(
-    GetSlot(dtStart, ISO_YEAR),
-    GetSlot(dtStart, ISO_MONTH),
-    GetSlot(dtStart, ISO_DAY),
-    GetSlot(dtStart, ISO_HOUR),
-    GetSlot(dtStart, ISO_MINUTE),
-    GetSlot(dtStart, ISO_SECOND),
-    GetSlot(dtStart, ISO_MILLISECOND),
-    GetSlot(dtStart, ISO_MICROSECOND),
-    GetSlot(dtStart, ISO_NANOSECOND),
-    GetSlot(dtEnd, ISO_YEAR),
-    GetSlot(dtEnd, ISO_MONTH),
-    GetSlot(dtEnd, ISO_DAY),
-    GetSlot(dtEnd, ISO_HOUR),
-    GetSlot(dtEnd, ISO_MINUTE),
-    GetSlot(dtEnd, ISO_SECOND),
-    GetSlot(dtEnd, ISO_MILLISECOND),
-    GetSlot(dtEnd, ISO_MICROSECOND),
-    GetSlot(dtEnd, ISO_NANOSECOND),
+  for (; dayCorrection <= maxDayCorrection; dayCorrection++) {
+    const intermediateDate = BalanceISODate(
+      isoDtEnd.isoDate.year,
+      isoDtEnd.isoDate.month,
+      isoDtEnd.isoDate.day - dayCorrection * sign
+    );
+
+    // Incorporate time parts from dtStart
+    intermediateDateTime = CombineISODateAndTimeRecord(intermediateDate, isoDtStart.time);
+
+    // Convert intermediate datetime to epoch-nanoseconds (may disambiguate)
+    const intermediateNs = GetEpochNanosecondsFor(timeZone, intermediateDateTime, 'compatible');
+
+    // Compute the nanosecond diff between the intermediate instant and the final destination
+    timeDuration = TimeDuration.fromEpochNsDiff(ns2, intermediateNs);
+
+    // Did intermediateNs NOT surpass ns2?
+    // If so, exit the loop with success (without incrementing dayCorrection past maxDayCorrection)
+    if (timeDuration.sign() !== -sign) {
+      break;
+    }
+  }
+
+  assert(dayCorrection <= maxDayCorrection, `more than ${maxDayCorrection} day correction needed`);
+
+  // Output of the above loop
+  assertExists(intermediateDateTime);
+
+  // Similar to what happens in DifferenceISODateTime with date parts only:
+  const dateLargestUnit = LargerOfTwoTemporalUnits('day', largestUnit) as Temporal.DateUnit;
+  const dateDifference = CalendarDateUntil(calendar, isoDtStart.isoDate, intermediateDateTime.isoDate, dateLargestUnit);
+  return CombineDateAndTimeDuration(dateDifference, timeDuration);
+}
+
+// Epoch-nanosecond bounding technique where the start/end of the calendar-unit
+// interval are converted to epoch-nanosecond times and destEpochNs is nudged to
+// either one.
+function NudgeToCalendarUnit(
+  sign: -1 | 1,
+  durationParam: InternalDuration,
+  destEpochNs: JSBI,
+  isoDateTime: ISODateTime,
+  timeZone: string | null,
+  calendar: BuiltinCalendarId,
+  increment: number,
+  unit: Temporal.DateUnit,
+  roundingMode: Temporal.RoundingMode
+) {
+  // unit must be day, week, month, or year
+  // timeZone may be undefined
+  let duration = durationParam;
+
+  // Create a duration with smallestUnit trunc'd towards zero
+  // Create a separate duration that incorporates roundingIncrement
+  let r1, r2, startDuration, endDuration;
+  switch (unit) {
+    case 'year': {
+      const years = RoundNumberToIncrement(duration.date.years, increment, 'trunc');
+      r1 = years;
+      r2 = years + increment * sign;
+      startDuration = { years: r1, months: 0, weeks: 0, days: 0 };
+      endDuration = { ...startDuration, years: r2 };
+      break;
+    }
+    case 'month': {
+      const months = RoundNumberToIncrement(duration.date.months, increment, 'trunc');
+      r1 = months;
+      r2 = months + increment * sign;
+      startDuration = AdjustDateDurationRecord(duration.date, 0, 0, r1);
+      endDuration = AdjustDateDurationRecord(duration.date, 0, 0, r2);
+      break;
+    }
+    case 'week': {
+      const yearsMonths = AdjustDateDurationRecord(duration.date, 0, 0);
+      const weeksStart = CalendarDateAdd(calendar, isoDateTime.isoDate, yearsMonths, 'constrain');
+      const weeksEnd = BalanceISODate(weeksStart.year, weeksStart.month, weeksStart.day + duration.date.days);
+      const untilResult = CalendarDateUntil(calendar, weeksStart, weeksEnd, 'week');
+      const weeks = RoundNumberToIncrement(duration.date.weeks + untilResult.weeks, increment, 'trunc');
+      r1 = weeks;
+      r2 = weeks + increment * sign;
+      startDuration = AdjustDateDurationRecord(duration.date, 0, r1);
+      endDuration = AdjustDateDurationRecord(duration.date, 0, r2);
+      break;
+    }
+    case 'day': {
+      const days = RoundNumberToIncrement(duration.date.days, increment, 'trunc');
+      r1 = days;
+      r2 = days + increment * sign;
+      startDuration = AdjustDateDurationRecord(duration.date, r1);
+      endDuration = AdjustDateDurationRecord(duration.date, r2);
+      break;
+    }
+    default:
+      /* c8 ignore next */ assertNotReached();
+  }
+
+  if (sign === 1) assert(r1 >= 0 && r1 < r2, `positive ordering of r1, r2: 0 ≤ ${r1} < ${r2}`);
+  if (sign === -1) assert(r1 <= 0 && r1 > r2, `negative ordering of r1, r2: 0 ≥ ${r1} > ${r2}`);
+
+  // Apply to origin, output PlainDateTimes
+  const start = CalendarDateAdd(calendar, isoDateTime.isoDate, startDuration, 'constrain');
+  const end = CalendarDateAdd(calendar, isoDateTime.isoDate, endDuration, 'constrain');
+
+  // Convert to epoch-nanoseconds
+  let startEpochNs, endEpochNs;
+  const startDateTime = CombineISODateAndTimeRecord(start, isoDateTime.time);
+  const endDateTime = CombineISODateAndTimeRecord(end, isoDateTime.time);
+  if (timeZone) {
+    startEpochNs = GetEpochNanosecondsFor(timeZone, startDateTime, 'compatible');
+    endEpochNs = GetEpochNanosecondsFor(timeZone, endDateTime, 'compatible');
+  } else {
+    startEpochNs = GetUTCEpochNanoseconds(startDateTime);
+    endEpochNs = GetUTCEpochNanoseconds(endDateTime);
+  }
+
+  // Round the smallestUnit within the epoch-nanosecond span
+  if (sign === 1) {
+    assert(
+      JSBI.lessThanOrEqual(startEpochNs, destEpochNs) && JSBI.lessThanOrEqual(destEpochNs, endEpochNs),
+      `${unit} was 0 days long`
+    );
+  }
+  if (sign === -1) {
+    assert(
+      JSBI.lessThanOrEqual(endEpochNs, destEpochNs) && JSBI.lessThanOrEqual(destEpochNs, startEpochNs),
+      `${unit} was 0 days long`
+    );
+  }
+  assert(!JSBI.equal(endEpochNs, startEpochNs), 'startEpochNs must ≠ endEpochNs');
+  const numerator = TimeDuration.fromEpochNsDiff(destEpochNs, startEpochNs);
+  const denominator = TimeDuration.fromEpochNsDiff(endEpochNs, startEpochNs);
+  const unsignedRoundingMode = GetUnsignedRoundingMode(roundingMode, sign < 0 ? 'negative' : 'positive');
+  const cmp = numerator.add(numerator).abs().subtract(denominator.abs()).sign();
+  const even = (Math.abs(r1) / increment) % 2 === 0;
+  // prettier-ignore
+  const roundedUnit = numerator.isZero()
+    ? Math.abs(r1)
+    : !numerator.cmp(denominator) // equal?
+      ? Math.abs(r2)
+      : ApplyUnsignedRoundingMode(Math.abs(r1), Math.abs(r2), cmp, even, unsignedRoundingMode);
+
+  // Trick to minimize rounding error, due to the lack of fma() in JS
+  const fakeNumerator = new TimeDuration(
+    JSBI.add(
+      JSBI.multiply(denominator.totalNs, JSBI.BigInt(r1)),
+      JSBI.multiply(numerator.totalNs, JSBI.BigInt(increment * sign))
+    )
+  );
+  const total = fakeNumerator.fdiv(denominator.totalNs);
+  assert(Math.abs(r1) <= Math.abs(total) && Math.abs(total) <= Math.abs(r2), 'r1 ≤ total ≤ r2');
+
+  // Determine whether expanded or contracted
+  const didExpandCalendarUnit = roundedUnit === Math.abs(r2);
+  duration = { date: didExpandCalendarUnit ? endDuration : startDuration, time: TimeDuration.ZERO };
+
+  const nudgeResult = {
+    duration,
+    nudgedEpochNs: didExpandCalendarUnit ? endEpochNs : startEpochNs,
+    didExpandCalendarUnit
+  };
+  return { nudgeResult, total };
+}
+
+// Attempts rounding of time units within a time zone's day, but if the rounding
+// causes time to exceed the total time within the day, rerun rounding in next
+// day.
+function NudgeToZonedTime(
+  sign: -1 | 1,
+  durationParam: InternalDuration,
+  isoDateTime: ISODateTime,
+  timeZone: string,
+  calendar: BuiltinCalendarId,
+  increment: number,
+  unit: Temporal.TimeUnit,
+  roundingMode: Temporal.RoundingMode
+) {
+  // unit must be hour or smaller
+  let duration = durationParam;
+
+  // Apply to origin, output start/end of the day as PlainDateTimes
+  const start = CalendarDateAdd(calendar, isoDateTime.isoDate, duration.date, 'constrain');
+  const startDateTime = CombineISODateAndTimeRecord(start, isoDateTime.time);
+  const endDate = BalanceISODate(start.year, start.month, start.day + sign);
+  const endDateTime = CombineISODateAndTimeRecord(endDate, isoDateTime.time);
+
+  // Compute the epoch-nanosecond start/end of the final whole-day interval
+  // If duration has negative sign, startEpochNs will be after endEpochNs
+  const startEpochNs = GetEpochNanosecondsFor(timeZone, startDateTime, 'compatible');
+  const endEpochNs = GetEpochNanosecondsFor(timeZone, endDateTime, 'compatible');
+
+  // The signed amount of time from the start of the whole-day interval to the end
+  const daySpan = TimeDuration.fromEpochNsDiff(endEpochNs, startEpochNs);
+  if (daySpan.sign() !== sign) throw new RangeError('time zone returned inconsistent Instants');
+
+  // Compute time parts of the duration to nanoseconds and round
+  // Result could be negative
+  const unitIncrement = JSBI.BigInt(NS_PER_TIME_UNIT[unit] * increment);
+  let roundedTimeDuration = duration.time.round(unitIncrement, roundingMode);
+
+  // Does the rounded time exceed the time-in-day?
+  const beyondDaySpan = roundedTimeDuration.subtract(daySpan);
+  const didRoundBeyondDay = beyondDaySpan.sign() !== -sign;
+
+  let dayDelta, nudgedEpochNs;
+  if (didRoundBeyondDay) {
+    // If rounded into next day, use the day-end as the local origin and rerun
+    // the rounding
+    dayDelta = sign;
+    roundedTimeDuration = beyondDaySpan.round(unitIncrement, roundingMode);
+    nudgedEpochNs = roundedTimeDuration.addToEpochNs(endEpochNs);
+  } else {
+    // Otherwise, if time not rounded beyond day, use the day-start as the local
+    // origin
+    dayDelta = 0;
+    nudgedEpochNs = roundedTimeDuration.addToEpochNs(startEpochNs);
+  }
+
+  const dateDuration = AdjustDateDurationRecord(duration.date, duration.date.days + dayDelta);
+  const resultDuration = CombineDateAndTimeDuration(dateDuration, roundedTimeDuration);
+  return {
+    duration: resultDuration,
+    nudgedEpochNs,
+    didExpandCalendarUnit: didRoundBeyondDay
+  };
+}
+
+// Converts all fields to nanoseconds and does integer rounding.
+function NudgeToDayOrTime(
+  durationParam: InternalDuration,
+  destEpochNs: JSBI,
+  largestUnit: Temporal.DateTimeUnit,
+  increment: number,
+  smallestUnit: Temporal.TimeUnit | 'day',
+  roundingMode: Temporal.RoundingMode
+) {
+  // unit must be day or smaller
+  let duration = durationParam;
+
+  const timeDuration = duration.time.add24HourDays(duration.date.days);
+  // Convert to nanoseconds and round
+  const roundedTime = timeDuration.round(JSBI.BigInt(increment * NS_PER_TIME_UNIT[smallestUnit]), roundingMode);
+  const diffTime = roundedTime.subtract(timeDuration);
+
+  // Determine if whole days expanded
+  const { quotient: wholeDays } = timeDuration.divmod(DAY_NANOS);
+  const { quotient: roundedWholeDays } = roundedTime.divmod(DAY_NANOS);
+  const didExpandDays = Math.sign(roundedWholeDays - wholeDays) === timeDuration.sign();
+
+  const nudgedEpochNs = diffTime.addToEpochNs(destEpochNs);
+
+  let days = 0;
+  let remainder = roundedTime;
+  if (TemporalUnitCategory(largestUnit) === 'date') {
+    days = roundedWholeDays;
+    remainder = roundedTime.add(TimeDuration.fromComponents(-roundedWholeDays * 24, 0, 0, 0, 0, 0));
+  }
+
+  const dateDuration = AdjustDateDurationRecord(duration.date, days);
+  return {
+    duration: { date: dateDuration, time: remainder },
+    nudgedEpochNs,
+    didExpandCalendarUnit: didExpandDays
+  };
+}
+
+// Given a potentially bottom-heavy duration, bubble up smaller units to larger
+// units. Any units smaller than smallestUnit are already zeroed-out.
+function BubbleRelativeDuration(
+  sign: -1 | 1,
+  durationParam: InternalDuration,
+  nudgedEpochNs: JSBI,
+  isoDateTime: ISODateTime,
+  timeZone: string | null,
+  calendar: BuiltinCalendarId,
+  largestUnit: Temporal.DateUnit,
+  smallestUnit: Temporal.DateUnit
+) {
+  // smallestUnit is day or larger
+  let duration = durationParam;
+
+  if (smallestUnit === largestUnit) return duration;
+
+  // Check to see if nudgedEpochNs has hit the boundary of any units higher than
+  // smallestUnit, in which case increment the higher unit and clear smaller
+  // units.
+  const largestUnitIndex = UNITS_DESCENDING.indexOf(largestUnit);
+  const smallestUnitIndex = UNITS_DESCENDING.indexOf(smallestUnit);
+  for (let unitIndex = smallestUnitIndex - 1; unitIndex >= largestUnitIndex; unitIndex--) {
+    // The only situation where days and smaller bubble-up into weeks is when
+    // largestUnit is 'week' (not to be confused with the situation where
+    // smallestUnit is 'week', in which case days and smaller are ROUNDED-up
+    // into weeks, but that has already happened by the time this function
+    // executes)
+    // So, if days and smaller are NOT bubbled-up into weeks, and the current
+    // unit is weeks, skip.
+    const unit = UNITS_DESCENDING[unitIndex];
+    if (unit === 'week' && largestUnit !== 'week') {
+      continue;
+    }
+
+    let endDuration;
+    switch (unit) {
+      case 'year': {
+        const years = duration.date.years + sign;
+        endDuration = { years, months: 0, weeks: 0, days: 0 };
+        break;
+      }
+      case 'month': {
+        const months = duration.date.months + sign;
+        endDuration = AdjustDateDurationRecord(duration.date, 0, 0, months);
+        break;
+      }
+      case 'week': {
+        const weeks = duration.date.weeks + sign;
+        endDuration = AdjustDateDurationRecord(duration.date, 0, weeks);
+        break;
+      }
+      default:
+        /* c8 ignore next */ assertNotReached();
+    }
+
+    // Compute end-of-unit in epoch-nanoseconds
+    const end = CalendarDateAdd(calendar, isoDateTime.isoDate, endDuration, 'constrain');
+    const endDateTime = CombineISODateAndTimeRecord(end, isoDateTime.time);
+    let endEpochNs;
+    if (timeZone) {
+      endEpochNs = GetEpochNanosecondsFor(timeZone, endDateTime, 'compatible');
+    } else {
+      endEpochNs = GetUTCEpochNanoseconds(endDateTime);
+    }
+
+    const didExpandToEnd = compare(nudgedEpochNs, endEpochNs) !== -sign;
+
+    // Is nudgedEpochNs at the end-of-unit? This means it should bubble-up to
+    // the next highest unit (and possibly further...)
+    if (didExpandToEnd) {
+      duration = { date: endDuration, time: TimeDuration.ZERO };
+    } else {
+      // NOT at end-of-unit. Stop looking for bubbling
+      break;
+    }
+  }
+
+  return duration;
+}
+
+function RoundRelativeDuration(
+  durationParam: InternalDuration,
+  destEpochNs: JSBI,
+  isoDateTime: ISODateTime,
+  timeZone: string | null,
+  calendar: BuiltinCalendarId,
+  largestUnitParam: Temporal.DateTimeUnit,
+  increment: number,
+  smallestUnit: Temporal.DateTimeUnit,
+  roundingMode: Temporal.RoundingMode
+) {
+  let duration = durationParam;
+  // The duration must already be balanced. This should be achieved by calling
+  // one of the non-rounding since/until internal methods prior. It's okay to
+  // have a bottom-heavy weeks because weeks don't bubble-up into months. It's
+  // okay to have >24 hour day assuming the final day of relativeTo+duration has
+  // >24 hours in its timezone. (should automatically end up like this if using
+  // non-rounding since/until internal methods prior)
+  const irregularLengthUnit = IsCalendarUnit(smallestUnit) || (timeZone && smallestUnit === 'day');
+  const sign = InternalDurationSign(duration) < 0 ? -1 : 1;
+
+  let nudgeResult;
+  if (irregularLengthUnit) {
+    // Rounding an irregular-length unit? Use epoch-nanosecond-bounding technique
+    ({ nudgeResult } = NudgeToCalendarUnit(
+      sign,
+      duration,
+      destEpochNs,
+      isoDateTime,
+      timeZone,
+      calendar,
+      increment,
+      smallestUnit,
+      roundingMode
+    ));
+  } else if (timeZone) {
+    // Special-case for rounding time units within a zoned day
+    uncheckedAssertNarrowedType<Temporal.TimeUnit>(
+      smallestUnit,
+      'other values handled in irregularLengthUnit clause above'
+    );
+    nudgeResult = NudgeToZonedTime(
+      sign,
+      duration,
+      isoDateTime,
+      timeZone,
+      calendar,
+      increment,
+      smallestUnit,
+      roundingMode
+    );
+  } else {
+    // Rounding uniform-length days/hours/minutes/etc units. Simple nanosecond
+    // math. years/months/weeks unchanged
+    nudgeResult = NudgeToDayOrTime(duration, destEpochNs, largestUnitParam, increment, smallestUnit, roundingMode);
+  }
+
+  duration = nudgeResult.duration;
+  // Did nudging cause the duration to expand to the next day or larger?
+  // Bubble-up smaller calendar units into higher ones, except for weeks, which
+  // don't balance up into months
+  if (nudgeResult.didExpandCalendarUnit && smallestUnit !== 'week') {
+    uncheckedAssertNarrowedType<Temporal.DateUnit>(
+      largestUnitParam,
+      'if we expanded to a calendar unit, then largestUnit is a calendar unit'
+    );
+    duration = BubbleRelativeDuration(
+      sign,
+      duration,
+      nudgeResult.nudgedEpochNs, // The destEpochNs after expanding/contracting
+      isoDateTime,
+      timeZone,
+      calendar,
+      largestUnitParam, // where to STOP bubbling
+      LargerOfTwoTemporalUnits(smallestUnit, 'day') as Temporal.DateUnit // where to START bubbling-up from
+    );
+  }
+
+  return duration;
+}
+
+function TotalRelativeDuration(
+  duration: InternalDuration,
+  destEpochNs: JSBI,
+  isoDateTime: ISODateTime,
+  timeZone: string | null,
+  calendar: BuiltinCalendarId,
+  unit: Temporal.DateTimeUnit
+) {
+  // The duration must already be balanced. This should be achieved by calling
+  // one of the non-rounding since/until internal methods prior. It's okay to
+  // have a bottom-heavy weeks because weeks don't bubble-up into months. It's
+  // okay to have >24 hour day assuming the final day of relativeTo+duration has
+  // >24 hours in its timezone. (should automatically end up like this if using
+  // non-rounding since/until internal methods prior)
+  if (IsCalendarUnit(unit) || (timeZone && unit === 'day')) {
+    // Rounding an irregular-length unit? Use epoch-nanosecond-bounding technique
+    const sign = InternalDurationSign(duration) < 0 ? -1 : 1;
+    return NudgeToCalendarUnit(sign, duration, destEpochNs, isoDateTime, timeZone, calendar, 1, unit, 'trunc').total;
+  }
+  // Rounding uniform-length days/hours/minutes/etc units. Simple nanosecond
+  // math. years/months/weeks unchanged
+  const timeDuration = duration.time.add24HourDays(duration.date.days);
+  return TotalTimeDuration(timeDuration, unit);
+}
+
+export function DifferencePlainDateTimeWithRounding(
+  isoDateTime1: ISODateTime,
+  isoDateTime2: ISODateTime,
+  calendar: BuiltinCalendarId,
+  largestUnit: Temporal.DateTimeUnit,
+  roundingIncrement: number,
+  smallestUnit: Temporal.DateTimeUnit,
+  roundingMode: Temporal.RoundingMode
+) {
+  if (CompareISODateTime(isoDateTime1, isoDateTime2) == 0) {
+    return { date: ZeroDateDuration(), time: TimeDuration.ZERO };
+  }
+
+  RejectDateTimeRange(isoDateTime1);
+  RejectDateTimeRange(isoDateTime2);
+  const duration = DifferenceISODateTime(isoDateTime1, isoDateTime2, calendar, largestUnit);
+
+  if (smallestUnit === 'nanosecond' && roundingIncrement === 1) return duration;
+
+  const destEpochNs = GetUTCEpochNanoseconds(isoDateTime2);
+  return RoundRelativeDuration(
+    duration,
+    destEpochNs,
+    isoDateTime1,
+    null,
     calendar,
     largestUnit,
-    options
+    roundingIncrement,
+    smallestUnit,
+    roundingMode
   );
-  const intermediateNs = AddZonedDateTime(start, timeZone, calendar, years, months, weeks, 0, 0, 0, 0, 0, 0, 0);
-  // may disambiguate
-  let timeRemainderNs = JSBI.subtract(ns2, intermediateNs);
-  const intermediate = CreateTemporalZonedDateTime(intermediateNs, timeZone, calendar);
-  ({ nanoseconds: timeRemainderNs, days } = NanosecondsToDays(timeRemainderNs, intermediate));
+}
 
-  // Finally, merge the date and time durations and return the merged result.
-  const { hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = BalanceDuration(
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    JSBI.toNumber(timeRemainderNs),
-    'hour'
+export function DifferencePlainDateTimeWithTotal(
+  isoDateTime1: ISODateTime,
+  isoDateTime2: ISODateTime,
+  calendar: BuiltinCalendarId,
+  unit: Temporal.DateTimeUnit
+) {
+  if (CompareISODateTime(isoDateTime1, isoDateTime2) == 0) return 0;
+
+  RejectDateTimeRange(isoDateTime1);
+  RejectDateTimeRange(isoDateTime2);
+  const duration = DifferenceISODateTime(isoDateTime1, isoDateTime2, calendar, unit);
+
+  if (unit === 'nanosecond') return JSBI.toNumber(duration.time.totalNs);
+
+  const destEpochNs = GetUTCEpochNanoseconds(isoDateTime2);
+  return TotalRelativeDuration(duration, destEpochNs, isoDateTime1, null, calendar, unit);
+}
+
+export function DifferenceZonedDateTimeWithRounding(
+  ns1: JSBI,
+  ns2: JSBI,
+  timeZone: string,
+  calendar: BuiltinCalendarId,
+  largestUnit: Temporal.DateTimeUnit,
+  roundingIncrement: number,
+  smallestUnit: Temporal.DateTimeUnit,
+  roundingMode: Temporal.RoundingMode
+) {
+  if (TemporalUnitCategory(largestUnit) === 'time') {
+    // The user is only asking for a time difference, so return difference of instants.
+    return DifferenceInstant(ns1, ns2, roundingIncrement, smallestUnit as Temporal.TimeUnit, roundingMode);
+  }
+
+  const duration = DifferenceZonedDateTime(ns1, ns2, timeZone, calendar, largestUnit);
+
+  if (smallestUnit === 'nanosecond' && roundingIncrement === 1) return duration;
+
+  const dateTime = GetISODateTimeFor(timeZone, ns1);
+  return RoundRelativeDuration(
+    duration,
+    ns2,
+    dateTime,
+    timeZone,
+    calendar,
+    largestUnit,
+    roundingIncrement,
+    smallestUnit,
+    roundingMode
   );
-  return { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds };
+}
+
+export function DifferenceZonedDateTimeWithTotal(
+  ns1: JSBI,
+  ns2: JSBI,
+  timeZone: string,
+  calendar: BuiltinCalendarId,
+  unit: Temporal.DateTimeUnit
+) {
+  if (TemporalUnitCategory(unit) === 'time') {
+    // The user is only asking for a time difference, so return difference of instants.
+    return TotalTimeDuration(TimeDuration.fromEpochNsDiff(ns2, ns1), unit as Temporal.TimeUnit);
+  }
+
+  const duration = DifferenceZonedDateTime(ns1, ns2, timeZone, calendar, unit);
+  const dateTime = GetISODateTimeFor(timeZone, ns1);
+  return TotalRelativeDuration(duration, ns2, dateTime, timeZone, calendar, unit);
 }
 
 type DifferenceOperation = 'since' | 'until';
 
-// TODO: does it make sense to explicitly union the other and options types for each operation?
-export function DifferenceTemporalInstant(
-  operation: DifferenceOperation,
-  instant: Temporal.Instant,
-  otherParam: InstantParams['until'][0],
-  optionsParam: InstantParams['until'][1] | undefined
-): Temporal.Duration {
-  const other = ToTemporalInstant(otherParam);
-  let first, second;
-  if (operation === 'until') {
-    [first, second] = [instant, other];
-  } else {
-    [first, second] = [other, instant];
+function GetDifferenceSettings<T extends Temporal.DateTimeUnit>(
+  op: DifferenceOperation,
+  options: Temporal.DifferenceOptions<T>,
+  group: 'datetime' | 'date' | 'time',
+  disallowed: (Temporal.DateTimeUnit | 'auto')[],
+  fallbackSmallest: T,
+  smallestLargestDefaultUnit: T
+) {
+  const ALLOWED_UNITS = TEMPORAL_UNITS.reduce((allowed, unitInfo) => {
+    const p = unitInfo[0];
+    const s = unitInfo[1];
+    const c = unitInfo[2];
+    if ((group === 'datetime' || c === group) && !disallowed.includes(s)) {
+      allowed.push(s, p);
+    }
+    return allowed;
+  }, [] as (Temporal.DateTimeUnit | Temporal.PluralUnit<Temporal.DateTimeUnit>)[]);
+
+  let largestUnit = GetTemporalUnitValuedOption(options, 'largestUnit', group, 'auto');
+  if (disallowed.includes(largestUnit)) {
+    throw new RangeError(`largestUnit must be one of ${ALLOWED_UNITS.join(', ')}, not ${largestUnit}`);
   }
-  const options = GetOptionsObject(optionsParam);
-  const smallestUnit = GetTemporalUnit(options, 'smallestUnit', 'time', 'nanosecond');
-  const defaultLargestUnit = LargerOfTwoTemporalUnits('second', smallestUnit);
-  let largestUnit = GetTemporalUnit(options, 'largestUnit', 'time', 'auto');
+
+  const roundingIncrement = GetTemporalRoundingIncrementOption(options);
+
+  let roundingMode = GetRoundingModeOption(options, 'trunc');
+  if (op === 'since') roundingMode = NegateRoundingMode(roundingMode);
+
+  const smallestUnit = GetTemporalUnitValuedOption(options, 'smallestUnit', group, fallbackSmallest);
+  if (disallowed.includes(smallestUnit)) {
+    throw new RangeError(`smallestUnit must be one of ${ALLOWED_UNITS.join(', ')}, not ${smallestUnit}`);
+  }
+
+  const defaultLargestUnit = LargerOfTwoTemporalUnits(smallestLargestDefaultUnit, smallestUnit);
   if (largestUnit === 'auto') largestUnit = defaultLargestUnit;
   if (LargerOfTwoTemporalUnits(largestUnit, smallestUnit) !== largestUnit) {
     throw new RangeError(`largestUnit ${largestUnit} cannot be smaller than smallestUnit ${smallestUnit}`);
   }
-  const roundingMode = ToTemporalRoundingMode(options, 'trunc');
-  const MAX_DIFFERENCE_INCREMENTS = {
+  const MAX_DIFFERENCE_INCREMENTS: { [k in Temporal.DateTimeUnit]?: number } = {
     hour: 24,
     minute: 60,
     second: 60,
@@ -4277,389 +4136,229 @@ export function DifferenceTemporalInstant(
     microsecond: 1000,
     nanosecond: 1000
   };
-  const roundingIncrement = ToTemporalRoundingIncrement(options, MAX_DIFFERENCE_INCREMENTS[smallestUnit], false);
-  const onens = GetSlot(first, EPOCHNANOSECONDS);
-  const twons = GetSlot(second, EPOCHNANOSECONDS);
-  let { seconds, milliseconds, microseconds, nanoseconds } = DifferenceInstant(
+  const maximum = MAX_DIFFERENCE_INCREMENTS[smallestUnit];
+  if (maximum !== undefined) ValidateTemporalRoundingIncrement(roundingIncrement, maximum, false);
+
+  return { largestUnit: largestUnit as T, roundingIncrement, roundingMode, smallestUnit: smallestUnit as T };
+}
+
+export function DifferenceTemporalInstant(
+  operation: DifferenceOperation,
+  instant: Temporal.Instant,
+  otherParam: InstantParams['until'][0],
+  options: InstantParams['until'][1]
+) {
+  const other = ToTemporalInstant(otherParam);
+
+  const resolvedOptions = GetOptionsObject(options);
+  const settings = GetDifferenceSettings(operation, resolvedOptions, 'time', [], 'nanosecond', 'second');
+
+  const onens = GetSlot(instant, EPOCHNANOSECONDS);
+  const twons = GetSlot(other, EPOCHNANOSECONDS);
+  const duration = DifferenceInstant(
     onens,
     twons,
-    roundingIncrement,
-    smallestUnit,
-    roundingMode
+    settings.roundingIncrement,
+    settings.smallestUnit,
+    settings.roundingMode
   );
-  let hours, minutes;
-  ({ hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = BalanceDuration(
-    0,
-    0,
-    0,
-    seconds,
-    milliseconds,
-    microseconds,
-    nanoseconds,
-    largestUnit
-  ));
-  const Duration = GetIntrinsic('%Temporal.Duration%');
-  return new Duration(0, 0, 0, 0, hours, minutes, seconds, milliseconds, microseconds, nanoseconds);
+  let result = TemporalDurationFromInternal(duration, settings.largestUnit);
+  if (operation === 'since') result = CreateNegatedTemporalDuration(result);
+  return result;
 }
 
 export function DifferenceTemporalPlainDate(
   operation: DifferenceOperation,
   plainDate: Temporal.PlainDate,
   otherParam: PlainDateParams['until'][0],
-  optionsParam: PlainDateParams['until'][1]
-): Temporal.Duration {
-  const sign = operation === 'since' ? -1 : 1;
+  options: PlainDateParams['until'][1]
+) {
   const other = ToTemporalDate(otherParam);
   const calendar = GetSlot(plainDate, CALENDAR);
   const otherCalendar = GetSlot(other, CALENDAR);
-  const calendarId = ToString(calendar);
-  const otherCalendarId = ToString(otherCalendar);
-  if (calendarId !== otherCalendarId) {
-    throw new RangeError(`cannot compute difference between dates of ${calendarId} and ${otherCalendarId} calendars`);
+  if (!CalendarEquals(calendar, otherCalendar)) {
+    throw new RangeError(`cannot compute difference between dates of ${calendar} and ${otherCalendar} calendars`);
   }
 
-  const options = GetOptionsObject(optionsParam);
-  const smallestUnit = GetTemporalUnit(options, 'smallestUnit', 'date', 'day');
-  const defaultLargestUnit = LargerOfTwoTemporalUnits('day', smallestUnit);
-  let largestUnit = GetTemporalUnit(options, 'largestUnit', 'date', 'auto');
-  if (largestUnit === 'auto') largestUnit = defaultLargestUnit;
-  if (LargerOfTwoTemporalUnits(largestUnit, smallestUnit) !== largestUnit) {
-    throw new RangeError(`largestUnit ${largestUnit} cannot be smaller than smallestUnit ${smallestUnit}`);
-  }
-  let roundingMode = ToTemporalRoundingMode(options, 'trunc');
-  if (operation === 'since') roundingMode = NegateTemporalRoundingMode(roundingMode);
-  const roundingIncrement = ToTemporalRoundingIncrement(options, undefined, false);
-
-  const untilOptions = MergeLargestUnitOption(options, largestUnit);
-  let { years, months, weeks, days } = CalendarDateUntil(calendar, plainDate, other, untilOptions);
-
-  if (smallestUnit !== 'day' || roundingIncrement !== 1) {
-    ({ years, months, weeks, days } = RoundDuration(
-      years,
-      months,
-      weeks,
-      days,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      roundingIncrement,
-      smallestUnit,
-      roundingMode,
-      plainDate
-    ));
-  }
+  const resolvedOptions = GetOptionsObject(options);
+  const settings = GetDifferenceSettings(operation, resolvedOptions, 'date', [], 'day', 'day');
 
   const Duration = GetIntrinsic('%Temporal.Duration%');
-  return new Duration(sign * years, sign * months, sign * weeks, sign * days, 0, 0, 0, 0, 0, 0);
+  const isoDate = GetSlot(plainDate, ISO_DATE);
+  const isoOther = GetSlot(other, ISO_DATE);
+  if (CompareISODate(isoDate, isoOther) === 0) return new Duration();
+
+  const dateDifference = CalendarDateUntil(calendar, isoDate, isoOther, settings.largestUnit);
+
+  let duration = { date: dateDifference, time: TimeDuration.ZERO };
+  const roundingIsNoop = settings.smallestUnit === 'day' && settings.roundingIncrement === 1;
+  if (!roundingIsNoop) {
+    const isoDateTime = CombineISODateAndTimeRecord(isoDate, MidnightTimeRecord());
+    const isoDateTimeOther = CombineISODateAndTimeRecord(isoOther, MidnightTimeRecord());
+    const destEpochNs = GetUTCEpochNanoseconds(isoDateTimeOther);
+    duration = RoundRelativeDuration(
+      duration,
+      destEpochNs,
+      isoDateTime,
+      null,
+      calendar,
+      settings.largestUnit,
+      settings.roundingIncrement,
+      settings.smallestUnit,
+      settings.roundingMode
+    );
+  }
+
+  let result = TemporalDurationFromInternal(duration, 'day');
+  if (operation === 'since') result = CreateNegatedTemporalDuration(result);
+  return result;
 }
 
 export function DifferenceTemporalPlainDateTime(
   operation: DifferenceOperation,
   plainDateTime: Temporal.PlainDateTime,
   otherParam: PlainDateTimeParams['until'][0],
-  optionsParam: PlainDateTimeParams['until'][1]
-): Temporal.Duration {
-  const sign = operation === 'since' ? -1 : 1;
+  options: PlainDateTimeParams['until'][1]
+) {
   const other = ToTemporalDateTime(otherParam);
   const calendar = GetSlot(plainDateTime, CALENDAR);
   const otherCalendar = GetSlot(other, CALENDAR);
-  const calendarId = ToString(calendar);
-  const otherCalendarId = ToString(otherCalendar);
-  if (calendarId !== otherCalendarId) {
-    throw new RangeError(`cannot compute difference between dates of ${calendarId} and ${otherCalendarId} calendars`);
+  if (!CalendarEquals(calendar, otherCalendar)) {
+    throw new RangeError(`cannot compute difference between dates of ${calendar} and ${otherCalendar} calendars`);
   }
-  const options = GetOptionsObject(optionsParam);
-  const smallestUnit = GetTemporalUnit(options, 'smallestUnit', 'datetime', 'nanosecond');
-  const defaultLargestUnit = LargerOfTwoTemporalUnits('day', smallestUnit);
-  let largestUnit = GetTemporalUnit(options, 'largestUnit', 'datetime', 'auto');
-  if (largestUnit === 'auto') largestUnit = defaultLargestUnit;
-  if (LargerOfTwoTemporalUnits(largestUnit, smallestUnit) !== largestUnit) {
-    throw new RangeError(`largestUnit ${largestUnit} cannot be smaller than smallestUnit ${smallestUnit}`);
-  }
-  let roundingMode = ToTemporalRoundingMode(options, 'trunc');
-  if (operation === 'since') roundingMode = NegateTemporalRoundingMode(roundingMode);
-  const roundingIncrement = ToTemporalDateTimeRoundingIncrement(options, smallestUnit);
 
-  let { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } =
-    DifferenceISODateTime(
-      GetSlot(plainDateTime, ISO_YEAR),
-      GetSlot(plainDateTime, ISO_MONTH),
-      GetSlot(plainDateTime, ISO_DAY),
-      GetSlot(plainDateTime, ISO_HOUR),
-      GetSlot(plainDateTime, ISO_MINUTE),
-      GetSlot(plainDateTime, ISO_SECOND),
-      GetSlot(plainDateTime, ISO_MILLISECOND),
-      GetSlot(plainDateTime, ISO_MICROSECOND),
-      GetSlot(plainDateTime, ISO_NANOSECOND),
-      GetSlot(other, ISO_YEAR),
-      GetSlot(other, ISO_MONTH),
-      GetSlot(other, ISO_DAY),
-      GetSlot(other, ISO_HOUR),
-      GetSlot(other, ISO_MINUTE),
-      GetSlot(other, ISO_SECOND),
-      GetSlot(other, ISO_MILLISECOND),
-      GetSlot(other, ISO_MICROSECOND),
-      GetSlot(other, ISO_NANOSECOND),
-      calendar,
-      largestUnit,
-      options
-    );
-
-  const relativeTo = TemporalDateTimeToDate(plainDateTime);
-  ({ years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = RoundDuration(
-    years,
-    months,
-    weeks,
-    days,
-    hours,
-    minutes,
-    seconds,
-    milliseconds,
-    microseconds,
-    nanoseconds,
-    roundingIncrement,
-    smallestUnit,
-    roundingMode,
-    relativeTo
-  ));
-  ({ days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = BalanceDuration(
-    days,
-    hours,
-    minutes,
-    seconds,
-    milliseconds,
-    microseconds,
-    nanoseconds,
-    largestUnit
-  ));
+  const resolvedOptions = GetOptionsObject(options);
+  const settings = GetDifferenceSettings(operation, resolvedOptions, 'datetime', [], 'nanosecond', 'day');
 
   const Duration = GetIntrinsic('%Temporal.Duration%');
-  return new Duration(
-    sign * years,
-    sign * months,
-    sign * weeks,
-    sign * days,
-    sign * hours,
-    sign * minutes,
-    sign * seconds,
-    sign * milliseconds,
-    sign * microseconds,
-    sign * nanoseconds
+  const isoDateTime1 = GetSlot(plainDateTime, ISO_DATE_TIME);
+  const isoDateTime2 = GetSlot(other, ISO_DATE_TIME);
+  if (CompareISODateTime(isoDateTime1, isoDateTime2) === 0) return new Duration();
+
+  const duration = DifferencePlainDateTimeWithRounding(
+    isoDateTime1,
+    isoDateTime2,
+    calendar,
+    settings.largestUnit,
+    settings.roundingIncrement,
+    settings.smallestUnit,
+    settings.roundingMode
   );
+
+  let result = TemporalDurationFromInternal(duration, settings.largestUnit);
+  if (operation === 'since') result = CreateNegatedTemporalDuration(result);
+  return result;
 }
 
 export function DifferenceTemporalPlainTime(
   operation: DifferenceOperation,
   plainTime: Temporal.PlainTime,
   otherParam: PlainTimeParams['until'][0],
-  optionsParam: PlainTimeParams['until'][1]
-): Temporal.Duration {
-  const sign = operation === 'since' ? -1 : 1;
+  options: PlainTimeParams['until'][1]
+) {
   const other = ToTemporalTime(otherParam);
-  const options = GetOptionsObject(optionsParam);
-  let largestUnit = GetTemporalUnit(options, 'largestUnit', 'time', 'auto');
-  if (largestUnit === 'auto') largestUnit = 'hour';
-  const smallestUnit = GetTemporalUnit(options, 'smallestUnit', 'time', 'nanosecond');
-  if (LargerOfTwoTemporalUnits(largestUnit, smallestUnit) !== largestUnit) {
-    throw new RangeError(`largestUnit ${largestUnit} cannot be smaller than smallestUnit ${smallestUnit}`);
-  }
-  let roundingMode = ToTemporalRoundingMode(options, 'trunc');
-  if (operation === 'since') roundingMode = NegateTemporalRoundingMode(roundingMode);
-  const MAX_INCREMENTS = {
-    hour: 24,
-    minute: 60,
-    second: 60,
-    millisecond: 1000,
-    microsecond: 1000,
-    nanosecond: 1000
-  };
-  const roundingIncrement = ToTemporalRoundingIncrement(options, MAX_INCREMENTS[smallestUnit], false);
-  let { hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = DifferenceTime(
-    GetSlot(plainTime, ISO_HOUR),
-    GetSlot(plainTime, ISO_MINUTE),
-    GetSlot(plainTime, ISO_SECOND),
-    GetSlot(plainTime, ISO_MILLISECOND),
-    GetSlot(plainTime, ISO_MICROSECOND),
-    GetSlot(plainTime, ISO_NANOSECOND),
-    GetSlot(other, ISO_HOUR),
-    GetSlot(other, ISO_MINUTE),
-    GetSlot(other, ISO_SECOND),
-    GetSlot(other, ISO_MILLISECOND),
-    GetSlot(other, ISO_MICROSECOND),
-    GetSlot(other, ISO_NANOSECOND)
+
+  const resolvedOptions = GetOptionsObject(options);
+  const settings = GetDifferenceSettings(operation, resolvedOptions, 'time', [], 'nanosecond', 'hour');
+
+  let timeDuration = DifferenceTime(GetSlot(plainTime, TIME), GetSlot(other, TIME));
+  timeDuration = RoundTimeDuration(
+    timeDuration,
+    settings.roundingIncrement,
+    settings.smallestUnit,
+    settings.roundingMode
   );
-  ({ hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = RoundDuration(
-    0,
-    0,
-    0,
-    0,
-    hours,
-    minutes,
-    seconds,
-    milliseconds,
-    microseconds,
-    nanoseconds,
-    roundingIncrement,
-    smallestUnit,
-    roundingMode
-  ));
-  ({ hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = BalanceDuration(
-    0,
-    hours,
-    minutes,
-    seconds,
-    milliseconds,
-    microseconds,
-    nanoseconds,
-    largestUnit
-  ));
-  const Duration = GetIntrinsic('%Temporal.Duration%');
-  return new Duration(
-    0,
-    0,
-    0,
-    0,
-    sign * hours,
-    sign * minutes,
-    sign * seconds,
-    sign * milliseconds,
-    sign * microseconds,
-    sign * nanoseconds
-  );
+  const duration = CombineDateAndTimeDuration(ZeroDateDuration(), timeDuration);
+
+  let result = TemporalDurationFromInternal(duration, settings.largestUnit);
+  if (operation === 'since') result = CreateNegatedTemporalDuration(result);
+  return result;
 }
 
 export function DifferenceTemporalPlainYearMonth(
   operation: DifferenceOperation,
   yearMonth: Temporal.PlainYearMonth,
   otherParam: PlainYearMonthParams['until'][0],
-  optionsParam: PlainYearMonthParams['until'][1]
-): Temporal.Duration {
-  const sign = operation === 'since' ? -1 : 1;
+  options: PlainYearMonthParams['until'][1]
+) {
   const other = ToTemporalYearMonth(otherParam);
   const calendar = GetSlot(yearMonth, CALENDAR);
   const otherCalendar = GetSlot(other, CALENDAR);
-  const calendarID = ToString(calendar);
-  const otherCalendarID = ToString(otherCalendar);
-  if (calendarID !== otherCalendarID) {
-    throw new RangeError(`cannot compute difference between months of ${calendarID} and ${otherCalendarID} calendars`);
+  if (!CalendarEquals(calendar, otherCalendar)) {
+    throw new RangeError(`cannot compute difference between months of ${calendar} and ${otherCalendar} calendars`);
   }
-  const options = GetOptionsObject(optionsParam);
-  const ALLOWED_UNITS = SINGULAR_PLURAL_UNITS.reduce((allowed, [p, s, c]) => {
-    if (c === 'date' && s !== 'week' && s !== 'day') allowed.push(s, p);
-    return allowed;
-  }, [] as Array<Temporal.DateTimeUnit | Temporal.PluralUnit<Temporal.DateTimeUnit>>);
-  const smallestUnit = GetTemporalUnit(options, 'smallestUnit', 'date', 'month');
-  if (smallestUnit === 'week' || smallestUnit === 'day') {
-    throw new RangeError(`smallestUnit must be one of ${ALLOWED_UNITS.join(', ')}, not ${smallestUnit}`);
-  }
-  let largestUnit = GetTemporalUnit(options, 'largestUnit', 'date', 'auto');
-  if (largestUnit === 'week' || largestUnit === 'day') {
-    throw new RangeError(`largestUnit must be one of ${ALLOWED_UNITS.join(', ')}, not ${largestUnit}`);
-  }
-  if (largestUnit === 'auto') largestUnit = 'year';
-  if (LargerOfTwoTemporalUnits(largestUnit, smallestUnit) !== largestUnit) {
-    throw new RangeError(`largestUnit ${largestUnit} cannot be smaller than smallestUnit ${smallestUnit}`);
-  }
-  let roundingMode = ToTemporalRoundingMode(options, 'trunc');
-  if (operation === 'since') roundingMode = NegateTemporalRoundingMode(roundingMode);
-  const roundingIncrement = ToTemporalRoundingIncrement(options, undefined, false);
 
-  const fieldNames = CalendarFields(calendar, ['monthCode', 'year'] as const);
-  const otherFields = PrepareTemporalFields(other, fieldNames, []);
-  otherFields.day = 1;
-  const thisFields = PrepareTemporalFields(yearMonth, fieldNames, []);
-  thisFields.day = 1;
-  // The calls to PrepareTemporalFields don't mark day as a required property,
-  // and TS doesn't automatically narrow the type of the object because of the
-  // assignments above, so we must "cast" the inputs.
-  const otherDate = CalendarDateFromFields(calendar, otherFields as typeof otherFields & { day: number });
-  const thisDate = CalendarDateFromFields(calendar, thisFields as typeof thisFields & { day: number });
-
-  const untilOptions = MergeLargestUnitOption(options, largestUnit);
-  let { years, months } = CalendarDateUntil(calendar, thisDate, otherDate, untilOptions);
-
-  if (smallestUnit !== 'month' || roundingIncrement !== 1) {
-    ({ years, months } = RoundDuration(
-      years,
-      months,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      roundingIncrement,
-      smallestUnit,
-      roundingMode,
-      thisDate
-    ));
-  }
+  const resolvedOptions = GetOptionsObject(options);
+  const settings = GetDifferenceSettings(operation, resolvedOptions, 'date', ['week', 'day'], 'month', 'year');
 
   const Duration = GetIntrinsic('%Temporal.Duration%');
-  return new Duration(sign * years, sign * months, 0, 0, 0, 0, 0, 0, 0, 0);
+  if (CompareISODate(GetSlot(yearMonth, ISO_DATE), GetSlot(other, ISO_DATE)) == 0) {
+    return new Duration();
+  }
+
+  const thisFields: CalendarFieldsRecord = ISODateToFields(calendar, GetSlot(yearMonth, ISO_DATE), 'year-month');
+  thisFields.day = 1;
+  const thisDate = CalendarDateFromFields(calendar, thisFields, 'constrain');
+  const otherFields: CalendarFieldsRecord = ISODateToFields(calendar, GetSlot(other, ISO_DATE), 'year-month');
+  otherFields.day = 1;
+  const otherDate = CalendarDateFromFields(calendar, otherFields, 'constrain');
+
+  const dateDifference = CalendarDateUntil(calendar, thisDate, otherDate, settings.largestUnit);
+  let duration = { date: AdjustDateDurationRecord(dateDifference, 0, 0), time: TimeDuration.ZERO };
+  if (settings.smallestUnit !== 'month' || settings.roundingIncrement !== 1) {
+    const isoDateTime = CombineISODateAndTimeRecord(thisDate, MidnightTimeRecord());
+    const isoDateTimeOther = CombineISODateAndTimeRecord(otherDate, MidnightTimeRecord());
+    const destEpochNs = GetUTCEpochNanoseconds(isoDateTimeOther);
+    duration = RoundRelativeDuration(
+      duration,
+      destEpochNs,
+      isoDateTime,
+      null,
+      calendar,
+      settings.largestUnit,
+      settings.roundingIncrement,
+      settings.smallestUnit,
+      settings.roundingMode
+    );
+  }
+
+  let result = TemporalDurationFromInternal(duration, 'day');
+  if (operation === 'since') result = CreateNegatedTemporalDuration(result);
+  return result;
 }
 
 export function DifferenceTemporalZonedDateTime(
   operation: DifferenceOperation,
   zonedDateTime: Temporal.ZonedDateTime,
   otherParam: ZonedDateTimeParams['until'][0],
-  optionsParam: ZonedDateTimeParams['until'][1]
-): Temporal.Duration {
-  const sign = operation === 'since' ? -1 : 1;
+  options: ZonedDateTimeParams['until'][1]
+) {
   const other = ToTemporalZonedDateTime(otherParam);
   const calendar = GetSlot(zonedDateTime, CALENDAR);
   const otherCalendar = GetSlot(other, CALENDAR);
-  const calendarId = ToString(calendar);
-  const otherCalendarId = ToString(otherCalendar);
-  if (calendarId !== otherCalendarId) {
-    throw new RangeError(`cannot compute difference between dates of ${calendarId} and ${otherCalendarId} calendars`);
+  if (!CalendarEquals(calendar, otherCalendar)) {
+    throw new RangeError(`cannot compute difference between dates of ${calendar} and ${otherCalendar} calendars`);
   }
-  const options = GetOptionsObject(optionsParam);
-  const smallestUnit = GetTemporalUnit(options, 'smallestUnit', 'datetime', 'nanosecond');
-  const defaultLargestUnit = LargerOfTwoTemporalUnits('hour', smallestUnit);
-  let largestUnit = GetTemporalUnit(options, 'largestUnit', 'datetime', 'auto');
-  if (largestUnit === 'auto') largestUnit = defaultLargestUnit;
-  if (LargerOfTwoTemporalUnits(largestUnit, smallestUnit) !== largestUnit) {
-    throw new RangeError(`largestUnit ${largestUnit} cannot be smaller than smallestUnit ${smallestUnit}`);
-  }
-  let roundingMode = ToTemporalRoundingMode(options, 'trunc');
-  if (operation === 'since') roundingMode = NegateTemporalRoundingMode(roundingMode);
-  const roundingIncrement = ToTemporalDateTimeRoundingIncrement(options, smallestUnit);
+
+  const resolvedOptions = GetOptionsObject(options);
+  const settings = GetDifferenceSettings(operation, resolvedOptions, 'datetime', [], 'nanosecond', 'hour');
 
   const ns1 = GetSlot(zonedDateTime, EPOCHNANOSECONDS);
   const ns2 = GetSlot(other, EPOCHNANOSECONDS);
-  let years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds;
-  if (largestUnit !== 'year' && largestUnit !== 'month' && largestUnit !== 'week' && largestUnit !== 'day') {
+
+  const Duration = GetIntrinsic('%Temporal.Duration%');
+
+  let result;
+  if (TemporalUnitCategory(settings.largestUnit) !== 'date') {
     // The user is only asking for a time difference, so return difference of instants.
-    years = 0;
-    months = 0;
-    weeks = 0;
-    days = 0;
-    ({ seconds, milliseconds, microseconds, nanoseconds } = DifferenceInstant(
+    const duration = DifferenceInstant(
       ns1,
       ns2,
-      roundingIncrement,
-      // TODO this doesn't type-check as it includes >= day-size units
-      // This is probably safe as the typing for ToSmallestTemporalUnit isn't
-      // very good.
-      smallestUnit as any,
-      roundingMode
-    ));
-    ({ hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = BalanceDuration(
-      0,
-      0,
-      0,
-      seconds,
-      milliseconds,
-      microseconds,
-      nanoseconds,
-      largestUnit
-    ));
+      settings.roundingIncrement,
+      settings.smallestUnit as Temporal.TimeUnit,
+      settings.roundingMode
+    );
+    result = TemporalDurationFromInternal(duration, settings.largestUnit);
   } else {
     const timeZone = GetSlot(zonedDateTime, TIME_ZONE);
     if (!TimeZoneEquals(timeZone, GetSlot(other, TIME_ZONE))) {
@@ -4668,358 +4367,50 @@ export function DifferenceTemporalZonedDateTime(
           'or smaller because day lengths can vary between time zones due to DST or time zone offset changes.'
       );
     }
-    const untilOptions = MergeLargestUnitOption(options, largestUnit);
-    ({ years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } =
-      DifferenceZonedDateTime(ns1, ns2, timeZone, calendar, largestUnit, untilOptions));
-    ({ years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = RoundDuration(
-      years,
-      months,
-      weeks,
-      days,
-      hours,
-      minutes,
-      seconds,
-      milliseconds,
-      microseconds,
-      nanoseconds,
-      roundingIncrement,
-      smallestUnit,
-      roundingMode,
-      zonedDateTime
-    ));
-    ({ years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } =
-      AdjustRoundedDurationDays(
-        years,
-        months,
-        weeks,
-        days,
-        hours,
-        minutes,
-        seconds,
-        milliseconds,
-        microseconds,
-        nanoseconds,
-        roundingIncrement,
-        smallestUnit,
-        roundingMode,
-        zonedDateTime
-      ));
+
+    if (JSBI.equal(ns1, ns2)) return new Duration();
+
+    const duration = DifferenceZonedDateTimeWithRounding(
+      ns1,
+      ns2,
+      timeZone,
+      calendar,
+      settings.largestUnit,
+      settings.roundingIncrement,
+      settings.smallestUnit,
+      settings.roundingMode
+    );
+    result = TemporalDurationFromInternal(duration, 'hour');
   }
 
-  const Duration = GetIntrinsic('%Temporal.Duration%');
-  return new Duration(
-    sign * years,
-    sign * months,
-    sign * weeks,
-    sign * days,
-    sign * hours,
-    sign * minutes,
-    sign * seconds,
-    sign * milliseconds,
-    sign * microseconds,
-    sign * nanoseconds
-  );
+  if (operation === 'since') result = CreateNegatedTemporalDuration(result);
+  return result;
 }
 
-export function AddISODate(
-  yearParam: number,
-  monthParam: number,
-  dayParam: number,
-  yearsParam: number,
-  monthsParam: number,
-  weeksParam: number,
-  daysParam: number,
-  overflow: Temporal.ArithmeticOptions['overflow']
+export function AddTime(
+  { hour, minute, second: secondParam, millisecond, microsecond, nanosecond: nanosecondParam }: TimeRecord,
+  timeDuration: TimeDuration
 ) {
-  let year = yearParam;
-  let month = monthParam;
-  let day = dayParam;
-  let years = yearsParam;
-  let months = monthsParam;
-  let weeks = weeksParam;
-  let days = daysParam;
-
-  year += years;
-  month += months;
-  ({ year, month } = BalanceISOYearMonth(year, month));
-  ({ year, month, day } = RegulateISODate(year, month, day, overflow));
-  days += 7 * weeks;
-  day += days;
-  ({ year, month, day } = BalanceISODate(year, month, day));
-  return { year, month, day };
-}
-
-function AddTime(
-  hourParam: number,
-  minuteParam: number,
-  secondParam: number,
-  millisecondParam: number,
-  microsecondParam: number,
-  nanosecondParam: number,
-  hours: number,
-  minutes: number,
-  seconds: number,
-  milliseconds: number,
-  microseconds: number,
-  nanoseconds: number
-) {
-  let hour = hourParam;
-  let minute = minuteParam;
   let second = secondParam;
-  let millisecond = millisecondParam;
-  let microsecond = microsecondParam;
   let nanosecond = nanosecondParam;
 
-  hour += hours;
-  minute += minutes;
-  second += seconds;
-  millisecond += milliseconds;
-  microsecond += microseconds;
-  nanosecond += nanoseconds;
-  let deltaDays = 0;
-  ({ deltaDays, hour, minute, second, millisecond, microsecond, nanosecond } = BalanceTime(
-    hour,
-    minute,
-    second,
-    millisecond,
-    microsecond,
-    nanosecond
-  ));
-  return { deltaDays, hour, minute, second, millisecond, microsecond, nanosecond };
+  second += timeDuration.sec;
+  nanosecond += timeDuration.subsec;
+  return BalanceTime(hour, minute, second, millisecond, microsecond, nanosecond);
 }
 
-function AddDuration(
-  y1: number,
-  mon1: number,
-  w1: number,
-  d1: number,
-  h1: number,
-  min1: number,
-  s1: number,
-  ms1: number,
-  µs1: number,
-  ns1: number,
-  y2: number,
-  mon2: number,
-  w2: number,
-  d2: number,
-  h2: number,
-  min2: number,
-  s2: number,
-  ms2: number,
-  µs2: number,
-  ns2: number,
-  relativeTo: ReturnType<typeof ToRelativeTemporalObject>
-) {
-  const largestUnit1 = DefaultTemporalLargestUnit(y1, mon1, w1, d1, h1, min1, s1, ms1, µs1, ns1);
-  const largestUnit2 = DefaultTemporalLargestUnit(y2, mon2, w2, d2, h2, min2, s2, ms2, µs2, ns2);
-  const largestUnit = LargerOfTwoTemporalUnits(largestUnit1, largestUnit2);
-
-  let years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds;
-  if (!relativeTo) {
-    if (largestUnit === 'year' || largestUnit === 'month' || largestUnit === 'week') {
-      throw new RangeError('relativeTo is required for years, months, or weeks arithmetic');
-    }
-    years = months = weeks = 0;
-    ({ days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = BalanceDuration(
-      d1 + d2,
-      h1 + h2,
-      min1 + min2,
-      s1 + s2,
-      ms1 + ms2,
-      µs1 + µs2,
-      ns1 + ns2,
-      largestUnit
-    ));
-  } else if (IsTemporalDate(relativeTo)) {
-    const TemporalDuration = GetIntrinsic('%Temporal.Duration%');
-    const calendar = GetSlot(relativeTo, CALENDAR);
-
-    const dateDuration1 = new TemporalDuration(y1, mon1, w1, d1, 0, 0, 0, 0, 0, 0);
-    const dateDuration2 = new TemporalDuration(y2, mon2, w2, d2, 0, 0, 0, 0, 0, 0);
-    const dateAdd = calendar.dateAdd;
-    const intermediate = CalendarDateAdd(calendar, relativeTo, dateDuration1, undefined, dateAdd);
-    const end = CalendarDateAdd(calendar, intermediate, dateDuration2, undefined, dateAdd);
-
-    const dateLargestUnit = LargerOfTwoTemporalUnits('day', largestUnit);
-    const differenceOptions = ObjectCreate(null);
-    differenceOptions.largestUnit = dateLargestUnit;
-    ({ years, months, weeks, days } = CalendarDateUntil(calendar, relativeTo, end, differenceOptions));
-    // Signs of date part and time part may not agree; balance them together
-    ({ days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = BalanceDuration(
-      days,
-      h1 + h2,
-      min1 + min2,
-      s1 + s2,
-      ms1 + ms2,
-      µs1 + µs2,
-      ns1 + ns2,
-      largestUnit
-    ));
-  } else {
-    // relativeTo is a ZonedDateTime
-    const TemporalInstant = GetIntrinsic('%Temporal.Instant%');
-    const timeZone = GetSlot(relativeTo, TIME_ZONE);
-    const calendar = GetSlot(relativeTo, CALENDAR);
-    const intermediateNs = AddZonedDateTime(
-      GetSlot(relativeTo, INSTANT),
-      timeZone,
-      calendar,
-      y1,
-      mon1,
-      w1,
-      d1,
-      h1,
-      min1,
-      s1,
-      ms1,
-      µs1,
-      ns1
-    );
-    const endNs = AddZonedDateTime(
-      new TemporalInstant(intermediateNs),
-      timeZone,
-      calendar,
-      y2,
-      mon2,
-      w2,
-      d2,
-      h2,
-      min2,
-      s2,
-      ms2,
-      µs2,
-      ns2
-    );
-    if (largestUnit !== 'year' && largestUnit !== 'month' && largestUnit !== 'week' && largestUnit !== 'day') {
-      // The user is only asking for a time difference, so return difference of instants.
-      years = 0;
-      months = 0;
-      weeks = 0;
-      days = 0;
-      ({ seconds, milliseconds, microseconds, nanoseconds } = DifferenceInstant(
-        GetSlot(relativeTo, EPOCHNANOSECONDS),
-        endNs,
-        1,
-        'nanosecond',
-        'halfExpand'
-      ));
-      ({ hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = BalanceDuration(
-        0,
-        0,
-        0,
-        seconds,
-        milliseconds,
-        microseconds,
-        nanoseconds,
-        largestUnit
-      ));
-    } else {
-      ({ years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } =
-        DifferenceZonedDateTime(
-          GetSlot(relativeTo, EPOCHNANOSECONDS),
-          endNs,
-          timeZone,
-          calendar,
-          largestUnit,
-          ObjectCreate(null)
-        ));
-    }
-  }
-
-  RejectDuration(years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds);
-  return { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds };
-}
-
-function AddInstant(epochNanoseconds: JSBI, h: number, min: number, s: number, ms: number, µs: number, ns: number) {
-  let sum = ZERO;
-  sum = JSBI.add(sum, JSBI.BigInt(ns));
-  sum = JSBI.add(sum, JSBI.multiply(JSBI.BigInt(µs), THOUSAND));
-  sum = JSBI.add(sum, JSBI.multiply(JSBI.BigInt(ms), MILLION));
-  sum = JSBI.add(sum, JSBI.multiply(JSBI.BigInt(s), BILLION));
-  sum = JSBI.add(sum, JSBI.multiply(JSBI.BigInt(min), JSBI.BigInt(60 * 1e9)));
-  sum = JSBI.add(sum, JSBI.multiply(JSBI.BigInt(h), JSBI.BigInt(60 * 60 * 1e9)));
-
-  const result = JSBI.add(epochNanoseconds, sum);
+function AddInstant(epochNanoseconds: JSBI, timeDuration: TimeDuration) {
+  const result = timeDuration.addToEpochNs(epochNanoseconds);
   ValidateEpochNanoseconds(result);
   return result;
 }
 
-function AddDateTime(
-  year: number,
-  month: number,
-  day: number,
-  hourParam: number,
-  minuteParam: number,
-  secondParam: number,
-  millisecondParam: number,
-  microsecondParam: number,
-  nanosecondParam: number,
-  calendar: Temporal.CalendarProtocol,
-  years: number,
-  months: number,
-  weeks: number,
-  daysParam: number,
-  hours: number,
-  minutes: number,
-  seconds: number,
-  milliseconds: number,
-  microseconds: number,
-  nanoseconds: number,
-  options?: Temporal.ArithmeticOptions
-) {
-  let days = daysParam;
-  // Add the time part
-  let { deltaDays, hour, minute, second, millisecond, microsecond, nanosecond } = AddTime(
-    hourParam,
-    minuteParam,
-    secondParam,
-    millisecondParam,
-    microsecondParam,
-    nanosecondParam,
-    hours,
-    minutes,
-    seconds,
-    milliseconds,
-    microseconds,
-    nanoseconds
-  );
-  days += deltaDays;
-
-  // Delegate the date part addition to the calendar
-  const TemporalDuration = GetIntrinsic('%Temporal.Duration%');
-  const datePart = CreateTemporalDate(year, month, day, calendar);
-  const dateDuration = new TemporalDuration(years, months, weeks, days, 0, 0, 0, 0, 0, 0);
-  const addedDate = CalendarDateAdd(calendar, datePart, dateDuration, options);
-
-  return {
-    year: GetSlot(addedDate, ISO_YEAR),
-    month: GetSlot(addedDate, ISO_MONTH),
-    day: GetSlot(addedDate, ISO_DAY),
-    hour,
-    minute,
-    second,
-    millisecond,
-    microsecond,
-    nanosecond
-  };
-}
-
 export function AddZonedDateTime(
-  instant: Temporal.Instant,
-  timeZone: Temporal.TimeZoneProtocol,
-  calendar: Temporal.CalendarProtocol,
-  years: number,
-  months: number,
-  weeks: number,
-  days: number,
-  h: number,
-  min: number,
-  s: number,
-  ms: number,
-  µs: number,
-  ns: number,
-  options?: Temporal.ArithmeticOptions
+  epochNs: JSBI,
+  timeZone: string,
+  calendar: BuiltinCalendarId,
+  duration: InternalDuration,
+  overflow: Overflow = 'constrain'
 ) {
   // If only time is to be added, then use Instant math. It's not OK to fall
   // through to the date/time code below because compatible disambiguation in
@@ -5029,353 +4420,272 @@ export function AddZonedDateTime(
   // not expected and so is avoided below via a fast path for time-only
   // arithmetic.
   // BTW, this behavior is similar in spirit to offset: 'prefer' in `with`.
-  const TemporalDuration = GetIntrinsic('%Temporal.Duration%');
-  if (DurationSign(years, months, weeks, days, 0, 0, 0, 0, 0, 0) === 0) {
-    return AddInstant(GetSlot(instant, EPOCHNANOSECONDS), h, min, s, ms, µs, ns);
-  }
+  if (DateDurationSign(duration.date) === 0) return AddInstant(epochNs, duration.time);
 
   // RFC 5545 requires the date portion to be added in calendar days and the
   // time portion to be added in exact time.
-  const dt = BuiltinTimeZoneGetPlainDateTimeFor(timeZone, instant, calendar);
-  const datePart = CreateTemporalDate(GetSlot(dt, ISO_YEAR), GetSlot(dt, ISO_MONTH), GetSlot(dt, ISO_DAY), calendar);
-  const dateDuration = new TemporalDuration(years, months, weeks, days, 0, 0, 0, 0, 0, 0);
-  const addedDate = CalendarDateAdd(calendar, datePart, dateDuration, options);
-  const dtIntermediate = CreateTemporalDateTime(
-    GetSlot(addedDate, ISO_YEAR),
-    GetSlot(addedDate, ISO_MONTH),
-    GetSlot(addedDate, ISO_DAY),
-    GetSlot(dt, ISO_HOUR),
-    GetSlot(dt, ISO_MINUTE),
-    GetSlot(dt, ISO_SECOND),
-    GetSlot(dt, ISO_MILLISECOND),
-    GetSlot(dt, ISO_MICROSECOND),
-    GetSlot(dt, ISO_NANOSECOND),
-    calendar
-  );
+  const dt = GetISODateTimeFor(timeZone, epochNs);
+  const addedDate = CalendarDateAdd(calendar, dt.isoDate, duration.date, overflow);
+  const dtIntermediate = CombineISODateAndTimeRecord(addedDate, dt.time);
 
   // Note that 'compatible' is used below because this disambiguation behavior
   // is required by RFC 5545.
-  const instantIntermediate = BuiltinTimeZoneGetInstantFor(timeZone, dtIntermediate, 'compatible');
-  return AddInstant(GetSlot(instantIntermediate, EPOCHNANOSECONDS), h, min, s, ms, µs, ns);
+  const intermediateNs = GetEpochNanosecondsFor(timeZone, dtIntermediate, 'compatible');
+  return AddInstant(intermediateNs, duration.time);
 }
 
 type AddSubtractOperation = 'add' | 'subtract';
 
-export function AddDurationToOrSubtractDurationFromDuration(
+export function AddDurations(
   operation: AddSubtractOperation,
   duration: Temporal.Duration,
-  other: DurationParams['add'][0],
-  optionsParam: DurationParams['add'][1]
-): Temporal.Duration {
-  const sign = operation === 'subtract' ? -1 : 1;
-  let { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } =
-    ToTemporalDurationRecord(other);
-  const options = GetOptionsObject(optionsParam);
-  const relativeTo = ToRelativeTemporalObject(options);
-  ({ years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = AddDuration(
-    GetSlot(duration, YEARS),
-    GetSlot(duration, MONTHS),
-    GetSlot(duration, WEEKS),
-    GetSlot(duration, DAYS),
-    GetSlot(duration, HOURS),
-    GetSlot(duration, MINUTES),
-    GetSlot(duration, SECONDS),
-    GetSlot(duration, MILLISECONDS),
-    GetSlot(duration, MICROSECONDS),
-    GetSlot(duration, NANOSECONDS),
-    sign * years,
-    sign * months,
-    sign * weeks,
-    sign * days,
-    sign * hours,
-    sign * minutes,
-    sign * seconds,
-    sign * milliseconds,
-    sign * microseconds,
-    sign * nanoseconds,
-    relativeTo
-  ));
-  const Duration = GetIntrinsic('%Temporal.Duration%');
-  return new Duration(years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds);
+  otherParam: DurationParams['add'][0]
+) {
+  let other = ToTemporalDuration(otherParam);
+  if (operation === 'subtract') other = CreateNegatedTemporalDuration(other);
+
+  const largestUnit1 = DefaultTemporalLargestUnit(duration);
+  const largestUnit2 = DefaultTemporalLargestUnit(other);
+  const largestUnit = LargerOfTwoTemporalUnits(largestUnit1, largestUnit2);
+  if (IsCalendarUnit(largestUnit)) {
+    throw new RangeError('For years, months, or weeks arithmetic, use date arithmetic relative to a starting point');
+  }
+
+  const d1 = ToInternalDurationRecordWith24HourDays(duration);
+  const d2 = ToInternalDurationRecordWith24HourDays(other);
+  const result = CombineDateAndTimeDuration(ZeroDateDuration(), d1.time.add(d2.time));
+  return TemporalDurationFromInternal(result, largestUnit);
 }
 
-export function AddDurationToOrSubtractDurationFromInstant(
+export function AddDurationToInstant(
   operation: AddSubtractOperation,
   instant: Temporal.Instant,
   durationLike: InstantParams['add'][0]
-): Temporal.Instant {
-  const sign = operation === 'subtract' ? -1 : 1;
-  const { hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = ToLimitedTemporalDuration(durationLike, [
-    'years',
-    'months',
-    'weeks',
-    'days'
-  ]);
-  const ns = AddInstant(
-    GetSlot(instant, EPOCHNANOSECONDS),
-    sign * hours,
-    sign * minutes,
-    sign * seconds,
-    sign * milliseconds,
-    sign * microseconds,
-    sign * nanoseconds
-  );
-  const Instant = GetIntrinsic('%Temporal.Instant%');
-  return new Instant(ns);
+) {
+  let duration = ToTemporalDuration(durationLike);
+  if (operation === 'subtract') duration = CreateNegatedTemporalDuration(duration);
+  const largestUnit = DefaultTemporalLargestUnit(duration);
+  if (TemporalUnitCategory(largestUnit) === 'date') {
+    throw new RangeError(
+      `Duration field ${largestUnit} not supported by Temporal.Instant. Try Temporal.ZonedDateTime instead.`
+    );
+  }
+  const internalDuration = ToInternalDurationRecordWith24HourDays(duration);
+  const ns = AddInstant(GetSlot(instant, EPOCHNANOSECONDS), internalDuration.time);
+  return CreateTemporalInstant(ns);
 }
 
-export function AddDurationToOrSubtractDurationFromPlainDateTime(
+export function AddDurationToDate(
+  operation: AddSubtractOperation,
+  plainDate: Temporal.PlainDate,
+  durationLike: PlainDateParams['add'][0],
+  options: PlainDateParams['add'][1]
+) {
+  const calendar = GetSlot(plainDate, CALENDAR);
+
+  let duration = ToTemporalDuration(durationLike);
+  if (operation === 'subtract') duration = CreateNegatedTemporalDuration(duration);
+  const dateDuration = ToDateDurationRecordWithoutTime(duration);
+
+  const resolvedOptions = GetOptionsObject(options);
+  const overflow = GetTemporalOverflowOption(resolvedOptions);
+
+  const addedDate = CalendarDateAdd(calendar, GetSlot(plainDate, ISO_DATE), dateDuration, overflow);
+  return CreateTemporalDate(addedDate, calendar);
+}
+
+export function AddDurationToDateTime(
   operation: AddSubtractOperation,
   dateTime: Temporal.PlainDateTime,
   durationLike: PlainDateTimeParams['add'][0],
-  optionsParam: PlainDateTimeParams['add'][1]
-): Temporal.PlainDateTime {
-  const sign = operation === 'subtract' ? -1 : 1;
-  const { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } =
-    ToTemporalDurationRecord(durationLike);
-  const options = GetOptionsObject(optionsParam);
+  options: PlainDateTimeParams['add'][1]
+) {
+  let duration = ToTemporalDuration(durationLike);
+  if (operation === 'subtract') duration = CreateNegatedTemporalDuration(duration);
+  const resolvedOptions = GetOptionsObject(options);
+  const overflow = GetTemporalOverflowOption(resolvedOptions);
+
   const calendar = GetSlot(dateTime, CALENDAR);
-  const { year, month, day, hour, minute, second, millisecond, microsecond, nanosecond } = AddDateTime(
-    GetSlot(dateTime, ISO_YEAR),
-    GetSlot(dateTime, ISO_MONTH),
-    GetSlot(dateTime, ISO_DAY),
-    GetSlot(dateTime, ISO_HOUR),
-    GetSlot(dateTime, ISO_MINUTE),
-    GetSlot(dateTime, ISO_SECOND),
-    GetSlot(dateTime, ISO_MILLISECOND),
-    GetSlot(dateTime, ISO_MICROSECOND),
-    GetSlot(dateTime, ISO_NANOSECOND),
-    calendar,
-    sign * years,
-    sign * months,
-    sign * weeks,
-    sign * days,
-    sign * hours,
-    sign * minutes,
-    sign * seconds,
-    sign * milliseconds,
-    sign * microseconds,
-    sign * nanoseconds,
-    options
-  );
-  return CreateTemporalDateTime(year, month, day, hour, minute, second, millisecond, microsecond, nanosecond, calendar);
+
+  const internalDuration = ToInternalDurationRecordWith24HourDays(duration);
+
+  // Add the time part
+  const isoDateTime = GetSlot(dateTime, ISO_DATE_TIME);
+  const timeResult = AddTime(isoDateTime.time, internalDuration.time);
+  const dateDuration = AdjustDateDurationRecord(internalDuration.date, timeResult.deltaDays);
+
+  // Delegate the date part addition to the calendar
+  RejectDuration(dateDuration.years, dateDuration.months, dateDuration.weeks, dateDuration.days, 0, 0, 0, 0, 0, 0);
+  const addedDate = CalendarDateAdd(calendar, isoDateTime.isoDate, dateDuration, overflow);
+
+  const result = CombineISODateAndTimeRecord(addedDate, timeResult);
+  return CreateTemporalDateTime(result, calendar);
 }
 
-export function AddDurationToOrSubtractDurationFromPlainTime(
+export function AddDurationToTime(
   operation: AddSubtractOperation,
   temporalTime: Temporal.PlainTime,
   durationLike: PlainTimeParams['add'][0]
-): Temporal.PlainTime {
-  const sign = operation === 'subtract' ? -1 : 1;
-  const { hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = ToTemporalDurationRecord(durationLike);
-  let { hour, minute, second, millisecond, microsecond, nanosecond } = AddTime(
-    GetSlot(temporalTime, ISO_HOUR),
-    GetSlot(temporalTime, ISO_MINUTE),
-    GetSlot(temporalTime, ISO_SECOND),
-    GetSlot(temporalTime, ISO_MILLISECOND),
-    GetSlot(temporalTime, ISO_MICROSECOND),
-    GetSlot(temporalTime, ISO_NANOSECOND),
-    sign * hours,
-    sign * minutes,
-    sign * seconds,
-    sign * milliseconds,
-    sign * microseconds,
-    sign * nanoseconds
+) {
+  let duration = ToTemporalDuration(durationLike);
+  if (operation === 'subtract') duration = CreateNegatedTemporalDuration(duration);
+  const internalDuration = ToInternalDurationRecordWith24HourDays(duration);
+  const { hour, minute, second, millisecond, microsecond, nanosecond } = AddTime(
+    GetSlot(temporalTime, TIME),
+    internalDuration.time
   );
-  ({ hour, minute, second, millisecond, microsecond, nanosecond } = RegulateTime(
-    hour,
-    minute,
-    second,
-    millisecond,
-    microsecond,
-    nanosecond,
-    'reject'
-  ));
-  const PlainTime = GetIntrinsic('%Temporal.PlainTime%');
-  return new PlainTime(hour, minute, second, millisecond, microsecond, nanosecond);
+  const time = RegulateTime(hour, minute, second, millisecond, microsecond, nanosecond, 'reject');
+  return CreateTemporalTime(time);
 }
 
-export function AddDurationToOrSubtractDurationFromPlainYearMonth(
+export function AddDurationToYearMonth(
   operation: AddSubtractOperation,
   yearMonth: Temporal.PlainYearMonth,
   durationLike: PlainYearMonthParams['add'][0],
-  optionsParam: PlainYearMonthParams['add'][1]
-): Temporal.PlainYearMonth {
-  let duration = ToTemporalDurationRecord(durationLike);
-  if (operation === 'subtract') {
-    duration = {
-      years: -duration.years,
-      months: -duration.months,
-      weeks: -duration.weeks,
-      days: -duration.days,
-      hours: -duration.hours,
-      minutes: -duration.minutes,
-      seconds: -duration.seconds,
-      milliseconds: -duration.milliseconds,
-      microseconds: -duration.microseconds,
-      nanoseconds: -duration.nanoseconds
-    };
-  }
-  let { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = duration;
-  ({ days } = BalanceDuration(days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds, 'day'));
-
-  const options = GetOptionsObject(optionsParam);
+  options: PlainYearMonthParams['add'][1]
+) {
+  let duration = ToTemporalDuration(durationLike);
+  if (operation === 'subtract') duration = CreateNegatedTemporalDuration(duration);
+  const resolvedOptions = GetOptionsObject(options);
+  const overflow = GetTemporalOverflowOption(resolvedOptions);
+  const sign = DurationSign(duration);
 
   const calendar = GetSlot(yearMonth, CALENDAR);
-  const fieldNames = CalendarFields(calendar, ['monthCode', 'year'] as const);
-  const fields = PrepareTemporalFields(yearMonth, fieldNames, []);
-  const sign = DurationSign(years, months, weeks, days, 0, 0, 0, 0, 0, 0);
-  fields.day = sign < 0 ? ToPositiveInteger(CalendarDaysInMonth(calendar, yearMonth)) : 1;
-  // PrepareTemporalFields returns a type where 'day' is potentially undefined,
-  // and TS doesn't narrow the type as a result of the assignment above, so we
-  // cast the fields input to the new type.
-  const startDate = CalendarDateFromFields(calendar, fields as typeof fields & { day: number });
-  const Duration = GetIntrinsic('%Temporal.Duration%');
-  const durationToAdd = new Duration(years, months, weeks, days, 0, 0, 0, 0, 0, 0);
-  const optionsCopy = ObjectAssign(ObjectCreate(null), options);
-  const addedDate = CalendarDateAdd(calendar, startDate, durationToAdd, options);
-  const addedDateFields = PrepareTemporalFields(addedDate, fieldNames, []);
+  const fields: CalendarFieldsRecord = ISODateToFields(calendar, GetSlot(yearMonth, ISO_DATE), 'year-month');
+  fields.day = 1;
+  let startDate = CalendarDateFromFields(calendar, fields, 'constrain');
+  if (sign < 0) {
+    const nextMonth = CalendarDateAdd(calendar, startDate, { months: 1 }, 'constrain');
+    startDate = BalanceISODate(nextMonth.year, nextMonth.month, nextMonth.day - 1);
+  }
+  const durationToAdd = ToDateDurationRecordWithoutTime(duration);
+  RejectDateRange(startDate);
+  const addedDate = CalendarDateAdd(calendar, startDate, durationToAdd, overflow);
+  const addedDateFields = ISODateToFields(calendar, addedDate, 'year-month');
 
-  return CalendarYearMonthFromFields(calendar, addedDateFields, optionsCopy);
+  const isoDate = CalendarYearMonthFromFields(calendar, addedDateFields, overflow);
+  return CreateTemporalYearMonth(isoDate, calendar);
 }
 
-export function AddDurationToOrSubtractDurationFromZonedDateTime(
+export function AddDurationToZonedDateTime(
   operation: AddSubtractOperation,
   zonedDateTime: Temporal.ZonedDateTime,
   durationLike: ZonedDateTimeParams['add'][0],
-  optionsParam: ZonedDateTimeParams['add'][1]
-): Temporal.ZonedDateTime {
-  const sign = operation === 'subtract' ? -1 : 1;
-  const { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } =
-    ToTemporalDurationRecord(durationLike);
-  const options = GetOptionsObject(optionsParam);
+  options: ZonedDateTimeParams['add'][1]
+) {
+  let duration = ToTemporalDuration(durationLike);
+  if (operation === 'subtract') duration = CreateNegatedTemporalDuration(duration);
+
+  const resolvedOptions = GetOptionsObject(options);
+  const overflow = GetTemporalOverflowOption(resolvedOptions);
   const timeZone = GetSlot(zonedDateTime, TIME_ZONE);
   const calendar = GetSlot(zonedDateTime, CALENDAR);
+  const internalDuration = ToInternalDurationRecord(duration);
   const epochNanoseconds = AddZonedDateTime(
-    GetSlot(zonedDateTime, INSTANT),
+    GetSlot(zonedDateTime, EPOCHNANOSECONDS),
     timeZone,
     calendar,
-    sign * years,
-    sign * months,
-    sign * weeks,
-    sign * days,
-    sign * hours,
-    sign * minutes,
-    sign * seconds,
-    sign * milliseconds,
-    sign * microseconds,
-    sign * nanoseconds,
-    options
+    internalDuration,
+    overflow
   );
   return CreateTemporalZonedDateTime(epochNanoseconds, timeZone, calendar);
 }
 
-function RoundNumberToIncrement(quantity: JSBI, increment: number, mode: Temporal.RoundingMode) {
-  if (increment === 1) return quantity;
-  let { quotient, remainder } = divmod(quantity, JSBI.BigInt(increment));
-  if (JSBI.equal(remainder, ZERO)) return quantity;
-  const sign = JSBI.lessThan(remainder, ZERO) ? -1 : 1;
-  switch (mode) {
-    case 'ceil':
-      if (sign > 0) quotient = JSBI.add(quotient, JSBI.BigInt(sign));
-      break;
-    case 'floor':
-      if (sign < 0) quotient = JSBI.add(quotient, JSBI.BigInt(sign));
-      break;
-    case 'trunc':
-      // no change needed, because divmod is a truncation
-      break;
-    case 'halfExpand':
-      // "half up away from zero"
-      if (JSBI.toNumber(abs(JSBI.multiply(remainder, JSBI.BigInt(2)))) >= increment) {
-        quotient = JSBI.add(quotient, JSBI.BigInt(sign));
-      }
-      break;
-  }
-  return JSBI.multiply(quotient, JSBI.BigInt(increment));
+// ts-prune-ignore-next TODO: remove this after tests are converted to TS
+export function RoundNumberToIncrement(quantity: number, increment: number, mode: Temporal.RoundingMode) {
+  const quotient = Math.trunc(quantity / increment);
+  const remainder = quantity % increment;
+  const sign = quantity < 0 ? 'negative' : 'positive';
+  const r1 = Math.abs(quotient);
+  const r2 = r1 + 1;
+  const cmp = ComparisonResult(Math.abs(remainder * 2) - increment);
+  const even = r1 % 2 === 0;
+  const unsignedRoundingMode = GetUnsignedRoundingMode(mode, sign);
+  const rounded = remainder === 0 ? r1 : ApplyUnsignedRoundingMode(r1, r2, cmp, even, unsignedRoundingMode);
+  return increment * (sign === 'positive' ? rounded : -rounded);
 }
 
-export function RoundInstant(
+// ts-prune-ignore-next TODO: remove this after tests are converted to TS
+export function RoundNumberToIncrementAsIfPositive(
+  quantityParam: JSBI | bigint,
+  incrementParam: JSBI | bigint,
+  mode: Temporal.RoundingMode
+) {
+  const quantity = ensureJSBI(quantityParam);
+  const increment = ensureJSBI(incrementParam);
+  const quotient = JSBI.divide(quantity, increment);
+  const remainder = JSBI.remainder(quantity, increment);
+  const unsignedRoundingMode = GetUnsignedRoundingMode(mode, 'positive');
+  let r1: JSBI, r2: JSBI;
+  if (JSBI.lessThan(quantity, ZERO)) {
+    r1 = JSBI.subtract(quotient, ONE);
+    r2 = quotient;
+  } else {
+    r1 = quotient;
+    r2 = JSBI.add(quotient, ONE);
+  }
+  // Similar to the comparison in RoundNumberToIncrement, but multiplied by an
+  // extra sign to make sure we treat it as positive
+  const cmp = (compare(abs(JSBI.multiply(remainder, TWO)), increment) * (JSBI.lessThan(quantity, ZERO) ? -1 : 1) +
+    0) as -1 | 0 | 1;
+  const rounded = JSBI.equal(remainder, ZERO)
+    ? quotient
+    : ApplyUnsignedRoundingMode(r1, r2, cmp, isEven(r1), unsignedRoundingMode);
+  return JSBI.multiply(rounded, increment);
+}
+
+export function RoundTemporalInstant(
   epochNs: JSBI,
   increment: number,
-  unit: keyof typeof nsPerTimeUnit,
+  unit: TimeUnitOrDay,
   roundingMode: Temporal.RoundingMode
 ) {
-  // Note: NonNegativeModulo, but with BigInt
-  let remainder = JSBI.remainder(epochNs, JSBI.BigInt(86400e9));
-  if (JSBI.lessThan(remainder, ZERO)) remainder = JSBI.add(remainder, JSBI.BigInt(86400e9));
-  const wholeDays = JSBI.subtract(epochNs, remainder);
-  const roundedRemainder = RoundNumberToIncrement(remainder, nsPerTimeUnit[unit] * increment, roundingMode);
-  return JSBI.add(wholeDays, roundedRemainder);
+  const incrementNs = NS_PER_TIME_UNIT[unit] * increment;
+  return RoundNumberToIncrementAsIfPositive(epochNs, JSBI.BigInt(incrementNs), roundingMode);
 }
 
 export function RoundISODateTime(
-  yearParam: number,
-  monthParam: number,
-  dayParam: number,
-  hourParam: number,
-  minuteParam: number,
-  secondParam: number,
-  millisecondParam: number,
-  microsecondParam: number,
-  nanosecondParam: number,
+  isoDateTime: ISODateTime,
   increment: number,
   unit: UnitSmallerThanOrEqualTo<'day'>,
-  roundingMode: Temporal.RoundingMode,
-  dayLengthNs = 86400e9
+  roundingMode: Temporal.RoundingMode
 ) {
-  const { deltaDays, hour, minute, second, millisecond, microsecond, nanosecond } = RoundTime(
-    hourParam,
-    minuteParam,
-    secondParam,
-    millisecondParam,
-    microsecondParam,
-    nanosecondParam,
-    increment,
-    unit,
-    roundingMode,
-    dayLengthNs
-  );
-  const { year, month, day } = BalanceISODate(yearParam, monthParam, dayParam + deltaDays);
-  return { year, month, day, hour, minute, second, millisecond, microsecond, nanosecond };
+  AssertISODateTimeWithinLimits(isoDateTime);
+  const { year, month, day } = isoDateTime.isoDate;
+  const time = RoundTime(isoDateTime.time, increment, unit, roundingMode);
+  const isoDate = BalanceISODate(year, month, day + time.deltaDays);
+  return CombineISODateAndTimeRecord(isoDate, time);
 }
 
 export function RoundTime(
-  hour: number,
-  minute: number,
-  second: number,
-  millisecond: number,
-  microsecond: number,
-  nanosecond: number,
+  { hour, minute, second, millisecond, microsecond, nanosecond }: TimeRecord,
   increment: number,
-  unit: keyof typeof nsPerTimeUnit | 'day',
-  roundingMode: Temporal.RoundingMode,
-  dayLengthNs = 86400e9
+  unit: TimeUnitOrDay,
+  roundingMode: Temporal.RoundingMode
 ) {
-  let quantity = ZERO;
+  let quantity;
   switch (unit) {
     case 'day':
     case 'hour':
-      quantity = JSBI.BigInt(hour);
-    // fall through
+      quantity = ((((hour * 60 + minute) * 60 + second) * 1000 + millisecond) * 1000 + microsecond) * 1000 + nanosecond;
+      break;
     case 'minute':
-      quantity = JSBI.add(JSBI.multiply(quantity, SIXTY), JSBI.BigInt(minute));
-    // fall through
+      quantity = (((minute * 60 + second) * 1000 + millisecond) * 1000 + microsecond) * 1000 + nanosecond;
+      break;
     case 'second':
-      quantity = JSBI.add(JSBI.multiply(quantity, SIXTY), JSBI.BigInt(second));
-    // fall through
+      quantity = ((second * 1000 + millisecond) * 1000 + microsecond) * 1000 + nanosecond;
+      break;
     case 'millisecond':
-      quantity = JSBI.add(JSBI.multiply(quantity, THOUSAND), JSBI.BigInt(millisecond));
-    // fall through
+      quantity = (millisecond * 1000 + microsecond) * 1000 + nanosecond;
+      break;
     case 'microsecond':
-      quantity = JSBI.add(JSBI.multiply(quantity, THOUSAND), JSBI.BigInt(microsecond));
-    // fall through
+      quantity = microsecond * 1000 + nanosecond;
+      break;
     case 'nanosecond':
-      quantity = JSBI.add(JSBI.multiply(quantity, THOUSAND), JSBI.BigInt(nanosecond));
+      quantity = nanosecond;
   }
-  const nsPerUnit = unit === 'day' ? dayLengthNs : nsPerTimeUnit[unit];
-  const rounded = RoundNumberToIncrement(quantity, nsPerUnit * increment, roundingMode);
-  const result = JSBI.toNumber(JSBI.divide(rounded, JSBI.BigInt(nsPerUnit)));
+  const nsPerUnit = NS_PER_TIME_UNIT[unit];
+  const result = RoundNumberToIncrement(quantity, nsPerUnit * increment, roundingMode) / nsPerUnit;
   switch (unit) {
     case 'day':
       return { deltaDays: result, hour: 0, minute: 0, second: 0, millisecond: 0, microsecond: 0, nanosecond: 0 };
@@ -5396,519 +4706,43 @@ export function RoundTime(
   }
 }
 
-function DaysUntil(
-  earlier: Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime,
-  later: Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime
-) {
-  return DifferenceISODate(
-    GetSlot(earlier, ISO_YEAR),
-    GetSlot(earlier, ISO_MONTH),
-    GetSlot(earlier, ISO_DAY),
-    GetSlot(later, ISO_YEAR),
-    GetSlot(later, ISO_MONTH),
-    GetSlot(later, ISO_DAY),
-    'day'
-  ).days;
-}
-
-function MoveRelativeDate(
-  calendar: Temporal.CalendarProtocol,
-  relativeToParam: NonNullable<ReturnType<typeof ToRelativeTemporalObject>>,
-  duration: Temporal.Duration
-) {
-  const later = CalendarDateAdd(calendar, relativeToParam, duration, undefined);
-  const days = DaysUntil(relativeToParam, later);
-  return { relativeTo: later, days };
-}
-
-export function MoveRelativeZonedDateTime(
-  relativeTo: Temporal.ZonedDateTime,
-  years: number,
-  months: number,
-  weeks: number,
-  days: number
-) {
-  const timeZone = GetSlot(relativeTo, TIME_ZONE);
-  const calendar = GetSlot(relativeTo, CALENDAR);
-  const intermediateNs = AddZonedDateTime(
-    GetSlot(relativeTo, INSTANT),
-    timeZone,
-    calendar,
-    years,
-    months,
-    weeks,
-    days,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0
-  );
-  return CreateTemporalZonedDateTime(intermediateNs, timeZone, calendar);
-}
-
-export function AdjustRoundedDurationDays(
-  yearsParam: number,
-  monthsParam: number,
-  weeksParam: number,
-  daysParam: number,
-  hoursParam: number,
-  minutesParam: number,
-  secondsParam: number,
-  millisecondsParam: number,
-  microsecondsParam: number,
-  nanosecondsParam: number,
+export function RoundTimeDuration(
+  timeDuration: TimeDuration,
   increment: number,
-  unit: Temporal.DateTimeUnit,
-  roundingMode: Temporal.RoundingMode,
-  relativeTo: ReturnType<typeof ToRelativeTemporalObject>
+  unit: Temporal.TimeUnit,
+  roundingMode: Temporal.RoundingMode
 ) {
-  let years = yearsParam;
-  let months = monthsParam;
-  let weeks = weeksParam;
-  let days = daysParam;
-  let hours = hoursParam;
-  let minutes = minutesParam;
-  let seconds = secondsParam;
-  let milliseconds = millisecondsParam;
-  let microseconds = microsecondsParam;
-  let nanoseconds = nanosecondsParam;
-  if (
-    !IsTemporalZonedDateTime(relativeTo) ||
-    unit === 'year' ||
-    unit === 'month' ||
-    unit === 'week' ||
-    unit === 'day' ||
-    (unit === 'nanosecond' && increment === 1)
-  ) {
-    return { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds };
-  }
-
-  // There's one more round of rounding possible: if relativeTo is a
-  // ZonedDateTime, the time units could have rounded up into enough hours
-  // to exceed the day length. If this happens, grow the date part by a
-  // single day and re-run exact time rounding on the smaller remainder. DO
-  // NOT RECURSE, because once the extra hours are sucked up into the date
-  // duration, there's no way for another full day to come from the next
-  // round of rounding. And if it were possible (e.g. contrived calendar
-  // with 30-minute-long "days") then it'd risk an infinite loop.
-  let timeRemainderNs = TotalDurationNanoseconds(
-    0,
-    hours,
-    minutes,
-    seconds,
-    milliseconds,
-    microseconds,
-    nanoseconds,
-    0
-  );
-  const direction = MathSign(JSBI.toNumber(timeRemainderNs));
-
-  const timeZone = GetSlot(relativeTo, TIME_ZONE);
-  const calendar = GetSlot(relativeTo, CALENDAR);
-  const dayStart = AddZonedDateTime(
-    GetSlot(relativeTo, INSTANT),
-    timeZone,
-    calendar,
-    years,
-    months,
-    weeks,
-    days,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0
-  );
-  const TemporalInstant = GetIntrinsic('%Temporal.Instant%');
-  const dayEnd = AddZonedDateTime(
-    new TemporalInstant(dayStart),
-    timeZone,
-    calendar,
-    0,
-    0,
-    0,
-    direction,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0
-  );
-  const dayLengthNs = JSBI.subtract(dayEnd, dayStart);
-
-  if (
-    JSBI.greaterThanOrEqual(JSBI.multiply(JSBI.subtract(timeRemainderNs, dayLengthNs), JSBI.BigInt(direction)), ZERO)
-  ) {
-    ({ years, months, weeks, days } = AddDuration(
-      years,
-      months,
-      weeks,
-      days,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      direction,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      relativeTo
-    ));
-    timeRemainderNs = RoundInstant(JSBI.subtract(timeRemainderNs, dayLengthNs), increment, unit, roundingMode);
-    ({ hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = BalanceDuration(
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      JSBI.toNumber(timeRemainderNs),
-      'hour'
-    ));
-  }
-  return { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds };
+  // unit must be a time unit
+  const divisor = NS_PER_TIME_UNIT[unit];
+  return timeDuration.round(JSBI.BigInt(divisor * increment), roundingMode);
 }
 
-export function RoundDuration(
-  yearsParam: number,
-  monthsParam: number,
-  weeksParam: number,
-  daysParam: number,
-  hoursParam: number,
-  minutesParam: number,
-  secondsParam: number,
-  millisecondsParam: number,
-  microsecondsParam: number,
-  nanosecondsParam: number,
-  increment: number,
-  unit: Temporal.DateTimeUnit,
-  roundingMode: Temporal.RoundingMode,
-  relativeToParam: ReturnType<typeof ToRelativeTemporalObject> = undefined
-) {
-  let years = yearsParam;
-  let months = monthsParam;
-  let weeks = weeksParam;
-  let days = daysParam;
-  let hours = hoursParam;
-  let minutes = minutesParam;
-  let seconds = secondsParam;
-  let milliseconds = millisecondsParam;
-  let microseconds = microsecondsParam;
-  let nanoseconds = JSBI.BigInt(nanosecondsParam);
-  const TemporalDuration = GetIntrinsic('%Temporal.Duration%');
-  let calendar, zdtRelative;
-  // A cast is used below because relativeTo will be either PlainDate or
-  // undefined for the rest of this long method (after any ZDT=>PlainDate
-  // conversion below), and TS isn't smart enough to know that the type has
-  // changed. See https://github.com/microsoft/TypeScript/issues/27706.
-  let relativeTo = relativeToParam as Temporal.PlainDate | undefined;
-  if (relativeTo) {
-    if (IsTemporalZonedDateTime(relativeTo)) {
-      zdtRelative = relativeTo;
-      relativeTo = ToTemporalDate(relativeTo);
-    } else if (!IsTemporalDate(relativeTo)) {
-      throw new TypeError('starting point must be PlainDate or ZonedDateTime');
-    }
-    calendar = GetSlot(relativeTo, CALENDAR);
-  }
-
-  // First convert time units up to days, if rounding to days or higher units.
-  // If rounding relative to a ZonedDateTime, then some days may not be 24h.
-  // TS doesn't know that `dayLengthNs` is only used if the unit is day or
-  // larger. We'll cast away `undefined` when it's used lower down below.
-  let dayLengthNs: JSBI | undefined;
-  if (unit === 'year' || unit === 'month' || unit === 'week' || unit === 'day') {
-    nanoseconds = TotalDurationNanoseconds(0, hours, minutes, seconds, milliseconds, microseconds, nanosecondsParam, 0);
-    let intermediate;
-    if (zdtRelative) {
-      intermediate = MoveRelativeZonedDateTime(zdtRelative, years, months, weeks, days);
-    }
-    let deltaDays;
-    let dayLength: number;
-    ({ days: deltaDays, nanoseconds, dayLengthNs: dayLength } = NanosecondsToDays(nanoseconds, intermediate));
-    dayLengthNs = JSBI.BigInt(dayLength);
-    days += deltaDays;
-    hours = minutes = seconds = milliseconds = microseconds = 0;
-  }
-
-  let total: number;
-  switch (unit) {
-    case 'year': {
-      if (!calendar) throw new RangeError('A starting point is required for years rounding');
-
-      // convert months and weeks to days by calculating difference(
-      // relativeTo + years, relativeTo + { years, months, weeks })
-      const yearsDuration = new TemporalDuration(years);
-      const dateAdd = calendar.dateAdd;
-      const yearsLater = CalendarDateAdd(calendar, relativeTo as Temporal.PlainDate, yearsDuration, undefined, dateAdd);
-      const yearsMonthsWeeks = new TemporalDuration(years, months, weeks);
-      const yearsMonthsWeeksLater = CalendarDateAdd(
-        calendar,
-        relativeTo as Temporal.PlainDate,
-        yearsMonthsWeeks,
-        undefined,
-        dateAdd
-      );
-      const monthsWeeksInDays = DaysUntil(yearsLater, yearsMonthsWeeksLater);
-      relativeTo = yearsLater;
-      days += monthsWeeksInDays;
-
-      const daysLater = CalendarDateAdd(calendar, relativeTo, { days }, undefined, dateAdd);
-      const untilOptions = ObjectCreate(null);
-      untilOptions.largestUnit = 'year';
-      const yearsPassed = CalendarDateUntil(calendar, relativeTo, daysLater, untilOptions).years;
-      years += yearsPassed;
-      const oldRelativeTo = relativeTo;
-      relativeTo = CalendarDateAdd(calendar, relativeTo, { years: yearsPassed }, undefined, dateAdd);
-      const daysPassed = DaysUntil(oldRelativeTo, relativeTo);
-      days -= daysPassed;
-      const oneYear = new TemporalDuration(days < 0 ? -1 : 1);
-      let { days: oneYearDays } = MoveRelativeDate(calendar, relativeTo, oneYear);
-
-      // Note that `nanoseconds` below (here and in similar code for months,
-      // weeks, and days further below) isn't actually nanoseconds for the
-      // full date range.  Instead, it's a BigInt representation of total
-      // days multiplied by the number of nanoseconds in the last day of
-      // the duration. This lets us do days-or-larger rounding using BigInt
-      // math which reduces precision loss.
-      oneYearDays = MathAbs(oneYearDays);
-      // dayLengthNs is never undefined if unit is `day` or larger.
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const divisor = JSBI.multiply(JSBI.BigInt(oneYearDays), dayLengthNs!);
-      nanoseconds = JSBI.add(
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        JSBI.add(JSBI.multiply(divisor, JSBI.BigInt(years)), JSBI.multiply(JSBI.BigInt(days), dayLengthNs!)),
-        nanoseconds
-      );
-      const rounded = RoundNumberToIncrement(
-        nanoseconds,
-        JSBI.toNumber(JSBI.multiply(divisor, JSBI.BigInt(increment))),
-        roundingMode
-      );
-      total = JSBI.toNumber(nanoseconds) / JSBI.toNumber(divisor);
-      years = JSBI.toNumber(JSBI.divide(rounded, divisor));
-      nanoseconds = ZERO;
-      months = weeks = days = 0;
-      break;
-    }
-    case 'month': {
-      if (!calendar) throw new RangeError('A starting point is required for months rounding');
-
-      // convert weeks to days by calculating difference(relativeTo +
-      //   { years, months }, relativeTo + { years, months, weeks })
-      const yearsMonths = new TemporalDuration(years, months);
-      const dateAdd = calendar.dateAdd;
-      const yearsMonthsLater = CalendarDateAdd(
-        calendar,
-        relativeTo as Temporal.PlainDate,
-        yearsMonths,
-        undefined,
-        dateAdd
-      );
-      const yearsMonthsWeeks = new TemporalDuration(years, months, weeks);
-      const yearsMonthsWeeksLater = CalendarDateAdd(
-        calendar,
-        relativeTo as Temporal.PlainDate,
-        yearsMonthsWeeks,
-        undefined,
-        dateAdd
-      );
-      const weeksInDays = DaysUntil(yearsMonthsLater, yearsMonthsWeeksLater);
-      relativeTo = yearsMonthsLater;
-      days += weeksInDays;
-
-      // Months may be different lengths of days depending on the calendar,
-      // convert days to months in a loop as described above under 'years'.
-      const sign = MathSign(days);
-      const oneMonth = new TemporalDuration(0, days < 0 ? -1 : 1);
-      let oneMonthDays: number;
-      ({ relativeTo, days: oneMonthDays } = MoveRelativeDate(calendar, relativeTo, oneMonth));
-      while (MathAbs(days) >= MathAbs(oneMonthDays)) {
-        months += sign;
-        days -= oneMonthDays;
-        ({ relativeTo, days: oneMonthDays } = MoveRelativeDate(calendar, relativeTo, oneMonth));
-      }
-      oneMonthDays = MathAbs(oneMonthDays);
-      // dayLengthNs is never undefined if unit is `day` or larger.
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const divisor = JSBI.multiply(JSBI.BigInt(oneMonthDays), dayLengthNs!);
-      nanoseconds = JSBI.add(
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        JSBI.add(JSBI.multiply(divisor, JSBI.BigInt(months)), JSBI.multiply(JSBI.BigInt(days), dayLengthNs!)),
-        nanoseconds
-      );
-      const rounded = RoundNumberToIncrement(
-        nanoseconds,
-        JSBI.toNumber(JSBI.multiply(divisor, JSBI.BigInt(increment))),
-        roundingMode
-      );
-      total = JSBI.toNumber(nanoseconds) / JSBI.toNumber(divisor);
-      months = JSBI.toNumber(JSBI.divide(rounded, divisor));
-      nanoseconds = ZERO;
-      weeks = days = 0;
-      break;
-    }
-    case 'week': {
-      if (!calendar) throw new RangeError('A starting point is required for weeks rounding');
-      // Weeks may be different lengths of days depending on the calendar,
-      // convert days to weeks in a loop as described above under 'years'.
-      const sign = MathSign(days);
-      const oneWeek = new TemporalDuration(0, 0, days < 0 ? -1 : 1);
-      let oneWeekDays;
-      ({ relativeTo, days: oneWeekDays } = MoveRelativeDate(calendar, relativeTo as Temporal.PlainDate, oneWeek));
-      while (MathAbs(days) >= MathAbs(oneWeekDays)) {
-        weeks += sign;
-        days -= oneWeekDays;
-        ({ relativeTo, days: oneWeekDays } = MoveRelativeDate(calendar, relativeTo, oneWeek));
-      }
-      oneWeekDays = MathAbs(oneWeekDays);
-      // dayLengthNs is never undefined if unit is `day` or larger.
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const divisor = JSBI.multiply(JSBI.BigInt(oneWeekDays), dayLengthNs!);
-      nanoseconds = JSBI.add(
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        JSBI.add(JSBI.multiply(divisor, JSBI.BigInt(weeks)), JSBI.multiply(JSBI.BigInt(days), dayLengthNs!)),
-        nanoseconds
-      );
-      const rounded = RoundNumberToIncrement(
-        nanoseconds,
-        JSBI.toNumber(JSBI.multiply(divisor, JSBI.BigInt(increment))),
-        roundingMode
-      );
-      total = JSBI.toNumber(nanoseconds) / JSBI.toNumber(divisor);
-      weeks = JSBI.toNumber(JSBI.divide(rounded, divisor));
-      nanoseconds = ZERO;
-      days = 0;
-      break;
-    }
-    case 'day': {
-      // dayLengthNs is never undefined if unit is `day` or larger.
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const divisor = dayLengthNs!;
-      nanoseconds = JSBI.add(JSBI.multiply(divisor, JSBI.BigInt(days)), nanoseconds);
-      const rounded = RoundNumberToIncrement(
-        nanoseconds,
-        JSBI.toNumber(JSBI.multiply(divisor, JSBI.BigInt(increment))),
-        roundingMode
-      );
-      total = JSBI.toNumber(nanoseconds) / JSBI.toNumber(divisor);
-      days = JSBI.toNumber(JSBI.divide(rounded, divisor));
-      nanoseconds = ZERO;
-      break;
-    }
-    case 'hour': {
-      const divisor = 3600e9;
-      let allNanoseconds = JSBI.multiply(JSBI.BigInt(hours), JSBI.BigInt(3600e9));
-      allNanoseconds = JSBI.add(allNanoseconds, JSBI.multiply(JSBI.BigInt(minutes), JSBI.BigInt(60e9)));
-      allNanoseconds = JSBI.add(allNanoseconds, JSBI.multiply(JSBI.BigInt(seconds), BILLION));
-      allNanoseconds = JSBI.add(allNanoseconds, JSBI.multiply(JSBI.BigInt(milliseconds), MILLION));
-      allNanoseconds = JSBI.add(allNanoseconds, JSBI.multiply(JSBI.BigInt(microseconds), THOUSAND));
-      allNanoseconds = JSBI.add(allNanoseconds, nanoseconds);
-      total = JSBI.toNumber(allNanoseconds) / divisor;
-      const rounded = RoundNumberToIncrement(allNanoseconds, divisor * increment, roundingMode);
-      hours = JSBI.toNumber(JSBI.divide(rounded, JSBI.BigInt(divisor)));
-      nanoseconds = ZERO;
-      minutes = seconds = milliseconds = microseconds = 0;
-      break;
-    }
-    case 'minute': {
-      const divisor = 60e9;
-      let allNanoseconds = JSBI.multiply(JSBI.BigInt(minutes), JSBI.BigInt(60e9));
-      allNanoseconds = JSBI.add(allNanoseconds, JSBI.multiply(JSBI.BigInt(seconds), BILLION));
-      allNanoseconds = JSBI.add(allNanoseconds, JSBI.multiply(JSBI.BigInt(milliseconds), MILLION));
-      allNanoseconds = JSBI.add(allNanoseconds, JSBI.multiply(JSBI.BigInt(microseconds), THOUSAND));
-      allNanoseconds = JSBI.add(allNanoseconds, nanoseconds);
-      total = JSBI.toNumber(allNanoseconds) / divisor;
-      const rounded = RoundNumberToIncrement(allNanoseconds, divisor * increment, roundingMode);
-      minutes = JSBI.toNumber(JSBI.divide(rounded, JSBI.BigInt(divisor)));
-      nanoseconds = ZERO;
-      seconds = milliseconds = microseconds = 0;
-      break;
-    }
-    case 'second': {
-      const divisor = 1e9;
-      let allNanoseconds = JSBI.multiply(JSBI.BigInt(seconds), BILLION);
-      allNanoseconds = JSBI.add(allNanoseconds, JSBI.multiply(JSBI.BigInt(milliseconds), MILLION));
-      allNanoseconds = JSBI.add(allNanoseconds, JSBI.multiply(JSBI.BigInt(microseconds), THOUSAND));
-      allNanoseconds = JSBI.add(allNanoseconds, nanoseconds);
-      total = JSBI.toNumber(allNanoseconds) / divisor;
-      const rounded = RoundNumberToIncrement(allNanoseconds, divisor * increment, roundingMode);
-      seconds = JSBI.toNumber(JSBI.divide(rounded, JSBI.BigInt(divisor)));
-      nanoseconds = ZERO;
-      milliseconds = microseconds = 0;
-      break;
-    }
-    case 'millisecond': {
-      const divisor = 1e6;
-      let allNanoseconds = JSBI.multiply(JSBI.BigInt(milliseconds), MILLION);
-      allNanoseconds = JSBI.add(allNanoseconds, JSBI.multiply(JSBI.BigInt(microseconds), THOUSAND));
-      allNanoseconds = JSBI.add(allNanoseconds, nanoseconds);
-      total = JSBI.toNumber(allNanoseconds) / divisor;
-      const rounded = RoundNumberToIncrement(allNanoseconds, divisor * increment, roundingMode);
-      milliseconds = JSBI.toNumber(JSBI.divide(rounded, JSBI.BigInt(divisor)));
-      nanoseconds = ZERO;
-      microseconds = 0;
-      break;
-    }
-    case 'microsecond': {
-      const divisor = 1e3;
-      let allNanoseconds = JSBI.multiply(JSBI.BigInt(microseconds), THOUSAND);
-      allNanoseconds = JSBI.add(allNanoseconds, nanoseconds);
-      total = JSBI.toNumber(allNanoseconds) / divisor;
-      const rounded = RoundNumberToIncrement(allNanoseconds, divisor * increment, roundingMode);
-      microseconds = JSBI.toNumber(JSBI.divide(rounded, JSBI.BigInt(divisor)));
-      nanoseconds = ZERO;
-      break;
-    }
-    case 'nanosecond': {
-      total = JSBI.toNumber(nanoseconds);
-      nanoseconds = RoundNumberToIncrement(nanoseconds, increment, roundingMode);
-      break;
-    }
-  }
-  return {
-    years,
-    months,
-    weeks,
-    days,
-    hours,
-    minutes,
-    seconds,
-    milliseconds,
-    microseconds,
-    nanoseconds: JSBI.toNumber(nanoseconds),
-    total
-  };
+export function TotalTimeDuration(timeDuration: TimeDuration, unit: TimeUnitOrDay) {
+  const divisor = NS_PER_TIME_UNIT[unit];
+  return timeDuration.fdiv(JSBI.BigInt(divisor));
 }
 
-export function CompareISODate(y1: number, m1: number, d1: number, y2: number, m2: number, d2: number) {
-  for (const [x, y] of [
-    [y1, y2],
-    [m1, m2],
-    [d1, d2]
-  ]) {
-    if (x !== y) return ComparisonResult(x - y);
-  }
+export function CompareISODate(isoDate1: ISODate, isoDate2: ISODate) {
+  if (isoDate1.year !== isoDate2.year) return ComparisonResult(isoDate1.year - isoDate2.year);
+  if (isoDate1.month !== isoDate2.month) return ComparisonResult(isoDate1.month - isoDate2.month);
+  if (isoDate1.day !== isoDate2.day) return ComparisonResult(isoDate1.day - isoDate2.day);
   return 0;
 }
 
-function NonNegativeModulo(x: number, y: number) {
-  let result = x % y;
-  if (ObjectIs(result, -0)) return 0;
-  if (result < 0) result += y;
-  return result;
+export function CompareTimeRecord(time1: TimeRecord, time2: TimeRecord) {
+  if (time1.hour !== time2.hour) return ComparisonResult(time1.hour - time2.hour);
+  if (time1.minute !== time2.minute) return ComparisonResult(time1.minute - time2.minute);
+  if (time1.second !== time2.second) return ComparisonResult(time1.second - time2.second);
+  if (time1.millisecond !== time2.millisecond) return ComparisonResult(time1.millisecond - time2.millisecond);
+  if (time1.microsecond !== time2.microsecond) return ComparisonResult(time1.microsecond - time2.microsecond);
+  if (time1.nanosecond !== time2.nanosecond) return ComparisonResult(time1.nanosecond - time2.nanosecond);
+  return 0;
+}
+
+export function CompareISODateTime(isoDateTime1: ISODateTime, isoDateTime2: ISODateTime) {
+  const dateResult = CompareISODate(isoDateTime1.isoDate, isoDateTime2.isoDate);
+  if (dateResult !== 0) return dateResult;
+  return CompareTimeRecord(isoDateTime1.time, isoDateTime2.time);
 }
 
 // Defaults to native bigint, or something "native bigint-like".
@@ -5925,44 +4759,48 @@ export function ToBigIntExternal(arg: unknown): ExternalBigInt {
   return jsbiBI as unknown as ExternalBigInt;
 }
 
-export function ToBigInt(arg: unknown): JSBI {
-  if (arg instanceof JSBI) {
-    return arg;
-  }
+// rounding modes supported: floor, ceil, trunc
+export function epochNsToMs(epochNanosecondsParam: JSBI | bigint, mode: 'floor' | 'ceil' | 'trunc') {
+  const epochNanoseconds = ensureJSBI(epochNanosecondsParam);
+  const { quotient, remainder } = divmod(epochNanoseconds, MILLION);
+  let epochMilliseconds = JSBI.toNumber(quotient);
+  if (mode === 'floor' && JSBI.toNumber(remainder) < 0) epochMilliseconds -= 1;
+  if (mode === 'ceil' && JSBI.toNumber(remainder) > 0) epochMilliseconds += 1;
+  return epochMilliseconds;
+}
 
+export function epochMsToNs(epochMilliseconds: number) {
+  if (!Number.isInteger(epochMilliseconds)) throw new RangeError('epoch milliseconds must be an integer');
+  return JSBI.multiply(JSBI.BigInt(epochMilliseconds), MILLION);
+}
+
+export function ToBigInt(arg: unknown): JSBI {
   let prim = arg;
   if (typeof arg === 'object') {
     const toPrimFn = (arg as { [Symbol.toPrimitive]: unknown })[Symbol.toPrimitive];
     if (toPrimFn && typeof toPrimFn === 'function') {
-      prim = ReflectApply(toPrimFn, arg, ['number']);
+      prim = toPrimFn.call(arg, 'number');
     }
   }
-  switch (typeof prim) {
-    case 'undefined':
-    case 'object':
-    case 'number':
-    case 'symbol':
-    default:
-      throw new TypeError(`cannot convert ${typeof arg} to bigint`);
-    case 'string':
-      if (!prim.match(/^\s*(?:[+-]?\d+\s*)?$/)) {
-        throw new SyntaxError('invalid BigInt syntax');
-      }
-    // eslint: no-fallthrough: false
-    case 'bigint':
-      try {
-        return JSBI.BigInt(prim.toString());
-      } catch (e: unknown) {
-        if (e instanceof Error && e.message.startsWith('Invalid integer')) throw new SyntaxError(e.message);
-        throw e;
-      }
-    case 'boolean':
-      if (prim) {
-        return ONE;
-      } else {
-        return ZERO;
-      }
+
+  // The AO ToBigInt throws on numbers because it does not allow implicit
+  // conversion between number and bigint (unlike the bigint constructor).
+  if (typeof prim === 'number') {
+    throw new TypeError('cannot convert number to bigint');
   }
+  if (typeof prim === 'bigint') {
+    // JSBI doesn't know anything about the bigint type, and intentionally
+    // assumes it doesn't exist. Passing one to the BigInt function will throw
+    // an error.
+    return JSBI.BigInt(prim.toString(10));
+  }
+  // JSBI will properly coerce types into a BigInt the same as the native BigInt
+  // constructor will, with the exception of native bigint which is handled
+  // above.
+  // As of 2023-04-07, the only runtime type that neither of those can handle is
+  // 'symbol', and both native bigint and the JSBI.BigInt function will throw an
+  // error if they are given a Symbol.
+  return JSBI.BigInt(prim as string | boolean | object);
 }
 
 // Note: This method returns values with bogus nanoseconds based on the previous iteration's
@@ -5971,8 +4809,9 @@ export function ToBigInt(arg: unknown): JSBI {
 export const SystemUTCEpochNanoSeconds: () => JSBI = (() => {
   let ns = JSBI.BigInt(Date.now() % 1e6);
   return () => {
-    const ms = JSBI.BigInt(Date.now());
-    const result = JSBI.add(JSBI.multiply(ms, MILLION), ns);
+    const now = Date.now();
+    const ms = JSBI.BigInt(now);
+    const result = JSBI.add(epochMsToNs(now), ns);
     ns = JSBI.remainder(ms, MILLION);
     if (JSBI.greaterThan(result, NS_MAX)) return NS_MAX;
     if (JSBI.lessThan(result, NS_MIN)) return NS_MIN;
@@ -5980,10 +4819,8 @@ export const SystemUTCEpochNanoSeconds: () => JSBI = (() => {
   };
 })();
 
-export function SystemTimeZone() {
-  const fmt = new IntlDateTimeFormat('en-us');
-  const TemporalTimeZone = GetIntrinsic('%Temporal.TimeZone%');
-  return new TemporalTimeZone(ParseTemporalTimeZone(fmt.resolvedOptions().timeZone));
+export function DefaultTimeZone() {
+  return new Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
 export function ComparisonResult(value: number) {
@@ -5991,13 +4828,13 @@ export function ComparisonResult(value: number) {
 }
 
 export function GetOptionsObject<T>(options: T) {
-  if (options === undefined) return ObjectCreate(null) as NonNullable<T>;
+  if (options === undefined) return Object.create(null) as NonNullable<T>;
   if (IsObject(options) && options !== null) return options;
   throw new TypeError(`Options parameter must be an object, not ${options === null ? 'null' : `${typeof options}`}`);
 }
 
 export function CreateOnePropObject<K extends string, V>(propName: K, propValue: V): { [k in K]: V } {
-  const o = ObjectCreate(null);
+  const o = Object.create(null);
   o[propName] = propValue;
   return o;
 }
@@ -6012,7 +4849,7 @@ function GetOption<P extends StringlyTypedKeys<O>, O extends Partial<Record<P, u
 function GetOption<
   P extends StringlyTypedKeys<O>,
   O extends Partial<Record<P, unknown>>,
-  Fallback extends Required<O>[P] | undefined
+  Fallback extends Required<O>[P] | typeof REQUIRED | undefined
 >(
   options: O,
   property: P,
@@ -6037,45 +4874,90 @@ function GetOption<
     }
     return value;
   }
+  if (fallback === REQUIRED) throw new RangeError(`${property} option is required`);
   return fallback;
 }
 
-function GetNumberOption<P extends StringlyTypedKeys<T>, T extends Partial<Record<P, unknown>>>(
-  options: T,
-  property: P,
-  minimum: number,
-  maximum: number,
-  fallback: number
-): number {
-  let valueRaw = options[property];
-  if (valueRaw === undefined) return fallback;
-  const value = ToNumber(valueRaw);
-  if (NumberIsNaN(value) || value < minimum || value > maximum) {
-    throw new RangeError(`${String(property)} must be between ${minimum} and ${maximum}, not ${value}`);
+// This is a temporary implementation. Ideally we'd rely on Intl.DateTimeFormat
+// here, to provide the latest CLDR alias data, when implementations catch up to
+// the ECMA-402 change. The aliases below are taken from
+// https://github.com/unicode-org/cldr/blob/main/common/bcp47/calendar.xml
+export function CanonicalizeCalendar(idParam: string): BuiltinCalendarId {
+  const id = ASCIILowercase(idParam);
+
+  if (!BUILTIN_CALENDAR_IDS.includes(ASCIILowercase(id))) {
+    throw new RangeError(`invalid calendar identifier ${id}`);
   }
-  return MathFloor(value);
+  uncheckedAssertNarrowedType<BuiltinCalendarId>(id, 'above code throws out any non-calendar IDs');
+
+  switch (id) {
+    case 'ethiopic-amete-alem':
+      // May need to be removed in the future.
+      // See https://github.com/tc39/ecma402/issues/285
+      return 'ethioaa';
+    // case 'gregorian':
+    // (Skip 'gregorian'. It isn't a valid identifier as it's a single
+    // subcomponent longer than 8 letters. It can only be used with the old
+    // @key=value syntax.)
+    case 'islamicc':
+      return 'islamic-civil';
+  }
+  return id;
 }
 
-export function IsBuiltinCalendar(id: string): id is BuiltinCalendarId {
-  return ArrayIncludes.call(BUILTIN_CALENDAR_IDS, id);
+function ASCIILowercase<T extends string>(str: T): T {
+  // The spec defines this operation distinct from String.prototype.lowercase,
+  // so we'll follow the spec here. Note that nasty security issues that can
+  // happen for some use cases if you're comparing case-modified non-ASCII
+  // values. For example, Turkish's "I" character was the source of a security
+  // issue involving "file://" URLs. See
+  // https://haacked.com/archive/2012/07/05/turkish-i-problem-and-why-you-should-care.aspx/.
+  let lowercase = '';
+  for (let ix = 0; ix < str.length; ix++) {
+    const code = str.charCodeAt(ix);
+    if (code >= 0x41 && code <= 0x5a) {
+      lowercase += String.fromCharCode(code + 0x20);
+    } else {
+      lowercase += String.fromCharCode(code);
+    }
+  }
+  return lowercase as T;
+}
+
+// This function isn't in the spec, but we put it in the polyfill to avoid
+// repeating the same (long) error message in many files.
+export function ValueOfThrows(constructorName: string): never {
+  const compareCode =
+    constructorName === 'PlainMonthDay'
+      ? 'Temporal.PlainDate.compare(obj1.toPlainDate(year), obj2.toPlainDate(year))'
+      : `Temporal.${constructorName}.compare(obj1, obj2)`;
+
+  throw new TypeError(
+    'Do not use built-in arithmetic operators with Temporal objects. ' +
+      `When comparing, use ${compareCode}, not obj1 > obj2. ` +
+      "When coercing to strings, use `${obj}` or String(obj), not '' + obj. " +
+      'When coercing to numbers, use properties or methods of the object, not `+obj`. ' +
+      'When concatenating with strings, use `${str}${obj}` or str.concat(obj), not str + obj. ' +
+      'In React, coerce to a string before rendering a Temporal object.'
+  );
 }
 
 const OFFSET = new RegExp(`^${PARSE.offset.source}$`);
+const OFFSET_WITH_PARTS = new RegExp(`^${PARSE.offsetWithParts.source}$`);
 
 function bisect(
-  getState: (epochNs: JSBI) => number,
-  leftParam: JSBI,
-  rightParam: JSBI,
-  lstateParam: number = getState(leftParam),
-  rstateParam: number = getState(rightParam)
+  getState: (epochMs: number) => number,
+  leftParam: number,
+  rightParam: number,
+  lstateParam = getState(leftParam),
+  rstateParam = getState(rightParam)
 ) {
-  // This doesn't make much sense - why do these get converted unnecessarily?
-  let left = JSBI.BigInt(leftParam);
-  let right = JSBI.BigInt(rightParam);
+  let left = leftParam;
+  let right = rightParam;
   let lstate = lstateParam;
   let rstate = rstateParam;
-  while (JSBI.greaterThan(JSBI.subtract(right, left), ONE)) {
-    const middle = JSBI.divide(JSBI.add(left, right), JSBI.BigInt(2));
+  while (right - left > 1) {
+    let middle = Math.trunc((left + right) / 2);
     const mstate = getState(middle);
     if (mstate === lstate) {
       left = middle;
@@ -6084,17 +4966,8 @@ function bisect(
       right = middle;
       rstate = mstate;
     } else {
-      throw new Error(`invalid state in bisection ${lstate} - ${mstate} - ${rstate}`);
+      /* c8 ignore next */ assertNotReached(`invalid state in bisection ${lstate} - ${mstate} - ${rstate}`);
     }
   }
   return right;
 }
-
-const nsPerTimeUnit = {
-  hour: 3600e9,
-  minute: 60e9,
-  second: 1e9,
-  millisecond: 1e6,
-  microsecond: 1e3,
-  nanosecond: 1
-};

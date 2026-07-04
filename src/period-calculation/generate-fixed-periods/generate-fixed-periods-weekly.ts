@@ -1,7 +1,11 @@
 import i18n from '@dhis2/d2-i18n'
-import { Temporal } from '@js-temporal/polyfill-patched'
 import { SupportedCalendar } from '../../types'
-import { fromAnyDate, formatDate, padWithZeroes } from '../../utils/index'
+import {
+    formatDate,
+    getPlainDateFromCalendarFields,
+    padWithZeroes,
+} from '../../utils/index'
+import { AnyPlainDate } from '../../utils/plainDate'
 import { FixedPeriod, PeriodType } from '../types'
 import doesPeriodEndBefore from './does-period-end-before'
 
@@ -20,7 +24,7 @@ type GenerateFixedPeriodsWeekly = (options: {
     periodType: PeriodType
     calendar: SupportedCalendar
     startingDay: number /** 1 is Monday */
-    endsBefore?: Temporal.PlainDate
+    endsBefore?: AnyPlainDate
 }) => Array<FixedPeriod>
 
 // Does not need a `locale` as we're displaying the month as number in the
@@ -86,7 +90,7 @@ const generateFixedPeriodsWeekly: GenerateFixedPeriodsWeekly = ({
                 endDate: formatDate(endofWeek),
             })
         }
-        date = fromAnyDate({ date: endofWeek, calendar }).add({ days: 1 })
+        date = endofWeek.add({ days: 1 })
         i++
     } while (date.year === year) // important to have the condition after since the very first day can be in the previous year
     return days
@@ -127,12 +131,14 @@ const getStartingDate = (options: {
     const { year, calendar, startingDay } = options
 
     // first week in every year has the 4th in the first month
-    const fourthOfFirstMonth = Temporal.PlainDate.from({
-        year,
-        month: 1,
-        day: 4,
-        calendar,
-    })
+    const fourthOfFirstMonth = getPlainDateFromCalendarFields(
+        {
+            year,
+            month: 1,
+            day: 4,
+        },
+        calendar
+    )
 
     const dayDiff = fourthOfFirstMonth.dayOfWeek - startingDay
 
@@ -172,8 +178,8 @@ const buildValue = ({
 
 type BuildLabelFunc = (options: {
     periodType: PeriodType
-    date: Temporal.PlainDate
-    nextWeek: Temporal.PlainDate
+    date: AnyPlainDate
+    nextWeek: AnyPlainDate
     weekIndex: number
 }) => string
 

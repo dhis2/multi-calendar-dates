@@ -1,14 +1,15 @@
-import { Temporal } from '@js-temporal/polyfill-patched'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
 import { getNowInCalendar } from '../index'
 import { PickerOptions, SupportedCalendar } from '../types'
 import {
     formatDate,
-    getCustomCalendarIfExists,
+    getPlainDateFromCalendarFields,
+    getPlainDateFromIso,
     extractAndValidateDateString,
 } from '../utils/helpers'
 import localisationHelpers from '../utils/localisationHelpers'
+import { AnyPlainDate, isSameDate, toIsoPlainDate } from '../utils/plainDate'
 import { useCalendarWeekDays } from './internal/useCalendarWeekDays'
 import {
     useNavigation,
@@ -43,11 +44,15 @@ export type UseDatePickerReturn = UseNavigationReturnType & {
     }[][]
 }
 type UseDatePickerHookType = (options: DatePickerOptions) => UseDatePickerReturn
-type ValidatedDate = Temporal.YearOrEraAndEraYear &
-    Temporal.MonthOrMonthCode & {
-        day: number
-        format?: string
-    }
+type ValidatedDate = {
+    era?: string
+    eraYear?: number
+    year?: number
+    monthCode?: string
+    month?: number
+    day: number
+    format?: string
+}
 
 export const useDatePicker: UseDatePickerHookType = ({
     onDateSelect,
@@ -59,10 +64,8 @@ export const useDatePicker: UseDatePickerHookType = ({
     options,
 }) => {
     const optionsWithCustomerCalendar = useMemo(() => {
-        const calendar = getCustomCalendarIfExists(
-            dhis2CalendarsMap[options.calendar ?? 'gregorian'] ??
-                options.calendar
-        ) as SupportedCalendar
+        const calendar = (dhis2CalendarsMap[options.calendar ?? 'gregorian'] ??
+            options.calendar) as SupportedCalendar
         return {
             ...options,
             calendar,
@@ -75,14 +78,19 @@ export const useDatePicker: UseDatePickerHookType = ({
 
     const prevDateStringRef = useRef(dateString)
 
-    const todayZdt = useMemo(
-        () =>
-            getNowInCalendar(
-                resolvedOptions.calendar,
-                resolvedOptions.timeZone
-            ).startOfDay(),
-        [resolvedOptions]
-    )
+    // getNowInCalendar returns plain calendar-agnostic data (year/month/day) -
+    // reconstruct it into an AnyPlainDate here since this hook needs
+    // arithmetic (.with()) and comparisons (isSameDate) on "today".
+    const today = useMemo(() => {
+        const todayFields = getNowInCalendar(
+            resolvedOptions.calendar,
+            resolvedOptions.timeZone as string
+        )
+        return getPlainDateFromCalendarFields(
+            todayFields,
+            resolvedOptions.calendar
+        )
+    }, [resolvedOptions])
 
     const date = useMemo(
         () =>
@@ -105,70 +113,65 @@ export const useDatePicker: UseDatePickerHookType = ({
 
     date.format = !date.format ? format : date.format
 
-    const temporalCalendar = useMemo(
-        () => Temporal.Calendar.from(resolvedOptions.calendar),
-        [resolvedOptions.calendar]
-    )
-    const temporalTimeZone = useMemo(
-        () => Temporal.TimeZone.from(resolvedOptions.timeZone),
-        [resolvedOptions.timeZone]
-    )
-
-    const selectedDateZdt = useMemo(
+    const selectedDate = useMemo(
         () =>
             dateString
-                ? Temporal.Calendar.from(temporalCalendar)
-                      .dateFromFields(date)
-                      .toZonedDateTime({
-                          timeZone: temporalTimeZone,
-                      })
+                ? getPlainDateFromCalendarFields(date, resolvedOptions.calendar)
                 : null,
-        [dateString, date, temporalCalendar, temporalTimeZone]
+        [dateString, date, resolvedOptions.calendar]
     )
 
-    const [firstZdtOfVisibleMonth, setFirstZdtOfVisibleMonth] = useState(() => {
-        const zdt = selectedDateZdt || todayZdt
-        return zdt.with({ day: 1 })
-    })
+    const [firstOfVisibleMonth, setFirstOfVisibleMonth] =
+        useState<AnyPlainDate>(() => {
+            const base = selectedDate || today
+            return base.with({ day: 1 })
+        })
 
     const localeOptions = useMemo(
         () => ({
             locale: resolvedOptions.locale,
-            calendar: temporalCalendar,
-            timeZone: temporalTimeZone,
+            calendar: resolvedOptions.calendar,
+            timeZone: resolvedOptions.timeZone,
             weekDayFormat: resolvedOptions.weekDayFormat,
             numberingSystem: resolvedOptions.numberingSystem,
         }),
-        [resolvedOptions, temporalCalendar, temporalTimeZone]
+        [resolvedOptions]
     )
 
     const weekDayLabels = useWeekDayLabels(localeOptions)
 
-    // Both arguments below must stay referentially stable across renders
-    // when their actual contents haven't changed: `withCalendar` returns a
-    // new Temporal instance on every call, and the options object was
-    // previously a fresh object literal on every call. Either one changing
-    // identity on every render defeats useNavigation's internal useMemo,
-    // which then rebuilds the year (up to 126 entries) and month dropdown
-    // lists - each entry formatted through Intl - on every single render,
-    // including every keystroke while typing in CalendarInput.
-    const navigationDateZdt = useMemo(
-        () => firstZdtOfVisibleMonth.withCalendar(localeOptions.calendar),
-        [firstZdtOfVisibleMonth, localeOptions.calendar]
-    )
+    // firstOfVisibleMonth can still be tagged with a previous calendar for
+    // one render after the calendar option changes (it's only re-derived
+    // when `dateString` changes, in the effect below) - re-derive it from
+    // its ISO position in the CURRENT calendar before handing it to
+    // useNavigation, same as calendarWeekDays' per-cell label below.
+    // Memoized (rather than recomputed inline) so it - and therefore
+    // navigationOptions/useNavigation's own memo - stay referentially
+    // stable across renders when neither dependency actually changed; see
+    // useNavigation's internal useMemo, which rebuilds the year (up to 126
+    // entries) and month dropdown lists - each entry formatted through
+    // Intl - whenever its arguments change identity, including every
+    // keystroke while typing in CalendarInput.
+    const navigationDate = useMemo(() => {
+        const isoDate = toIsoPlainDate(firstOfVisibleMonth)
+        return getPlainDateFromIso(
+            { year: isoDate.year, month: isoDate.month, day: isoDate.day },
+            resolvedOptions.calendar
+        )
+    }, [firstOfVisibleMonth, resolvedOptions.calendar])
     const navigationOptions = useMemo(
         () => ({ ...localeOptions, pastOnly: options?.pastOnly }),
         [localeOptions, options?.pastOnly]
     )
     const navigation = useNavigation(
-        navigationDateZdt,
-        setFirstZdtOfVisibleMonth,
+        navigationDate,
+        setFirstOfVisibleMonth,
         navigationOptions
     )
     const selectDate = useCallback(
-        (zdt: Temporal.ZonedDateTime) => {
+        (day: AnyPlainDate) => {
             onDateSelect({
-                calendarDateString: formatDate(zdt, undefined, date.format),
+                calendarDateString: formatDate(day, undefined, date.format),
             })
         },
         [onDateSelect, date.format]
@@ -180,7 +183,7 @@ export const useDatePicker: UseDatePickerHookType = ({
     const selectDateRef = useRef(selectDate)
     selectDateRef.current = selectDate
 
-    const calendarWeekDaysZdts = useCalendarWeekDays(firstZdtOfVisibleMonth)
+    const calendarWeekDaysDates = useCalendarWeekDays(firstOfVisibleMonth)
 
     useEffect(() => {
         if (dateString === prevDateStringRef.current) {
@@ -189,28 +192,28 @@ export const useDatePicker: UseDatePickerHookType = ({
 
         prevDateStringRef.current = dateString
 
-        const zdt = Temporal.Calendar.from(temporalCalendar)
-            .dateFromFields(date)
-            .toZonedDateTime({
-                timeZone: temporalTimeZone,
-            })
+        const newDate = getPlainDateFromCalendarFields(
+            date,
+            resolvedOptions.calendar
+        )
 
         if (
-            (firstZdtOfVisibleMonth.year !== zdt.year ||
-                firstZdtOfVisibleMonth.month !== zdt.month) &&
-            !calendarWeekDaysZdts.some((week) =>
-                week.some((day) => day.equals(zdt))
+            (firstOfVisibleMonth.year !== newDate.year ||
+                firstOfVisibleMonth.month !== newDate.month) &&
+            !calendarWeekDaysDates.some((week) =>
+                week.some((day) =>
+                    toIsoPlainDate(day).equals(toIsoPlainDate(newDate))
+                )
             )
         ) {
-            setFirstZdtOfVisibleMonth(zdt.subtract({ days: zdt.day - 1 }))
+            setFirstOfVisibleMonth(newDate.with({ day: 1 }))
         }
     }, [
         date,
         dateString,
-        firstZdtOfVisibleMonth,
-        calendarWeekDaysZdts,
-        temporalCalendar,
-        temporalTimeZone,
+        firstOfVisibleMonth,
+        calendarWeekDaysDates,
+        resolvedOptions.calendar,
     ])
     // Rebuilding this list means re-running localiseWeekLabel (Intl-backed,
     // for non-custom calendars) for every visible day cell (~35-42 cells).
@@ -218,35 +221,47 @@ export const useDatePicker: UseDatePickerHookType = ({
     // keystroke while typing in CalendarInput.
     const calendarWeekDays = useMemo(
         () =>
-            calendarWeekDaysZdts.map((week) =>
-                week.map((weekDayZdt) => ({
-                    dateValue: formatDate(weekDayZdt, undefined, format),
-                    label: localisationHelpers.localiseWeekLabel(
-                        weekDayZdt.withCalendar(localeOptions.calendar),
+            calendarWeekDaysDates.map((week) =>
+                week.map((weekDay) => {
+                    // firstOfVisibleMonth (and therefore weekDay) can still be
+                    // tagged with a previous calendar for one render after the
+                    // calendar option changes (it's only re-derived when
+                    // `dateString` changes, in the effect above) - re-derive
+                    // the label from weekDay's ISO position in the CURRENT
+                    // calendar rather than trusting its own calendar tag.
+                    const isoWeekDay = toIsoPlainDate(weekDay)
+                    const weekDayInCurrentCalendar = getPlainDateFromIso(
                         {
-                            ...localeOptions,
-                            calendar: resolvedOptions.calendar,
-                        }
-                    ),
-                    onClick: () => selectDateRef.current(weekDayZdt),
-                    isSelected: selectedDateZdt
-                        ? selectedDateZdt
-                              ?.withCalendar('iso8601')
-                              .equals(weekDayZdt.withCalendar('iso8601'))
-                        : false,
-                    isToday: todayZdt && weekDayZdt.equals(todayZdt),
-                    isInCurrentMonth:
-                        firstZdtOfVisibleMonth &&
-                        weekDayZdt.month === firstZdtOfVisibleMonth.month,
-                }))
+                            year: isoWeekDay.year,
+                            month: isoWeekDay.month,
+                            day: isoWeekDay.day,
+                        },
+                        resolvedOptions.calendar
+                    )
+                    return {
+                        dateValue: formatDate(weekDay, undefined, format),
+                        label: localisationHelpers.localiseWeekLabel(
+                            weekDayInCurrentCalendar,
+                            localeOptions
+                        ),
+                        onClick: () => selectDateRef.current(weekDay),
+                        isSelected: selectedDate
+                            ? toIsoPlainDate(selectedDate).equals(isoWeekDay)
+                            : false,
+                        isToday: !!today && isSameDate(weekDay, today),
+                        isInCurrentMonth:
+                            !!firstOfVisibleMonth &&
+                            weekDay.month === firstOfVisibleMonth.month,
+                    }
+                })
             ),
         [
-            calendarWeekDaysZdts,
+            calendarWeekDaysDates,
             localeOptions,
             resolvedOptions.calendar,
-            selectedDateZdt,
-            todayZdt,
-            firstZdtOfVisibleMonth,
+            selectedDate,
+            today,
+            firstOfVisibleMonth,
             format,
         ]
     )

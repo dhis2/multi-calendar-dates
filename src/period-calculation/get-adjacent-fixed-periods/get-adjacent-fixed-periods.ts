@@ -1,6 +1,5 @@
 import { dhis2CalendarsMap } from '../../constants/dhis2CalendarsMap'
 import { SupportedCalendar } from '../../types'
-import { getCustomCalendarIfExists } from '../../utils/index'
 import {
     weeklyFixedPeriodTypes,
     monthlyFixedPeriodTypes,
@@ -25,9 +24,8 @@ const getAdjacentFixedPeriods: GetAdjacentFixedPeriods = ({
     steps = 1,
     locale = 'en',
 }) => {
-    const calendar = getCustomCalendarIfExists(
-        dhis2CalendarsMap[requestedCalendar] ?? requestedCalendar
-    ) as SupportedCalendar
+    const calendar = (dhis2CalendarsMap[requestedCalendar] ??
+        requestedCalendar) as SupportedCalendar
 
     const { periodType } = period
     const payload = { period, calendar, steps, locale }

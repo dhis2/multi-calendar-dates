@@ -1,23 +1,22 @@
 import type JSBI from 'jsbi';
 import type { Temporal } from '..';
-import type { BuiltinCalendarId, AnyTemporalType } from './internaltypes';
+import type {
+  BuiltinCalendarId,
+  AnySlottedType,
+  FormatterOrAmender,
+  ISODate,
+  ISODateTime,
+  TimeRecord
+} from './internaltypes';
+import type { DateTimeFormatImpl } from './intl';
 
 // Instant
 export const EPOCHNANOSECONDS = 'slot-epochNanoSeconds';
 
-// TimeZone
-export const TIMEZONE_ID = 'slot-timezone-identifier';
-
 // DateTime, Date, Time, YearMonth, MonthDay
-export const ISO_YEAR = 'slot-year';
-export const ISO_MONTH = 'slot-month';
-export const ISO_DAY = 'slot-day';
-export const ISO_HOUR = 'slot-hour';
-export const ISO_MINUTE = 'slot-minute';
-export const ISO_SECOND = 'slot-second';
-export const ISO_MILLISECOND = 'slot-millisecond';
-export const ISO_MICROSECOND = 'slot-microsecond';
-export const ISO_NANOSECOND = 'slot-nanosecond';
+export const ISO_DATE = 'slot-iso-date';
+export const ISO_DATE_TIME = 'slot-iso-date-time';
+export const TIME = 'slot-time';
 export const CALENDAR = 'slot-calendar';
 // Date, YearMonth, and MonthDay all have the same slots, disambiguation needed:
 export const DATE_BRAND = 'slot-date-brand';
@@ -25,7 +24,6 @@ export const YEAR_MONTH_BRAND = 'slot-year-month-brand';
 export const MONTH_DAY_BRAND = 'slot-month-day-brand';
 
 // ZonedDateTime
-export const INSTANT = 'slot-cached-instant';
 export const TIME_ZONE = 'slot-time-zone';
 
 // Duration
@@ -40,36 +38,38 @@ export const MILLISECONDS = 'slot-milliseconds';
 export const MICROSECONDS = 'slot-microseconds';
 export const NANOSECONDS = 'slot-nanoseconds';
 
-// Calendar
-export const CALENDAR_ID = 'slot-calendar-identifier';
+// DateTimeFormatImpl
+export const DATE = 'date';
+export const YM = 'ym';
+export const MD = 'md';
+export const TIME_FMT = 'time';
+export const DATETIME = 'datetime';
+export const INST = 'instant';
+export const ORIGINAL = 'original';
+export const TZ_CANONICAL = 'timezone-canonical';
+export const TZ_ORIGINAL = 'timezone-original';
+export const CAL_ID = 'calendar-id';
+export const LOCALE = 'locale';
+export const OPTIONS = 'options';
 
-interface SlotInfo<ValueType, UsedByType extends AnyTemporalType> {
+interface SlotInfo<ValueType, UsedByType extends AnySlottedType> {
   value: ValueType;
   usedBy: UsedByType;
 }
 
 interface SlotInfoRecord {
-  [k: string]: SlotInfo<unknown, AnyTemporalType>;
+  [k: string]: SlotInfo<unknown, AnySlottedType>;
 }
 
 interface Slots extends SlotInfoRecord {
   // Instant
   [EPOCHNANOSECONDS]: SlotInfo<JSBI, Temporal.Instant | Temporal.ZonedDateTime>; // number? JSBI?
 
-  // TimeZone
-  [TIMEZONE_ID]: SlotInfo<string, Temporal.TimeZone>;
-
   // DateTime, Date, Time, YearMonth, MonthDay
-  [ISO_YEAR]: SlotInfo<number, TypesWithCalendarUnits>;
-  [ISO_MONTH]: SlotInfo<number, TypesWithCalendarUnits>;
-  [ISO_DAY]: SlotInfo<number, TypesWithCalendarUnits>;
-  [ISO_HOUR]: SlotInfo<number, TypesWithCalendarUnits>;
-  [ISO_MINUTE]: SlotInfo<number, TypesWithCalendarUnits>;
-  [ISO_SECOND]: SlotInfo<number, TypesWithCalendarUnits>;
-  [ISO_MILLISECOND]: SlotInfo<number, TypesWithCalendarUnits>;
-  [ISO_MICROSECOND]: SlotInfo<number, TypesWithCalendarUnits>;
-  [ISO_NANOSECOND]: SlotInfo<number, TypesWithCalendarUnits>;
-  [CALENDAR]: SlotInfo<Temporal.CalendarProtocol, TypesWithCalendarUnits | Temporal.ZonedDateTime>;
+  [ISO_DATE]: SlotInfo<ISODate, Temporal.PlainDate | Temporal.PlainMonthDay | Temporal.PlainYearMonth>;
+  [ISO_DATE_TIME]: SlotInfo<ISODateTime, Temporal.PlainDateTime>;
+  [TIME]: SlotInfo<TimeRecord, Temporal.PlainTime>;
+  [CALENDAR]: SlotInfo<BuiltinCalendarId, TypesWithCalendarUnits>;
 
   // Date, YearMonth, MonthDay common slots
   [DATE_BRAND]: SlotInfo<true, Temporal.PlainDate>;
@@ -77,8 +77,7 @@ interface Slots extends SlotInfoRecord {
   [MONTH_DAY_BRAND]: SlotInfo<true, Temporal.PlainMonthDay>;
 
   // ZonedDateTime
-  [INSTANT]: SlotInfo<Temporal.Instant, Temporal.ZonedDateTime>;
-  [TIME_ZONE]: SlotInfo<Temporal.TimeZoneProtocol, Temporal.ZonedDateTime>;
+  [TIME_ZONE]: SlotInfo<string, Temporal.ZonedDateTime>;
 
   // Duration
   [YEARS]: SlotInfo<number, Temporal.Duration>;
@@ -92,14 +91,24 @@ interface Slots extends SlotInfoRecord {
   [MICROSECONDS]: SlotInfo<number, Temporal.Duration>;
   [NANOSECONDS]: SlotInfo<number, Temporal.Duration>;
 
-  // Calendar
-  [CALENDAR_ID]: SlotInfo<BuiltinCalendarId, Temporal.Calendar>;
+  // DateTimeFormatImpl
+  [DATE]: SlotInfo<FormatterOrAmender, DateTimeFormatImpl>;
+  [YM]: SlotInfo<FormatterOrAmender, DateTimeFormatImpl>;
+  [MD]: SlotInfo<FormatterOrAmender, DateTimeFormatImpl>;
+  [TIME_FMT]: SlotInfo<FormatterOrAmender, DateTimeFormatImpl>;
+  [DATETIME]: SlotInfo<FormatterOrAmender, DateTimeFormatImpl>;
+  [INST]: SlotInfo<FormatterOrAmender, DateTimeFormatImpl>;
+  [ORIGINAL]: SlotInfo<globalThis.Intl.DateTimeFormat, DateTimeFormatImpl>;
+  [TZ_CANONICAL]: SlotInfo<string, DateTimeFormatImpl>;
+  [TZ_ORIGINAL]: SlotInfo<string, DateTimeFormatImpl>;
+  [CAL_ID]: SlotInfo<globalThis.Intl.ResolvedDateTimeFormatOptions['calendar'], DateTimeFormatImpl>;
+  [LOCALE]: SlotInfo<globalThis.Intl.ResolvedDateTimeFormatOptions['locale'], DateTimeFormatImpl>;
+  [OPTIONS]: SlotInfo<Intl.DateTimeFormatOptions, DateTimeFormatImpl>;
 }
 
 type TypesWithCalendarUnits =
   | Temporal.PlainDateTime
   | Temporal.PlainDate
-  | Temporal.PlainTime
   | Temporal.PlainYearMonth
   | Temporal.PlainMonthDay
   | Temporal.ZonedDateTime;
@@ -108,19 +117,10 @@ interface SlotsToTypes {
   // Instant
   [EPOCHNANOSECONDS]: Temporal.Instant;
 
-  // TimeZone
-  [TIMEZONE_ID]: Temporal.TimeZone;
-
   // DateTime, Date, Time, YearMonth, MonthDay
-  [ISO_YEAR]: TypesWithCalendarUnits;
-  [ISO_MONTH]: TypesWithCalendarUnits;
-  [ISO_DAY]: TypesWithCalendarUnits;
-  [ISO_HOUR]: TypesWithCalendarUnits;
-  [ISO_MINUTE]: TypesWithCalendarUnits;
-  [ISO_SECOND]: TypesWithCalendarUnits;
-  [ISO_MILLISECOND]: TypesWithCalendarUnits;
-  [ISO_MICROSECOND]: TypesWithCalendarUnits;
-  [ISO_NANOSECOND]: TypesWithCalendarUnits;
+  [ISO_DATE]: Temporal.PlainDate | Temporal.PlainYearMonth | Temporal.PlainMonthDay;
+  [ISO_DATE_TIME]: Temporal.PlainDateTime;
+  [TIME]: Temporal.PlainTime;
   [CALENDAR]: TypesWithCalendarUnits;
 
   // Date, YearMonth, MonthDay common slots
@@ -129,7 +129,6 @@ interface SlotsToTypes {
   [MONTH_DAY_BRAND]: Temporal.PlainMonthDay;
 
   // ZonedDateTime
-  [INSTANT]: Temporal.ZonedDateTime;
   [TIME_ZONE]: Temporal.ZonedDateTime;
 
   // Duration
@@ -144,20 +143,47 @@ interface SlotsToTypes {
   [MICROSECONDS]: Temporal.Duration;
   [NANOSECONDS]: Temporal.Duration;
 
-  // Calendar
-  [CALENDAR_ID]: Temporal.Calendar;
+  // DateTimeFormatImpl
+  [DATE]: DateTimeFormatImpl;
+  [YM]: DateTimeFormatImpl;
+  [MD]: DateTimeFormatImpl;
+  [TIME_FMT]: DateTimeFormatImpl;
+  [DATETIME]: DateTimeFormatImpl;
+  [INST]: DateTimeFormatImpl;
+  [ORIGINAL]: DateTimeFormatImpl;
+  [TZ_CANONICAL]: DateTimeFormatImpl;
+  [TZ_ORIGINAL]: DateTimeFormatImpl;
+  [CAL_ID]: DateTimeFormatImpl;
+  [LOCALE]: DateTimeFormatImpl;
+  [OPTIONS]: DateTimeFormatImpl;
 }
 
 type SlotKey = keyof SlotsToTypes;
 
-const slots = new WeakMap();
-export function CreateSlots(container: AnyTemporalType): void {
-  slots.set(container, Object.create(null));
+const globalSlots = new WeakMap<Slots[keyof Slots]['usedBy'], Record<keyof Slots, Slots[keyof Slots]['value']>>();
+
+function _GetSlots(container: Slots[keyof Slots]['usedBy']) {
+  return globalSlots.get(container);
 }
 
-function GetSlots<T extends AnyTemporalType>(container: T) {
-  return slots.get(container);
+const GetSlotsSymbol = Symbol.for('@@Temporal__GetSlots');
+
+// expose GetSlots to avoid dual package hazards
+(globalThis as any)[GetSlotsSymbol] ||= _GetSlots;
+
+const GetSlots = (globalThis as any)[GetSlotsSymbol] as typeof _GetSlots;
+
+function _CreateSlots(container: Slots[keyof Slots]['usedBy']): void {
+  globalSlots.set(container, Object.create(null));
 }
+
+const CreateSlotsSymbol = Symbol.for('@@Temporal__CreateSlots');
+
+// expose CreateSlots to avoid dual package hazards
+(globalThis as any)[CreateSlotsSymbol] ||= _CreateSlots;
+
+export const CreateSlots = (globalThis as any)[CreateSlotsSymbol] as typeof _CreateSlots;
+
 // TODO: is there a better way than 9 overloads to make HasSlot into a type
 // guard that takes a variable number of parameters?
 export function HasSlot<ID1 extends SlotKey>(container: unknown, id1: ID1): container is Slots[ID1]['usedBy'];
@@ -271,14 +297,14 @@ export function HasSlot<
 ): container is Slots[ID1 | ID2 | ID3 | ID4 | ID5 | ID6 | ID7 | ID8 | ID9]['usedBy'];
 export function HasSlot(container: unknown, ...ids: (keyof Slots)[]): boolean {
   if (!container || 'object' !== typeof container) return false;
-  const myslots = GetSlots(container as AnyTemporalType);
-  return !!myslots && ids.reduce((all: boolean, id) => all && id in myslots, true);
+  const myslots = GetSlots(container as AnySlottedType);
+  return !!myslots && ids.every((id) => id in myslots);
 }
 export function GetSlot<KeyT extends keyof Slots>(
   container: Slots[typeof id]['usedBy'],
   id: KeyT
 ): Slots[KeyT]['value'] {
-  const value = GetSlots(container)[id];
+  const value = GetSlots(container)?.[id];
   if (value === undefined) throw new TypeError(`Missing internal slot ${id}`);
   return value;
 }
@@ -287,5 +313,29 @@ export function SetSlot<KeyT extends SlotKey>(
   id: KeyT,
   value: Slots[KeyT]['value']
 ): void {
-  GetSlots(container)[id] = value;
+  const slots = GetSlots(container);
+
+  if (slots === undefined) throw new TypeError('Missing slots for the given container');
+
+  const existingSlot = slots[id];
+
+  if (existingSlot) throw new TypeError(`${id} already has set`);
+
+  slots[id] = value;
+}
+
+export function ResetSlot<KeyT extends SlotKey>(
+  container: DateTimeFormatImpl,
+  id: KeyT,
+  value: Slots[KeyT]['value']
+): void {
+  const slots = GetSlots(container);
+
+  if (slots === undefined) throw new TypeError('Missing slots for the given container');
+
+  const existingSlot = slots[id];
+
+  if (existingSlot === undefined) throw new TypeError(`tried to reset ${id} which was not set`);
+
+  slots[id] = value;
 }
