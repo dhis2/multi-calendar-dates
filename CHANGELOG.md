@@ -1,3 +1,11 @@
+# [2.2.0-alpha.3](https://github.com/dhis2/multi-calendar-dates/compare/v2.2.0-alpha.2...v2.2.0-alpha.3) (2026-07-05)
+
+
+### Bug Fixes
+
+* **useDatePicker:** memoize calendarWeekDays and selectedDateZdt ([f10b088](https://github.com/dhis2/multi-calendar-dates/commit/f10b088bf2587758249d9aef7c76785b1035f5e1))
+* **useDatePicker:** stabilize useNavigation args to fix per-keystroke lag ([3b3fd03](https://github.com/dhis2/multi-calendar-dates/commit/3b3fd03644b9284cd9dc3dbb9ea35674d19b2a62))
+
 # [2.2.0-alpha.2](https://github.com/dhis2/multi-calendar-dates/compare/v2.2.0-alpha.1...v2.2.0-alpha.2) (2026-07-03)
 
 
