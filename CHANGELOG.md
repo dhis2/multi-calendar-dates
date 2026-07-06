@@ -1,3 +1,23 @@
+# [3.0.0-alpha.1](https://github.com/dhis2/multi-calendar-dates/compare/v2.2.0-alpha.3...v3.0.0-alpha.1) (2026-07-06)
+
+
+* feat(temporal)!: upgrade @js-temporal/polyfill to 0.5.1 ([ade19d5](https://github.com/dhis2/multi-calendar-dates/commit/ade19d5deebff7e884e1bb5680f741cb14d0f451)), closes [js-temporal/temporal-polyfill#357](https://github.com/js-temporal/temporal-polyfill/issues/357)
+
+
+### BREAKING CHANGES
+
+* getNowInCalendar now returns a plain CalendarDate
+object ({ year, month, day, eraYear? }, src/types.ts) instead of a
+Temporal.ZonedDateTime. This removes Temporal from the public
+interface entirely and matches convertFromIso8601/convertToIso8601's
+existing return shape. Code that only read .year/.month/.day/.eraYear
+needs no changes; code that called Temporal methods on the result
+needs to re-derive another date via getNowInCalendar/convertFromIso8601
+instead of calling .withCalendar()/.startOfDay() on the previous
+result.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+
 # [2.2.0-alpha.3](https://github.com/dhis2/multi-calendar-dates/compare/v2.2.0-alpha.2...v2.2.0-alpha.3) (2026-07-05)
 
 
