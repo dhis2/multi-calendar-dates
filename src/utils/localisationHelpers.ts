@@ -11,6 +11,7 @@ import {
     SupportedCalendar,
 } from '../types'
 import { formatDate, isCustomCalendar } from './helpers'
+import { AnyPlainDate } from './plainDate'
 
 const getPartialLocaleMatch: (
     locales: Record<string, CalendarCustomLocale>,
@@ -28,7 +29,7 @@ const getPartialLocaleMatch: (
 }
 
 const getCustomCalendarLocale = (
-    calendar: Temporal.CalendarLike,
+    calendar: string,
     locale: string | undefined
 ): CalendarCustomLocale | undefined => {
     const customCalendar = customCalendars[calendar as CustomCalendarTypes]
@@ -52,7 +53,7 @@ const getCustomCalendarLocale = (
 }
 
 type LocaliseDateLabel = (
-    selectedDateZdt: Temporal.ZonedDateTime | Temporal.PlainDate,
+    selectedDate: AnyPlainDate,
     localeOptions: {
         calendar: SupportedCalendar
         locale: string
@@ -61,7 +62,7 @@ type LocaliseDateLabel = (
 ) => string
 
 const localiseDateLabel: LocaliseDateLabel = (
-    selectedDateZdt,
+    selectedDate,
     localeOptions,
     options = { dateStyle: 'full' }
 ) => {
@@ -69,20 +70,15 @@ const localiseDateLabel: LocaliseDateLabel = (
         throw new Error('no calendar provided to localise function')
     }
 
-    if (!selectedDateZdt) {
+    if (!selectedDate) {
         throw new Error('a date must be provided to localiseDateLabel')
     }
 
     const isCustom = isCustomCalendar(localeOptions.calendar)
 
-    const nonCustomDate =
-        selectedDateZdt instanceof Temporal.ZonedDateTime
-            ? selectedDateZdt?.toPlainDate()
-            : selectedDateZdt
-
     return isCustom
-        ? formatDate(selectedDateZdt)
-        : nonCustomDate
+        ? formatDate(selectedDate)
+        : (selectedDate as Temporal.PlainDate)
               .toLocaleString(localeOptions.locale, {
                   calendar: localeOptions.calendar,
                   dateStyle: options.dateStyle,
@@ -91,7 +87,7 @@ const localiseDateLabel: LocaliseDateLabel = (
 }
 
 const localiseWeekLabel = (
-    zdt: Temporal.ZonedDateTime,
+    date: AnyPlainDate,
     localeOptions: PickerOptions
 ) => {
     if (!localeOptions.calendar) {
@@ -104,8 +100,8 @@ const localiseWeekLabel = (
     )
 
     return isCustom
-        ? customLocale?.numbers?.[zdt.day] || zdt.day
-        : zdt.toPlainDate().toLocaleString(localeOptions.locale, {
+        ? customLocale?.numbers?.[date.day] || date.day
+        : (date as Temporal.PlainDate).toLocaleString(localeOptions.locale, {
               calendar: localeOptions.calendar,
               numberingSystem: numberingSystems.includes(
                   localeOptions.numberingSystem as typeof numberingSystems[number]
@@ -117,11 +113,11 @@ const localiseWeekLabel = (
 }
 
 const localiseMonth = (
-    zdt:
-        | Temporal.ZonedDateTime
+    date:
+        | AnyPlainDate
         | Temporal.PlainYearMonth
-        | Temporal.PlainDate
-        | Temporal.PlainDateLike,
+        | Temporal.PlainDateLike
+        | { month: number },
     localeOptions: PickerOptions,
     format: Intl.DateTimeFormatOptions
 ) => {
@@ -135,12 +131,15 @@ const localiseMonth = (
     )
 
     return isCustom
-        ? customLocale?.monthNames[zdt.month! - 1]
-        : zdt.toLocaleString(localeOptions.locale, format)
+        ? customLocale?.monthNames[date.month! - 1]
+        : (date as Temporal.PlainYearMonth | Temporal.PlainDate).toLocaleString(
+              localeOptions.locale,
+              format
+          )
 }
 
 export const localiseWeekDayLabel = (
-    zdt: Temporal.ZonedDateTime,
+    date: AnyPlainDate,
     localeOptions: PickerOptionsWithResolvedCalendar
 ) => {
     if (!localeOptions.calendar) {
@@ -152,18 +151,18 @@ export const localiseWeekDayLabel = (
         localeOptions.calendar,
         localeOptions.locale
     )
-    const customDayString = customCalendar?.dayNamesShort[zdt.dayOfWeek - 1] // dayOfWeek is 1-based
+    const customDayString = customCalendar?.dayNamesShort[date.dayOfWeek - 1] // dayOfWeek is 1-based
 
     return isCustom && customDayString
         ? customDayString
-        : zdt.toPlainDate().toLocaleString(localeOptions.locale, {
+        : (date as Temporal.PlainDate).toLocaleString(localeOptions.locale, {
               weekday: localeOptions.weekDayFormat,
               calendar: localeOptions.calendar,
           })
 }
 
 export const localiseYear = (
-    zdt: Temporal.ZonedDateTime,
+    date: AnyPlainDate,
     localeOptions: PickerOptions,
     format: Intl.DateTimeFormatOptions
 ) => {
@@ -173,8 +172,10 @@ export const localiseYear = (
     const isCustom = isCustomCalendar(localeOptions.calendar)
 
     return isCustom
-        ? zdt.year
-        : zdt.toPlainYearMonth().toLocaleString(localeOptions.locale, format)
+        ? date.year
+        : (date as Temporal.PlainDate)
+              .toPlainYearMonth()
+              .toLocaleString(localeOptions.locale, format)
 }
 const localisationHelpers = {
     localiseYear,

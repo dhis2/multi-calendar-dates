@@ -1,5 +1,10 @@
-import { Temporal } from '@js-temporal/polyfill-patched'
 import { SupportedCalendar } from '../../types'
+import {
+    getPlainDateFromCalendarFields,
+    getPlainDateFromIso,
+    isCustomCalendar,
+} from '../../utils/index'
+import { AnyPlainDate } from '../../utils/plainDate'
 import { FixedPeriod, PeriodType } from '../types'
 import {
     buildYearlyFixedPeriod,
@@ -11,7 +16,7 @@ type GenerateFixedPeriodsYearly = (options: {
     year: number
     periodType: PeriodType
     calendar: SupportedCalendar
-    endsBefore?: Temporal.PlainDate
+    endsBefore?: AnyPlainDate
     yearsCount: number | null
     locale: string
 }) => Array<FixedPeriod>
@@ -25,25 +30,25 @@ const generateFixedPeriodsYearly: GenerateFixedPeriodsYearly = ({
     locale,
 }) => {
     const month = getYearlyStartMonthByPeriodType(periodType)
-    const currentYear = Temporal.PlainDate.from({
-        year,
-        month,
-        // this should really just be 1 but have to set it to 14th because of a
-        // quirk in custom calendars
-        // @TODO: discuss this with the Temporal team
-        day: calendar.toString() === 'nepali' ? 14 : 1,
-        calendar,
-    })
+    const currentYear = getPlainDateFromCalendarFields(
+        {
+            year,
+            month,
+            // this should really just be 1 but have to set it to 14th because of a
+            // quirk in custom calendars
+            // @TODO: discuss this with the Temporal team
+            day: isCustomCalendar(calendar) ? 14 : 1,
+        },
+        calendar
+    )
 
     // Timestamp "0" is gregorian 1970-01-01, so creating that date in the
     // gregorian calendar and then use the provided, correct calendar to
     // determine the year we need to go back to
-    const startYearDate = Temporal.PlainDate.from({
-        day: 1,
-        month: 1,
-        year: 1970,
-        calendar: 'gregory',
-    }).withCalendar(calendar)
+    const startYearDate = getPlainDateFromIso(
+        { day: 1, month: 1, year: 1970 },
+        calendar
+    )
 
     // we need to use eraYear because ethiopic calendar having the "correct"
     // year (as in what users expect to see) as eraYear, while iso8601 (which

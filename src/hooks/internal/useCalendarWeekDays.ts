@@ -1,10 +1,7 @@
-import { Temporal } from '@js-temporal/polyfill-patched'
 import { useMemo } from 'react'
+import { AnyPlainDate, toIsoPlainDate } from '../../utils/plainDate'
 
-const groupByWeek = (
-    acc: Temporal.ZonedDateTime[][],
-    day: Temporal.ZonedDateTime
-) => {
+const groupByWeek = (acc: AnyPlainDate[][], day: AnyPlainDate) => {
     if (day.dayOfWeek === 1) {
         acc.push([])
     }
@@ -16,56 +13,38 @@ const groupByWeek = (
 /**
  * internal hook used by useDatePicker hook to return the week days numbers in a calendar
  *
- * @param dayZdt
+ * @param day any date within the month to display
  * @returns an array of array of days (each top-level array is a week)
  */
-export const useCalendarWeekDays = (dayZdt: Temporal.ZonedDateTime) => {
+export const useCalendarWeekDays = (day: AnyPlainDate) => {
     return useMemo(() => {
-        const dateInfo: Temporal.ZonedDateTimeLike = {
-            year: dayZdt.year,
-            month: dayZdt.month,
-            day: dayZdt.day,
-            hour: 0,
-            minute: 0,
-            second: 0,
-            calendar: dayZdt.calendar,
-            timeZone: dayZdt.timeZone,
-        }
-
         // get first day of the month
-        const firstDayOfMonth = Temporal.ZonedDateTime.from({
-            ...dateInfo,
-            day: 1,
-        })
+        const firstDayOfMonth = day.with({ day: 1 })
         // get first day of first week to display
         const firstDayToDisplay = firstDayOfMonth.subtract({
             days: firstDayOfMonth.dayOfWeek - 1,
         })
 
         // get last day of month
-        const lastDayOfMonth = Temporal.ZonedDateTime.from({
-            ...dateInfo,
-            day: dayZdt.daysInMonth,
-        })
+        const lastDayOfMonth = day.with({ day: day.daysInMonth })
 
         // get last day of last week of month
         const lastDayToDisplay = lastDayOfMonth.add({
             days: 7 - lastDayOfMonth.dayOfWeek,
         })
 
-        const numberOfDaysInCalendar = lastDayToDisplay
-            .toPlainDate()
-            .since(firstDayToDisplay.toPlainDate()).days
+        const numberOfDaysInCalendar = toIsoPlainDate(lastDayToDisplay).since(
+            toIsoPlainDate(firstDayToDisplay)
+        ).days
 
-        let date: Temporal.ZonedDateTime =
-            Temporal.ZonedDateTime.from(firstDayToDisplay)
+        let date: AnyPlainDate = firstDayToDisplay
 
-        const allDates: Temporal.ZonedDateTime[] = []
+        const allDates: AnyPlainDate[] = []
 
         for (let i = 0; i <= numberOfDaysInCalendar; i++) {
             allDates.push(date)
             date = date.add({ days: 1 })
         }
         return allDates.reduce(groupByWeek, [])
-    }, [dayZdt])
+    }, [day])
 }

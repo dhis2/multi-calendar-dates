@@ -1,7 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill-patched'
-import { NepaliCalendar } from './nepaliCalendar'
-
-const calendar = new NepaliCalendar()
+import { NepaliPlainDate } from './nepaliCalendar'
 
 describe('from nepali to gregorian', () => {
     it('should convert from nepali calendar to gregorian', () => {
@@ -11,10 +9,9 @@ describe('from nepali to gregorian', () => {
             day: 1,
         } // 1st of Kartik 2079 is 18th of October 2022
 
-        const result =
-            Temporal.Calendar.from(calendar).dateFromFields(nepaliDate)
-        expect(result.toString()).toEqual('2022-10-18[u-ca=nepali]')
-        expect(result.calendar.id).toEqual('nepali')
+        const result = NepaliPlainDate.from(nepaliDate)
+        expect(result.isoDate.toString()).toEqual('2022-10-18')
+        expect(result.calendarId).toEqual('nepali')
     })
 
     it('should convert from nepali calendar to gregorian for the last n years', () => {
@@ -29,15 +26,16 @@ describe('from nepali to gregorian', () => {
                 day: 1,
             }
 
-            const date =
-                Temporal.Calendar.from(calendar).dateFromFields(nepaliDate)
-            expect(date.toString()).toMatch(`${gregorianStartYear - i}-10-`)
+            const date = NepaliPlainDate.from(nepaliDate)
+            expect(date.isoDate.toString()).toMatch(
+                `${gregorianStartYear - i}-10-`
+            )
         }
     })
 
     it('should throw an error if nepali year is out of range of supported dates', () => {
         expect(() =>
-            Temporal.Calendar.from(calendar).dateFromFields({
+            NepaliPlainDate.from({
                 year: 1969,
                 month: 7,
                 day: 1,
@@ -46,7 +44,7 @@ describe('from nepali to gregorian', () => {
             'Conversions are only possible between 1970 and 2100 in Nepali calendar'
         )
         expect(() =>
-            Temporal.Calendar.from(calendar).dateFromFields({
+            NepaliPlainDate.from({
                 year: 2101,
                 month: 7,
                 day: 1,
@@ -55,24 +53,13 @@ describe('from nepali to gregorian', () => {
             'Conversions are only possible between 1970 and 2100 in Nepali calendar'
         )
     })
-
-    it('should convert a year/month from nepali calendar to gregorian', () => {
-        const nepaliDate = {
-            year: 2079,
-            month: 7,
-            calendar,
-        }
-
-        const result = Temporal.PlainYearMonth.from(nepaliDate)
-        expect(result.year).toEqual(2079)
-        expect(result.month).toEqual(7)
-    })
 })
 
 describe('from greogorian to nepali', () => {
     it('should convert from gregorian calendar to nepali', () => {
-        const nepaliDate =
-            Temporal.PlainDate.from('2022-10-18').withCalendar(calendar)
+        const nepaliDate = NepaliPlainDate.fromIso(
+            Temporal.PlainDate.from('2022-10-18')
+        )
 
         expect(nepaliDate.year).toEqual(2079)
         expect(nepaliDate.eraYear).toEqual(2079)
@@ -85,9 +72,9 @@ describe('from greogorian to nepali', () => {
         const nepaliStartYear = 2100
 
         for (let i = 0; i < 100; i++) {
-            const nepaliDate = Temporal.PlainDate.from(
-                `${gregorianStartYear - i}-10-18`
-            ).withCalendar(calendar)
+            const nepaliDate = NepaliPlainDate.fromIso(
+                Temporal.PlainDate.from(`${gregorianStartYear - i}-10-18`)
+            )
 
             expect(nepaliDate.year).toEqual(nepaliStartYear - i)
         }
@@ -95,7 +82,7 @@ describe('from greogorian to nepali', () => {
 
     it('should throw an error if nepali year is out of range of supported dates', () => {
         expect(() => {
-            Temporal.PlainDate.from('2044-10-18').withCalendar(calendar).year
+            NepaliPlainDate.fromIso(Temporal.PlainDate.from('2044-10-18')).year
         }).toThrow(
             'Conversions are only possible between 1970 and 2100 in Nepali calendar'
         )
@@ -105,11 +92,10 @@ describe('from greogorian to nepali', () => {
 describe('nepali calendar arithmetic', () => {
     it('should get the next month correctly for all nepali years from 1971 to 2100', () => {
         for (let year = 1971; year < 2100; year++) {
-            const date = Temporal.PlainDate.from({
+            const date = NepaliPlainDate.from({
                 year,
                 month: 1,
                 day: 14,
-                calendar,
             })
 
             const afterOneMonth = date.add({ months: 1 })
@@ -161,16 +147,17 @@ describe('some random conversions nepali <-> gregorian', () => {
             bs: nepaliDate,
             ad: gregorianDate,
         }: typeof RANDOM_CONVERSION_MAPS[number]) => {
-            const isoResult =
-                Temporal.Calendar.from(calendar).dateFromFields(nepaliDate)
+            const isoResult = NepaliPlainDate.from(nepaliDate).isoDate
 
-            const { isoYear, isoMonth, isoDay } = isoResult.getISOFields()
-            expect({ year: isoYear, month: isoMonth, day: isoDay }).toEqual(
-                gregorianDate
+            expect({
+                year: isoResult.year,
+                month: isoResult.month,
+                day: isoResult.day,
+            }).toEqual(gregorianDate)
+
+            const nepaliResult = NepaliPlainDate.fromIso(
+                Temporal.PlainDate.from(gregorianDate)
             )
-
-            const nepaliResult =
-                Temporal.PlainDate.from(gregorianDate).withCalendar(calendar)
 
             expect(nepaliResult.year).toEqual(nepaliDate.year)
             expect(nepaliResult.month).toEqual(nepaliDate.month)

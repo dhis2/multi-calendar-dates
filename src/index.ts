@@ -10,3 +10,4 @@ export {
     convertFromIso8601,
     convertToIso8601,
 } from './utils'
+export type { CalendarDate } from './types'

@@ -1,11 +1,9 @@
 import { Temporal } from '@js-temporal/polyfill-patched'
 import { Dispatch, SetStateAction, useMemo } from 'react'
-import {
-    PickerOptionsWithResolvedCalendar,
-    SupportedCalendar,
-} from '../../types'
+import { PickerOptionsWithResolvedCalendar } from '../../types'
 import { isCustomCalendar, getMonthsForCalendar } from '../../utils/helpers'
 import localisationHelpers from '../../utils/localisationHelpers'
+import { AnyPlainDate } from '../../utils/plainDate'
 
 export type UseNavigationReturnType = {
     prevYear: {
@@ -44,8 +42,8 @@ export type UseNavigationReturnType = {
 }
 
 type UseNavigationHook = (
-    firstZdtOfVisibleMonth: Temporal.ZonedDateTime,
-    setFirstZdtOfVisibleMonth: Dispatch<SetStateAction<Temporal.ZonedDateTime>>,
+    firstOfVisibleMonth: AnyPlainDate,
+    setFirstOfVisibleMonth: Dispatch<SetStateAction<AnyPlainDate>>,
     localeOptions: PickerOptionsWithResolvedCalendar
 ) => UseNavigationReturnType
 /**
@@ -55,13 +53,13 @@ type UseNavigationHook = (
  * @returns
  */
 export const useNavigation: UseNavigationHook = (
-    firstZdtOfVisibleMonth,
-    setFirstZdtOfVisibleMonth,
+    firstOfVisibleMonth,
+    setFirstOfVisibleMonth,
     localeOptions
 ) => {
     return useMemo(() => {
-        const prevYear = firstZdtOfVisibleMonth.subtract({ years: 1 })
-        const nextYear = firstZdtOfVisibleMonth.add({ years: 1 })
+        const prevYear = firstOfVisibleMonth.subtract({ years: 1 })
+        const nextYear = firstOfVisibleMonth.add({ years: 1 })
 
         // Setting the day to the 14th is guaranteed to get the next month correctly
         // according to our defintion, which considers adding one month to be the equivalent
@@ -69,16 +67,17 @@ export const useNavigation: UseNavigationHook = (
         // then converts to the custom calendar, which could end up in the same month.
         // (for example in Nepali where current date + 30 can end up in the same month for a month that has 32 days)
         // todo: clarify the expected behaviour with the Temporal team
-        const prevMonth = firstZdtOfVisibleMonth
+        const prevMonth = firstOfVisibleMonth
             .with({ day: 14 })
             .subtract({ months: 1 })
-        const nextMonth = firstZdtOfVisibleMonth
+        const nextMonth = firstOfVisibleMonth
             .with({ day: 14 })
             .add({ months: 1 })
 
+        const calendar = localeOptions.calendar
         const options = {
             locale: localeOptions.locale,
-            calendar: localeOptions.calendar.id as SupportedCalendar,
+            calendar,
             numberingSystem: localeOptions.numberingSystem,
         }
 
@@ -103,7 +102,7 @@ export const useNavigation: UseNavigationHook = (
             const years = []
             let startYear, endYear
 
-            if (options.calendar === 'nepali') {
+            if (calendar === 'nepali') {
                 startYear = Math.max(
                     1971,
                     currentYearValue - (pastOnly ? 125 : 100)
@@ -118,7 +117,7 @@ export const useNavigation: UseNavigationHook = (
             }
 
             for (let year = startYear; year <= endYear; year++) {
-                const yearDate = firstZdtOfVisibleMonth.with({
+                const yearDate = firstOfVisibleMonth.with({
                     year,
                     month: 1,
                     day: 1,
@@ -128,7 +127,7 @@ export const useNavigation: UseNavigationHook = (
                     label: localisationHelpers
                         .localiseYear(
                             yearDate,
-                            { ...localeOptions, calendar: options.calendar },
+                            localeOptions,
                             yearNumericFormat
                         )
                         .toString(),
@@ -140,19 +139,16 @@ export const useNavigation: UseNavigationHook = (
 
         const currentYearValue =
             // Ethiopic years - when localised to English - add the era (i.e. 2015 ERA1)
-            options.calendar === 'ethiopic'
-                ? firstZdtOfVisibleMonth.eraYear ??
+            calendar === 'ethiopic'
+                ? firstOfVisibleMonth.eraYear ??
                   String(
                       localisationHelpers.localiseYear(
-                          firstZdtOfVisibleMonth,
-                          {
-                              ...localeOptions,
-                              calendar: options.calendar,
-                          },
+                          firstOfVisibleMonth,
+                          localeOptions,
                           yearNumericFormat
                       )
                   ).split(' ')[0]
-                : firstZdtOfVisibleMonth.year
+                : firstOfVisibleMonth.year
 
         const years = getYearOptions(currentYearValue, localeOptions.pastOnly)
 
@@ -161,45 +157,40 @@ export const useNavigation: UseNavigationHook = (
             month: 'long' as const,
         }
 
-        const isCustom = isCustomCalendar(options.calendar)
+        const isCustom = isCustomCalendar(calendar)
         const months =
-            !isCustom && options.locale?.toLowerCase().startsWith('en')
-                ? getMonthsForCalendar(options.calendar)
-                : getMonthsForCalendar(
-                      isCustom ? 'gregory' : options.calendar
-                  ).map((month) => {
-                      const calendar = new Temporal.Calendar(
-                          isCustom ? 'gregory' : options.calendar
-                      )
-                      const referenceDate = calendar.dateFromFields({
-                          year: 2000,
-                          month: 1,
-                          day: 1,
-                      })
+            !isCustom && localeOptions.locale?.toLowerCase().startsWith('en')
+                ? getMonthsForCalendar(calendar)
+                : getMonthsForCalendar(isCustom ? 'gregory' : calendar).map(
+                      (month) => {
+                          // isCustom (Nepali) has no real Temporal representation to
+                          // construct - localiseMonth's custom-calendar branch only
+                          // ever reads `.month` off this value, so a plain object
+                          // carrying just the month number is enough.
+                          const date = isCustom
+                              ? { month: month.value }
+                              : Temporal.PlainDate.from({
+                                    year: 2000,
+                                    month: month.value,
+                                    day: 1,
+                                    calendar,
+                                })
 
-                      const date = calendar.dateFromFields({
-                          year: referenceDate.year,
-                          month: month.value,
-                          day: 1,
-                      })
-
-                      return {
-                          value: month.value,
-                          label:
-                              localisationHelpers.localiseMonth(
-                                  date,
-                                  {
-                                      ...localeOptions,
-                                      calendar: options.calendar,
-                                  },
-                                  monthFormat
-                              ) || month.label,
+                          return {
+                              value: month.value,
+                              label:
+                                  localisationHelpers.localiseMonth(
+                                      date,
+                                      localeOptions,
+                                      monthFormat
+                                  ) || month.label,
+                          }
                       }
-                  })
+                  )
         const navigateToMonth = (monthNum: number) => {
             try {
-                setFirstZdtOfVisibleMonth(
-                    firstZdtOfVisibleMonth.with({ month: monthNum, day: 1 })
+                setFirstOfVisibleMonth(
+                    firstOfVisibleMonth.with({ month: monthNum, day: 1 })
                 )
             } catch (e) {
                 console.error('Invalid month navigation:', e)
@@ -208,7 +199,7 @@ export const useNavigation: UseNavigationHook = (
 
         const navigateToYear = (year: number) => {
             try {
-                setFirstZdtOfVisibleMonth(firstZdtOfVisibleMonth.with({ year }))
+                setFirstOfVisibleMonth(firstOfVisibleMonth.with({ year }))
             } catch (e) {
                 console.error('Invalid year navigation:', e)
             }
@@ -218,15 +209,15 @@ export const useNavigation: UseNavigationHook = (
             prevYear: {
                 label: localisationHelpers.localiseYear(
                     prevYear,
-                    { ...localeOptions, calendar: options.calendar },
+                    localeOptions,
                     yearNumericFormat
                 ),
-                navigateTo: () => setFirstZdtOfVisibleMonth(prevYear),
+                navigateTo: () => setFirstOfVisibleMonth(prevYear),
             },
             currYear: {
                 label: localisationHelpers.localiseYear(
-                    firstZdtOfVisibleMonth,
-                    { ...localeOptions, calendar: options.calendar },
+                    firstOfVisibleMonth,
+                    localeOptions,
                     yearNumericFormat
                 ),
                 value: currentYearValue,
@@ -234,38 +225,38 @@ export const useNavigation: UseNavigationHook = (
             nextYear: {
                 label: localisationHelpers.localiseYear(
                     nextYear,
-                    { ...localeOptions, calendar: options.calendar },
+                    localeOptions,
                     yearNumericFormat
                 ),
-                navigateTo: () => setFirstZdtOfVisibleMonth(nextYear),
+                navigateTo: () => setFirstOfVisibleMonth(nextYear),
             },
             prevMonth: {
                 label: localisationHelpers.localiseMonth(
                     prevMonth,
-                    { ...localeOptions, calendar: options.calendar },
+                    localeOptions,
                     monthFormat
                 ),
-                navigateTo: () => setFirstZdtOfVisibleMonth(prevMonth),
+                navigateTo: () => setFirstOfVisibleMonth(prevMonth),
             },
             currMonth: {
                 label: localisationHelpers.localiseMonth(
-                    firstZdtOfVisibleMonth,
-                    { ...localeOptions, calendar: options.calendar },
+                    firstOfVisibleMonth,
+                    localeOptions,
                     monthFormat
                 ),
             },
             nextMonth: {
                 label: localisationHelpers.localiseMonth(
                     nextMonth,
-                    { ...localeOptions, calendar: options.calendar },
+                    localeOptions,
                     monthFormat
                 ),
-                navigateTo: () => setFirstZdtOfVisibleMonth(nextMonth),
+                navigateTo: () => setFirstOfVisibleMonth(nextMonth),
             },
             months,
             years,
             navigateToMonth,
             navigateToYear,
         }
-    }, [firstZdtOfVisibleMonth, localeOptions, setFirstZdtOfVisibleMonth])
+    }, [firstOfVisibleMonth, localeOptions, setFirstOfVisibleMonth])
 }

@@ -1,31 +1,42 @@
 import { Temporal } from '@js-temporal/polyfill-patched'
 import { dhis2CalendarsMap } from '../constants/dhis2CalendarsMap'
-import { getCustomCalendarIfExists, isCustomCalendar } from '../utils/helpers'
+import { CalendarDate, SupportedCalendar } from '../types'
+import { getPlainDateFromIso } from './helpers'
 
 /**
- * Gets the Now DateTime in the specified calendar and timeZone
+ * Gets the current date in the specified calendar and timeZone.
  *
  * @param calendarToUse the calendar to use
  * @param timeZone the timeZone to use
- * @returns Temporal.ZoneDateTime which can be destructured to .year, .month, .day, .hour etc... (returning the values in the specified calendar) or can .getISOFields() to return the underlying iso8601 date
+ * @returns a plain `{ year, month, day, eraYear? }` object for the current
+ * date in the specified calendar - no Temporal (or other date-engine) types
+ * attached, matching `convertFromIso8601`/`convertToIso8601`. Note: unlike
+ * previous versions, this no longer carries time-of-day/timezone
+ * information - the timeZone parameter is only used to resolve which
+ * calendar date is "now".
  */
 const getNowInCalendar = (
-    calendarToUse: Temporal.CalendarLike = 'gregory',
-    timeZone: Temporal.TimeZoneLike = Intl?.DateTimeFormat?.().resolvedOptions?.()
-        ?.timeZone || 'UTC'
-): Temporal.ZonedDateTime => {
-    const gregorianDate = Temporal.Now.zonedDateTime('gregory', timeZone)
-    let calendar: Temporal.CalendarLike =
-        dhis2CalendarsMap[calendarToUse as string] ?? calendarToUse
+    // widened beyond SupportedCalendar to also accept DHIS2 calendar
+    // identifiers (e.g. 'ethiopian', 'gregorian') resolved via dhis2CalendarsMap below
+    calendarToUse = 'gregory',
+    timeZone: string = Intl?.DateTimeFormat?.().resolvedOptions?.()?.timeZone ||
+        'UTC'
+): CalendarDate => {
+    const isoDate = Temporal.Now.plainDateISO(timeZone)
+    const calendar = (dhis2CalendarsMap[calendarToUse as string] ??
+        calendarToUse) as SupportedCalendar
 
-    if (isCustomCalendar(calendar)) {
-        calendar = getCustomCalendarIfExists(calendar)
+    const date = getPlainDateFromIso(
+        { year: isoDate.year, month: isoDate.month, day: isoDate.day },
+        calendar
+    )
+
+    return {
+        eraYear: date.eraYear,
+        year: date.year,
+        month: date.month,
+        day: date.day,
     }
-
-    const result =
-        Temporal.ZonedDateTime.from(gregorianDate).withCalendar(calendar)
-
-    return result
 }
 
 export default getNowInCalendar
