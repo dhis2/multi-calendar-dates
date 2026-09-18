@@ -1,3 +1,42 @@
+# [3.0.0](https://github.com/dhis2/multi-calendar-dates/compare/v2.1.2...v3.0.0) (2026-09-18)
+
+
+* feat(temporal)!: upgrade @js-temporal/polyfill to 0.5.1 ([ade19d5](https://github.com/dhis2/multi-calendar-dates/commit/ade19d5deebff7e884e1bb5680f741cb14d0f451)), closes [js-temporal/temporal-polyfill#357](https://github.com/js-temporal/temporal-polyfill/issues/357)
+
+
+### Bug Fixes
+
+* **build:** add rootDir and exclude vendor from tsconfig for TS 6.0 ([6a7b2dc](https://github.com/dhis2/multi-calendar-dates/commit/6a7b2dc17e98565b9fdc9baad7a959a71bfae5cc))
+* **ci:** upgrade to Node 20, fix lint errors and formatting ([5fc57bc](https://github.com/dhis2/multi-calendar-dates/commit/5fc57bc68edfade7f0e27dbaaa6f03c389d77334))
+* **ci:** wire @js-temporal/polyfill-patched alias for cucumber runner ([7864a75](https://github.com/dhis2/multi-calendar-dates/commit/7864a753e8bead1e24b79aa5e873d0bf935ce44e))
+* **ethiopic:** vendor @js-temporal/polyfill with CLDR 48 era-code patch ([ec948fa](https://github.com/dhis2/multi-calendar-dates/commit/ec948fabac3b91ca0f6eac83301422dc3a5558d4)), closes [js-temporal/temporal-polyfill#357](https://github.com/js-temporal/temporal-polyfill/issues/357)
+* **translations:** sync translations from transifex (main) ([d202f08](https://github.com/dhis2/multi-calendar-dates/commit/d202f08a8e77943b307abff3fc7feef7ff74d22b))
+* **translations:** sync translations from transifex (main) ([155c81e](https://github.com/dhis2/multi-calendar-dates/commit/155c81e1629c86a1c7459125ff6d575ec55649f2))
+* **translations:** sync translations from transifex (main) ([d8e719e](https://github.com/dhis2/multi-calendar-dates/commit/d8e719ec073d31cbdbe366d98fd881145f466e1c))
+* **useDatePicker:** memoize calendarWeekDays and selectedDateZdt ([f10b088](https://github.com/dhis2/multi-calendar-dates/commit/f10b088bf2587758249d9aef7c76785b1035f5e1))
+* **useDatePicker:** stabilize useNavigation args to fix per-keystroke lag ([3b3fd03](https://github.com/dhis2/multi-calendar-dates/commit/3b3fd03644b9284cd9dc3dbb9ea35674d19b2a62))
+* **vendor:** remove this-param from DateTimeFormatImpl to fix Babel arg-shift bug ([#100](https://github.com/dhis2/multi-calendar-dates/issues/100)) ([23e7553](https://github.com/dhis2/multi-calendar-dates/commit/23e75535cdc92074ddbde9aba220278b678b04c2))
+
+
+### Features
+
+* trigger publish ([19fe19c](https://github.com/dhis2/multi-calendar-dates/commit/19fe19ce8680fc968dd348f3ab2d267e1b51bc7e))
+
+
+### BREAKING CHANGES
+
+* getNowInCalendar now returns a plain CalendarDate
+object ({ year, month, day, eraYear? }, src/types.ts) instead of a
+Temporal.ZonedDateTime. This removes Temporal from the public
+interface entirely and matches convertFromIso8601/convertToIso8601's
+existing return shape. Code that only read .year/.month/.day/.eraYear
+needs no changes; code that called Temporal methods on the result
+needs to re-derive another date via getNowInCalendar/convertFromIso8601
+instead of calling .withCalendar()/.startOfDay() on the previous
+result.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+
 # [3.0.0-alpha.1](https://github.com/dhis2/multi-calendar-dates/compare/v2.2.0-alpha.3...v3.0.0-alpha.1) (2026-07-06)
 
 
