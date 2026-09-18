@@ -306,7 +306,7 @@ describe('Ethiopic Calendar fixed period calculation', () => {
 
             expect(results.length).toBe(62)
             expect(results[0]).toMatchObject({
-                displayName: 'Meskerem 1, 2016 ERA0',
+                displayName: 'Meskerem 1, 2016',
                 endDate: '2016-01-01',
                 id: '20160101',
                 iso: '20160101',
@@ -315,7 +315,7 @@ describe('Ethiopic Calendar fixed period calculation', () => {
                 startDate: '2016-01-01',
             })
             expect(results[results.length - 1]).toMatchObject({
-                displayName: 'Hedar 2, 2016 ERA0',
+                displayName: 'Hedar 2, 2016',
                 endDate: '2016-03-02',
                 id: '20160302',
                 iso: '20160302',

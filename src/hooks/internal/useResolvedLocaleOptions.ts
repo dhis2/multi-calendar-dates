@@ -1,4 +1,4 @@
-import { Intl } from '@js-temporal/polyfill'
+import { Intl } from '@js-temporal/polyfill-patched'
 import { useMemo } from 'react'
 import {
     PickerOptions,

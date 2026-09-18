@@ -30,6 +30,82 @@ has some of the requirements and design decisions for this project.
 This [Jira epic](https://dhis2.atlassian.net/browse/DHIS2-14051) lists the app
 that moved to using the library, and what comes next.
 
+# Breaking changes: `@js-temporal/polyfill` 0.5.x calendar protocol removal
+
+This library upgraded its internal `@js-temporal/polyfill` dependency from
+0.4.x to 0.5.x. The proposal itself changed shape between those versions (per
+the [TC39 June 2024 meeting](https://docs.google.com/presentation/d/1PPMAxVnVjFwRPuJwOvVsw9nZLQ6jDM8Hd5PNO0Grp4I)),
+in a way that forced real changes to this library's internals and one public
+function. Understanding the underlying change explains *why* those internals
+look the way they do, in case you're debugging something calendar-related or
+upgrading the polyfill further in the future.
+
+**What changed upstream:** in 0.4.x, `Temporal.Calendar` was a real,
+subclassable class implementing a defined protocol — `dateFromFields`,
+`dateAdd`, `dateUntil`, `fields`, `mergeFields`, plus read methods like
+`year`, `month`, `eraYear`, `daysInMonth`. Any object implementing this
+protocol could be plugged into Temporal's engine as the `calendar` of a
+`PlainDate`/`ZonedDateTime`, and Temporal's internal machinery (arithmetic,
+formatting, comparison) would transparently call back into it. In 0.5.0,
+**`Temporal.Calendar` (and the entire user-defined-calendar protocol) was
+removed from the proposal entirely** — "without custom calendars, the huge
+surface area of `Temporal.Calendar` was not necessary." Calendars are now
+*only* plain string identifiers (a fixed set of built-in CLDR/ISO calendar
+IDs); there is no way to register custom calendar logic with Temporal at
+all. `Temporal.TimeZone` was removed for the identical reason (time zones
+are also string-only now). The `.calendar` property was also renamed to
+`.calendarId` and always returns a string.
+
+**How that drove this library's changes:**
+
+- This library's one non-CLDR calendar, Nepali, used to be implemented as
+  `NepaliCalendar extends Temporal.Calendar` — a real plugin registered with
+  Temporal's engine. With the protocol gone, there is nothing left to
+  `extends`, and no dispatch mechanism left for Temporal to call into even
+  if there were. Nepali support had to move from "a plugin Temporal knows
+  about" to a standalone, hand-rolled class living entirely outside
+  Temporal's object graph: `NepaliPlainDate`
+  (`src/custom-calendars/nepaliCalendar.ts`), wrapping a real ISO
+  `Temporal.PlainDate` internally and reimplementing the pieces it needs.
+- Because a Nepali date is no longer ever a real `Temporal.PlainDate`, any
+  code path that can receive either a CLDR-calendar date or a Nepali one now
+  works with a union type, `AnyPlainDate` (`Temporal.PlainDate |
+  NepaliPlainDate`, defined in `src/utils/plainDate.ts`), plus helper
+  functions (`toIsoPlainDate`, `isSameDate`) to compare across the two
+  representations consistently.
+- Every call site that used to do `Temporal.Calendar.from(x).dateFromFields(fields)`,
+  or pass a `NepaliCalendar` instance as the `calendar` field of a
+  `Temporal.PlainDate.from({ ...fields, calendar })` call, no longer
+  compiles or works (calendars must be plain strings now). These were
+  consolidated into two functions in `src/utils/helpers.ts` —
+  `getPlainDateFromCalendarFields` (construct from that calendar's own
+  year/month/day fields) and `getPlainDateFromIso` (reinterpret an ISO date
+  in a target calendar) — which dispatch to either real Temporal
+  construction (string calendar) or `NepaliPlainDate`'s own static methods,
+  via a small registry (`customPlainDateImplementations` in
+  `src/utils/plainDate.ts`) rather than hardcoding "is it Nepali?" at every
+  call site.
+- **`getNowInCalendar`'s public return type had to change** for the same
+  root reason, not just as a cleanup: it used to return a
+  `Temporal.ZonedDateTime` tagged with the target calendar, which for Nepali
+  meant calling `.withCalendar(nepaliCalendarInstance)` — a construct that
+  simply has no equivalent anymore. Rather than swap in the
+  Temporal-flavoured `AnyPlainDate` as a stopgap, it now returns a plain
+  `CalendarDate` object (`{ year, month, day, eraYear? }`, matching
+  `convertFromIso8601`/`convertToIso8601`'s existing shape) — see the
+  breaking-change note under [`getNowInCalendar`](#getnowincalendar) below.
+- The same 0.5.x work also tightened Temporal's own field validation: if you
+  supply `eraYear` when constructing a date, you must also supply the
+  matching `era` string, or it throws. This surfaced as a real bug during
+  this migration — `getPlainDateFromCalendarFields` was feeding a
+  `CalendarDate`'s `eraYear` (populated for any calendar with a genuine era
+  concept, e.g. Gregorian's AD, not just Ethiopic) back into
+  `Temporal.PlainDate.from()` without the matching `era`, since `CalendarDate`
+  deliberately never carries `era` publicly. The fix: only forward
+  `era`/`eraYear` together when *both* are present; otherwise drop them and
+  rely on `year` alone, which Temporal always accepts standalone for any
+  calendar.
+
 # Periods and Dates helpers
 
 The library also provides helper methods to work with periods and dates in
@@ -273,7 +349,24 @@ type FixedPeriod = {
 
 ## getNowInCalendar
 
-`getNowInCalendar` returns today's date in the specified calendrical system.
+`getNowInCalendar` returns today's date in the specified calendrical system,
+as a plain `{ year, month, day, eraYear? }` object — the same shape returned
+by `convertFromIso8601`/`convertToIso8601` below.
+
+> **Breaking change (`@js-temporal/polyfill` 0.5.x upgrade):** prior versions
+> of this library returned a `Temporal.ZonedDateTime` directly from
+> `getNowInCalendar`, exposing Temporal methods (`.startOfDay()`,
+> `.withCalendar()`, etc.) and time-of-day/timezone information alongside
+> `.year`/`.month`/`.day`/`.eraYear`. It now returns plain data only — no
+> Temporal (or other date-engine) type is exposed, and there is no time-of-day
+> or timezone information. Code that only read `.year`/`.month`/`.day`/`.eraYear`
+> (the documented, common case) needs no changes; code that called Temporal
+> methods on the result needs to be rewritten against plain data (e.g. re-derive
+> another date via `getNowInCalendar`/`convertFromIso8601` again, rather than
+> calling `.withCalendar()` on the previous result). See
+> ["Breaking changes: `@js-temporal/polyfill` 0.5.x calendar protocol
+> removal"](#breaking-changes-js-temporalpolyfill-05x-calendar-protocol-removal)
+> above for why this was forced, not just a cleanup.
 
 ### Examples
 
@@ -710,14 +803,13 @@ day names, and the weeks in the current view (month).
 type DatePickerOptions = {
     date: string
     options: PickerOptions
-    onDateSelect: ({
-        calendarDate,
-        calendarDateString,
-    }: {
-        calendarDate: Temporal.ZonedDateTime
-        calendarDateString: string
-    }) => void
+    onDateSelect: (payload: OnDateSelectPayload) => void
+    minDate?: string
+    maxDate?: string
+    format?: 'YYYY-MM-DD' | 'DD-MM-YYYY'
+    strictValidation?: boolean
 }
+type OnDateSelectPayload = { calendarDateString: string } | null
 ```
 
 ```ts
@@ -725,9 +817,8 @@ type DatePickerOptions = {
 type UseDatePickerReturn = UseNavigationReturnType & {
     weekDayLabels: string[]
     calendarWeekDays: {
-        zdt: Temporal.ZonedDateTime
+        dateValue: string
         label: string | number
-        calendarDate: string
         onClick: () => void
         isSelected: boolean | undefined
         isToday: boolean

@@ -67,8 +67,10 @@ describe('date conversion from gregorian', () => {
     })
     it('should convert to islamic date', () => {
         const result = convertFromIso8601('2024-05-23', 'islamic')
+        // Islamic has no era concept, so eraYear is genuinely undefined here
+        // (unlike Ethiopic) - consumers should read `eraYear ?? year`.
         expect(result).toMatchObject({
-            eraYear: 1445,
+            eraYear: undefined,
             year: 1445,
             month: 11,
             day: 15,

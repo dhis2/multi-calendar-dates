@@ -17,7 +17,7 @@ describe('Ethiopic/getAdjacentFixedPeriods', () => {
                 {
                     periodType: 'DAILY',
                     name: '2014-13-05',
-                    displayName: 'Pagumen 5, 2014 ERA0',
+                    displayName: 'Pagumen 5, 2014',
                     id: '20141305',
                     iso: '20141305',
                     startDate: '2014-13-05',
@@ -26,7 +26,7 @@ describe('Ethiopic/getAdjacentFixedPeriods', () => {
                 {
                     periodType: 'DAILY',
                     name: '2015-01-01',
-                    displayName: 'Meskerem 1, 2015 ERA0',
+                    displayName: 'Meskerem 1, 2015',
                     id: '20150101',
                     iso: '20150101',
                     startDate: '2015-01-01',
@@ -51,7 +51,7 @@ describe('Ethiopic/getAdjacentFixedPeriods', () => {
                 {
                     periodType: 'DAILY',
                     name: '2014-13-04',
-                    displayName: 'Pagumen 4, 2014 ERA0',
+                    displayName: 'Pagumen 4, 2014',
                     id: '20141304',
                     iso: '20141304',
                     startDate: '2014-13-04',
@@ -60,7 +60,7 @@ describe('Ethiopic/getAdjacentFixedPeriods', () => {
                 {
                     periodType: 'DAILY',
                     name: '2014-13-05',
-                    displayName: 'Pagumen 5, 2014 ERA0',
+                    displayName: 'Pagumen 5, 2014',
                     id: '20141305',
                     iso: '20141305',
                     startDate: '2014-13-05',
@@ -69,7 +69,7 @@ describe('Ethiopic/getAdjacentFixedPeriods', () => {
                 {
                     periodType: 'DAILY',
                     name: '2015-01-01',
-                    displayName: 'Meskerem 1, 2015 ERA0',
+                    displayName: 'Meskerem 1, 2015',
                     id: '20150101',
                     iso: '20150101',
                     startDate: '2015-01-01',
