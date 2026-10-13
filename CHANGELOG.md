@@ -1,3 +1,10 @@
+# [3.1.0](https://github.com/dhis2/multi-calendar-dates/compare/v3.0.0...v3.1.0) (2026-10-13)
+
+
+### Features
+
+* **getNowInCalendar:** return hour, minute and second ([#105](https://github.com/dhis2/multi-calendar-dates/issues/105)) ([b197f07](https://github.com/dhis2/multi-calendar-dates/commit/b197f07cb012e0891e6aa95420a9e04109f33e3c))
+
 # [3.0.0](https://github.com/dhis2/multi-calendar-dates/compare/v2.1.2...v3.0.0) (2026-09-18)
 
 
