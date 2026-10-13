@@ -18,7 +18,7 @@ Everything exported from `src/index.ts` is public. Nothing else is.
 - `periodTypes` — const array of all 53 supported period type identifiers
 
 **Utilities**
-- `getNowInCalendar` — today's date in any supported calendar
+- `getNowInCalendar` — the current date and time of day in any supported calendar
 - `convertFromIso8601` / `convertToIso8601` — convert between ISO 8601 and any calendar
 - `validateDateString` — validates a date string against format, range, and calendar rules
 
@@ -28,8 +28,8 @@ Everything exported from `src/index.ts` is public. Nothing else is.
 
 **Implicit Temporal contract.** The Temporal API (`@js-temporal/polyfill`) is described as an internal implementation detail. As of the `@js-temporal/polyfill` 0.5.x upgrade, both Temporal-adjacent public functions return plain, engine-agnostic data — no Temporal (or other date-engine) types are exposed publicly:
 
-- **`getNowInCalendar`** — returns a `CalendarDate` (`src/types.ts`): a plain `{ year, month, day, eraYear? }` object, no time-of-day/timezone information. Previously returned `Temporal.ZonedDateTime` directly (0.4.x and earlier), which leaked Temporal into the public interface — this was fixed as part of the 0.5.x upgrade.
-- **`convertFromIso8601` / `convertToIso8601`** — accept `string | Temporal.PlainDateLike` as their `date` parameter, and return the same `CalendarDate` shape. This shape is deliberately kept stable across polyfill upgrades.
+- **`getNowInCalendar`** — returns a `CalendarDateTime` (`src/types.ts`): a plain `{ year, month, day, eraYear?, hour, minute, second }` object (`CalendarDate` plus wall-clock time in the requested time zone; no other timezone information). Previously returned `Temporal.ZonedDateTime` directly (0.4.x and earlier), which leaked Temporal into the public interface — this was fixed as part of the 0.5.x upgrade.
+- **`convertFromIso8601` / `convertToIso8601`** — accept `string | Temporal.PlainDateLike` as their `date` parameter, and return a `CalendarDate` (the date part of the same shape, without time of day). This shape is deliberately kept stable across polyfill upgrades.
 
 `useDatePicker` and the period-calculation functions (`generateFixedPeriods`, `getFixedPeriodByDate`, etc.) are insulated too — their return types use plain strings and numbers, not Temporal objects.
 

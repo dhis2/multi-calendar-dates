@@ -54,6 +54,53 @@ describe('getting Now', () => {
             year: 1400,
         })
     })
+    it('should return the time of day in the given timeZone', () => {
+        // 01:46:40 UTC
+        const { hour, minute, second } = getNowInCalendar('gregory', 'UTC')
+        expect({ hour, minute, second }).toEqual({
+            hour: 1,
+            minute: 46,
+            second: 40,
+        })
+    })
+    it('should return the time of day for a non-Gregorian calendar', () => {
+        // Asia/Kathmandu is UTC+05:45
+        const { hour, minute, second } = getNowInCalendar(
+            'nepali',
+            'Asia/Kathmandu'
+        )
+        expect({ hour, minute, second }).toEqual({
+            hour: 7,
+            minute: 31,
+            second: 40,
+        })
+    })
+    it('should resolve the date and time from the same instant in the given timeZone', () => {
+        // 01:46:40 UTC on 13 October is still 12 October in Los Angeles (UTC-7)
+        const { day, month, year, hour, minute, second } = getNowInCalendar(
+            'gregory',
+            'America/Los_Angeles'
+        )
+        expect({ day, month, year, hour, minute, second }).toEqual({
+            day: 12,
+            month: 10,
+            year: 2021,
+            hour: 18,
+            minute: 46,
+            second: 40,
+        })
+    })
+    it('should return the time of day in Ethiopic', () => {
+        expect(getNowInCalendar('ethiopian', 'UTC')).toEqual({
+            eraYear: 2014,
+            year: expect.any(Number),
+            month: 2,
+            day: 3,
+            hour: 1,
+            minute: 46,
+            second: 40,
+        })
+    })
     it('should return a valid date when no timezone is provided', () => {
         const result = getNowInCalendar('gregory')
         expect(result.year).toBeTruthy()

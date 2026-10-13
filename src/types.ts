@@ -24,6 +24,18 @@ export type CalendarDate = {
     eraYear?: number
 }
 
+/**
+ * A `CalendarDate` plus the wall-clock time of day (24-hour) in the time zone
+ * it was resolved for. Returned by `getNowInCalendar`. Time of day doesn't
+ * depend on the calendar system, so these fields are the same whatever
+ * calendar the date part is in.
+ */
+export type CalendarDateTime = CalendarDate & {
+    hour: number
+    minute: number
+    second: number
+}
+
 export type PickerOptions = Partial<ResolvedLocaleOptions>
 
 export type PickerOptionsWithResolvedCalendar = Omit<

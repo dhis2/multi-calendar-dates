@@ -349,18 +349,23 @@ type FixedPeriod = {
 
 ## getNowInCalendar
 
-`getNowInCalendar` returns today's date in the specified calendrical system,
-as a plain `{ year, month, day, eraYear? }` object — the same shape returned
-by `convertFromIso8601`/`convertToIso8601` below.
+`getNowInCalendar` returns the current date and time of day in the specified
+calendrical system and time zone, as a plain
+`{ year, month, day, eraYear?, hour, minute, second }` object (typed as
+`CalendarDateTime`). The date fields are the same shape returned by
+`convertFromIso8601`/`convertToIso8601` below; `hour` (0-23), `minute` and
+`second` are the wall-clock time in the given time zone, read from the same
+instant as the date.
 
 > **Breaking change (`@js-temporal/polyfill` 0.5.x upgrade):** prior versions
 > of this library returned a `Temporal.ZonedDateTime` directly from
 > `getNowInCalendar`, exposing Temporal methods (`.startOfDay()`,
 > `.withCalendar()`, etc.) and time-of-day/timezone information alongside
 > `.year`/`.month`/`.day`/`.eraYear`. It now returns plain data only — no
-> Temporal (or other date-engine) type is exposed, and there is no time-of-day
-> or timezone information. Code that only read `.year`/`.month`/`.day`/`.eraYear`
-> (the documented, common case) needs no changes; code that called Temporal
+> Temporal (or other date-engine) type is exposed. `.hour`/`.minute`/`.second`
+> are still available as plain numbers (they were missing in 3.0.0 and added
+> back afterwards); other time zone information is not. Code that only read
+> `.year`/`.month`/`.day`/`.eraYear`/`.hour`/`.minute`/`.second` needs no changes; code that called Temporal
 > methods on the result needs to be rewritten against plain data (e.g. re-derive
 > another date via `getNowInCalendar`/`convertFromIso8601` again, rather than
 > calling `.withCalendar()` on the previous result). See
@@ -387,6 +392,11 @@ it('should get today date in Ethiopic', () => {
         month: 2,
         year: 2014,
     })
+})
+it('should get the time of day in the given time zone', () => {
+    // 01:46:40 UTC; Asia/Kathmandu is UTC+05:45
+    const { hour, minute, second } = getNowInCalendar('nepali', 'Asia/Kathmandu')
+    expect({ hour, minute, second }).toEqual({ hour: 7, minute: 31, second: 40 })
 })
 ```
 
