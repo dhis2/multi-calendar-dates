@@ -447,16 +447,50 @@ The method takes two positional arguments:
 -   `timeZone`: a string representing the time zone (defaults to `UTC`) of the
     user.
 
-and returns a
-[ZonedDateTime](https://tc39.es/proposal-temporal/docs/zoneddatetime.html#properties)
-object, which can be destructured to `.year` or `.eraYear` (`eraYear` preferred
-to avoid an issue with Ethiopic calendar), `.month`, `.day` which returns the
-values in the specified calendar, or you can `.getISOFields()` to return the
-underlying iso8601 (gregory) date.
+and returns a plain `{ year, month, day, eraYear? }` object in the specified
+calendar. Read the year as `eraYear ?? year`. To turn it into a `yyyy-MM-dd`
+string, use [`formatCalendarDate`](#date-arithmetic-and-formatting).
 
-> ToDo: we should also return the date stringified into `yyyy-MM-dd` since this
-> is the most common usecase and it would help clients not to have to do the
-> conversion manually.
+## Date arithmetic and formatting
+
+These take and return the same plain date objects as `getNowInCalendar` and
+`convertFromIso8601`, so their results can be passed in as-is. They follow the
+DHIS2 date-string convention: the year is `eraYear ?? year` (e.g. the Amete
+Mihret year for Ethiopic, not Temporal's Amete Alem `year`). The calendar can
+be a Temporal calendar id or a DHIS2 one (`ethiopian`, `gregorian`, …).
+
+-   **`getDaysInMonth({ year, month }, calendar)`** returns the number of days
+    in a month, e.g. `29` for February 2024, `5` or `6` for the 13th month in
+    Ethiopic, or up to `32` in Nepali.
+-   **`addToCalendarDate(date, { years, months, days }, calendar)`** adds (or,
+    with negative values, subtracts) years, months and days. Years and months
+    are counted in the calendar's own months, and the day is clamped to the
+    end of the resulting month; days are added after that.
+-   **`formatCalendarDate(date, { format, includeTime })`** formats a date as
+    the date string the DHIS2 backend expects. `format` is `YYYY-MM-DD`
+    (default) or `DD-MM-YYYY`. `includeTime` appends `Thh:mm:ss`, from
+    `getNowInCalendar`'s `hour`, `minute` and `second`.
+
+All of them throw for a date that doesn't exist in the calendar, or a Nepali
+year outside 1970-2100.
+
+### Examples
+
+```js
+const now = getNowInCalendar('ethiopian') // { eraYear: 2016, year: 7516, month: 10, day: 8, … }
+
+formatCalendarDate(now) // '2016-10-08'
+formatCalendarDate(now, { includeTime: true }) // '2016-10-08T10:30:00'
+
+// one year ago
+formatCalendarDate(addToCalendarDate(now, { years: -1 }, 'ethiopian')) // '2015-10-08'
+
+// 31 March minus 1 month is clamped to the end of February
+addToCalendarDate({ year: 2024, month: 3, day: 31 }, { months: -1 }, 'gregory') // { year: 2024, month: 2, day: 29, … }
+
+getDaysInMonth({ year: 2016, month: 13 }, 'ethiopian') // 5
+getDaysInMonth({ year: 2081, month: 2 }, 'nepali') // 32
+```
 
 ## `createFixedPeriodFromPeriodId`
 
