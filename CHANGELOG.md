@@ -1,3 +1,10 @@
+# [3.2.0](https://github.com/dhis2/multi-calendar-dates/compare/v3.1.0...v3.2.0) (2026-10-15)
+
+
+### Features
+
+* add date arithmetic and formatting helpers ([#106](https://github.com/dhis2/multi-calendar-dates/issues/106)) ([ad2111a](https://github.com/dhis2/multi-calendar-dates/commit/ad2111a3fd643f94994db3d02e6320a0a25bceac))
+
 # [3.1.0](https://github.com/dhis2/multi-calendar-dates/compare/v3.0.0...v3.1.0) (2026-10-13)
 
 
