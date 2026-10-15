@@ -9,5 +9,8 @@ export {
     DateValidationResult,
     convertFromIso8601,
     convertToIso8601,
+    addToCalendarDate,
+    formatCalendarDate,
+    getDaysInMonth,
 } from './utils'
 export type { CalendarDate, CalendarDateTime } from './types'

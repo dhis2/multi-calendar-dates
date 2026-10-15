@@ -9,3 +9,8 @@ export {
 } from './validate-date-string'
 
 export { convertFromIso8601, convertToIso8601 } from './convert-date'
+export {
+    addToCalendarDate,
+    formatCalendarDate,
+    getDaysInMonth,
+} from './calendar-date'

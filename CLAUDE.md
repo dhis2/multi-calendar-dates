@@ -21,6 +21,9 @@ Everything exported from `src/index.ts` is public. Nothing else is.
 - `getNowInCalendar` — the current date and time of day in any supported calendar
 - `convertFromIso8601` / `convertToIso8601` — convert between ISO 8601 and any calendar
 - `validateDateString` — validates a date string against format, range, and calendar rules
+- `getDaysInMonth` — the number of days in a month in any calendar
+- `addToCalendarDate` — adds years/months/days to a plain date, clamping the day to the end of the month (with correct month arithmetic for Nepali)
+- `formatCalendarDate` — formats a plain date (optionally with time of day) as the `yyyy-MM-dd` string the backend expects
 
 **Constants**
 - `constants.calendars` — 21 supported calendar IDs
