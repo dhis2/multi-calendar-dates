@@ -30,729 +30,98 @@ has some of the requirements and design decisions for this project.
 This [Jira epic](https://dhis2.atlassian.net/browse/DHIS2-14051) lists the app
 that moved to using the library, and what comes next.
 
-# Breaking changes: `@js-temporal/polyfill` 0.5.x calendar protocol removal
+# API
 
-This library upgraded its internal `@js-temporal/polyfill` dependency from
-0.4.x to 0.5.x. The proposal itself changed shape between those versions (per
-the [TC39 June 2024 meeting](https://docs.google.com/presentation/d/1PPMAxVnVjFwRPuJwOvVsw9nZLQ6jDM8Hd5PNO0Grp4I)),
-in a way that forced real changes to this library's internals and one public
-function. Understanding the underlying change explains *why* those internals
-look the way they do, in case you're debugging something calendar-related or
-upgrading the polyfill further in the future.
+Everything below is exported from `@dhis2/multi-calendar-dates`. See [API and
+examples](./doc/api.md) for arguments, return values and examples.
 
-**What changed upstream:** in 0.4.x, `Temporal.Calendar` was a real,
-subclassable class implementing a defined protocol — `dateFromFields`,
-`dateAdd`, `dateUntil`, `fields`, `mergeFields`, plus read methods like
-`year`, `month`, `eraYear`, `daysInMonth`. Any object implementing this
-protocol could be plugged into Temporal's engine as the `calendar` of a
-`PlainDate`/`ZonedDateTime`, and Temporal's internal machinery (arithmetic,
-formatting, comparison) would transparently call back into it. In 0.5.0,
-**`Temporal.Calendar` (and the entire user-defined-calendar protocol) was
-removed from the proposal entirely** — "without custom calendars, the huge
-surface area of `Temporal.Calendar` was not necessary." Calendars are now
-*only* plain string identifiers (a fixed set of built-in CLDR/ISO calendar
-IDs); there is no way to register custom calendar logic with Temporal at
-all. `Temporal.TimeZone` was removed for the identical reason (time zones
-are also string-only now). The `.calendar` property was also renamed to
-`.calendarId` and always returns a string.
+## Helpers
 
-**How that drove this library's changes:**
+| Name                                                                         | Description                                                                                                                              |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| [`getNowInCalendar`](./doc/api.md#getnowincalendar)                          | The current date and time of day in a calendar and time zone                                                                             |
+| [`convertFromIso8601`](./doc/api.md#convertfromiso8601-and-converttoiso8601) | Converts an ISO 8601 (Gregorian) date to a calendar                                                                                      |
+| [`convertToIso8601`](./doc/api.md#convertfromiso8601-and-converttoiso8601)   | Converts a date in a calendar to ISO 8601 (Gregorian)                                                                                    |
+| [`addToCalendarDate`](./doc/api.md#date-arithmetic-and-formatting)           | Adds or subtracts years, months and days in a calendar, clamping the day to the end of the month                                         |
+| [`formatCalendarDate`](./doc/api.md#date-arithmetic-and-formatting)          | Formats a date as the `yyyy-MM-dd` string the DHIS2 backend expects, optionally with the time of day                                     |
+| [`getDaysInMonth`](./doc/api.md#date-arithmetic-and-formatting)              | The number of days in a month in a calendar                                                                                              |
+| `validateDateString`                                                         | Validates a date string against the format, a min/max range and the calendar's rules. Returns a `DateValidationResult` code when invalid |
 
-- This library's one non-CLDR calendar, Nepali, used to be implemented as
-  `NepaliCalendar extends Temporal.Calendar` — a real plugin registered with
-  Temporal's engine. With the protocol gone, there is nothing left to
-  `extends`, and no dispatch mechanism left for Temporal to call into even
-  if there were. Nepali support had to move from "a plugin Temporal knows
-  about" to a standalone, hand-rolled class living entirely outside
-  Temporal's object graph: `NepaliPlainDate`
-  (`src/custom-calendars/nepaliCalendar.ts`), wrapping a real ISO
-  `Temporal.PlainDate` internally and reimplementing the pieces it needs.
-- Because a Nepali date is no longer ever a real `Temporal.PlainDate`, any
-  code path that can receive either a CLDR-calendar date or a Nepali one now
-  works with a union type, `AnyPlainDate` (`Temporal.PlainDate |
-  NepaliPlainDate`, defined in `src/utils/plainDate.ts`), plus helper
-  functions (`toIsoPlainDate`, `isSameDate`) to compare across the two
-  representations consistently.
-- Every call site that used to do `Temporal.Calendar.from(x).dateFromFields(fields)`,
-  or pass a `NepaliCalendar` instance as the `calendar` field of a
-  `Temporal.PlainDate.from({ ...fields, calendar })` call, no longer
-  compiles or works (calendars must be plain strings now). These were
-  consolidated into two functions in `src/utils/helpers.ts` —
-  `getPlainDateFromCalendarFields` (construct from that calendar's own
-  year/month/day fields) and `getPlainDateFromIso` (reinterpret an ISO date
-  in a target calendar) — which dispatch to either real Temporal
-  construction (string calendar) or `NepaliPlainDate`'s own static methods,
-  via a small registry (`customPlainDateImplementations` in
-  `src/utils/plainDate.ts`) rather than hardcoding "is it Nepali?" at every
-  call site.
-- **`getNowInCalendar`'s public return type had to change** for the same
-  root reason, not just as a cleanup: it used to return a
-  `Temporal.ZonedDateTime` tagged with the target calendar, which for Nepali
-  meant calling `.withCalendar(nepaliCalendarInstance)` — a construct that
-  simply has no equivalent anymore. Rather than swap in the
-  Temporal-flavoured `AnyPlainDate` as a stopgap, it now returns a plain
-  `CalendarDate` object (`{ year, month, day, eraYear? }`, matching
-  `convertFromIso8601`/`convertToIso8601`'s existing shape) — see the
-  breaking-change note under [`getNowInCalendar`](#getnowincalendar) below.
-- The same 0.5.x work also tightened Temporal's own field validation: if you
-  supply `eraYear` when constructing a date, you must also supply the
-  matching `era` string, or it throws. This surfaced as a real bug during
-  this migration — `getPlainDateFromCalendarFields` was feeding a
-  `CalendarDate`'s `eraYear` (populated for any calendar with a genuine era
-  concept, e.g. Gregorian's AD, not just Ethiopic) back into
-  `Temporal.PlainDate.from()` without the matching `era`, since `CalendarDate`
-  deliberately never carries `era` publicly. The fix: only forward
-  `era`/`eraYear` together when *both* are present; otherwise drop them and
-  rely on `year` alone, which Temporal always accepts standalone for any
-  calendar.
+## Fixed period utils
 
-# Periods and Dates helpers
+Used by apps like Data Entry, and by the analytics library, to generate the
+list of fixed periods (daily, weekly, monthly, …) in different calendar
+systems.
 
-The library also provides helper methods to work with periods and dates in
-multiple calendars. This allows doing date arithmetic, comparisons in a
-standard timezone-safe way. It currently relies on the Temporal API.
+| Name                                                                          | Description                                                              |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [`generateFixedPeriods`](./doc/api.md#generatefixedperiods)                   | All periods of a period type in a year, in the given calendar and locale |
+| [`getFixedPeriodByDate`](./doc/api.md#getfixedperiodbydate)                   | The period of a period type that contains a date                         |
+| [`createFixedPeriodFromPeriodId`](./doc/api.md#createfixedperiodfromperiodid) | Rebuilds a period from its id, e.g. `202301`                             |
+| [`getAdjacentFixedPeriods`](./doc/api.md#getadjacentfixedperiods)             | The N periods before or after a period                                   |
 
-> The library is built on top of Temporal API, but this is an implementation
-> detail, and one of the goals of the library is to hide that detail to allow
-> replacing Temporal with a different implementation in the future, i.e. a
-> Kotlin multi-platform implementation to achieve consistency between web,
-> android and backend.
+## Hooks and others
 
-## generateFixedPeriods
+The hooks are exported, but they're mostly used internally: by `@dhis2/ui`'s
+[Calendar](https://ui.dhis2.nu/components/calendar) and
+[CalendarInput](https://ui.dhis2.nu/components/calendar-input). Most apps use
+those components rather than the hooks directly.
 
-`generateFixedPeriods` returns the periods of a specific type in a specific
-year. This is used, for example in [Data
-Visualizer](https://github.com/dhis2/data-visualizer-app/pull/2233), to display
-the list of periods of different types (i.e. monthly, weekly, yearly) in a
-specific year, according to the user's calendar and locale.
+| Name                                       | Description                                                                                                           |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| [`useDatePicker`](#hooks-for-calendar-ui)  | Hook that returns the week grid, day labels and navigation state for a calendar picker                                |
+| `useResolvedDirection`                     | Hook that resolves the text direction (LTR/RTL) from the locale, or an explicit override                              |
+| [`periodTypes`](./doc/api.md#periodtypes)  | All supported period type ids                                                                                         |
+| `constants.calendars`                      | The supported calendar ids                                                                                            |
+| `constants.numberingSystems`               | The supported CLDR numbering system codes                                                                             |
+| `DateValidationResult`                     | The codes `validateDateString` returns when a date is invalid                                                         |
+| `CalendarDate`, `CalendarDateTime` (types) | `{ year, month, day, eraYear? }`, and the same plus `hour`, `minute` and `second`. Read the year as `eraYear ?? year` |
 
-### Examples
+### Hooks for Calendar UI
 
-Calling `generateFixedPeriods({year: 2015, periodType: "FYNOV", calendar:
-"gregory"})` will return all the November financial year periods (FYNOV) from
-the year 2015 (defaults to 10 years). Here are some more examples:
+The library provides a hook `useDatePicker` that's consumed by the dhis/ui
+calendar components. There are two components that currently use it:
 
-```js
-// some examples
-import { generateFixedPeriods } from '@dhis2/multi-calendar-dates'
+-   [Calendar](https://ui.dhis2.nu/components/calendar): a calendar component
+    supporting non-Greogorian calendars
+-   [CalendarInput](https://ui.dhis2.nu/components/calendar-input): a wrapper
+    around the Calendar component to support the most common use case for a
+    calendar when we want to display it next to an input.
 
-describe('generateFixedPeriods', () => {
-    it('should generate financial years periods (starting November) for the specified', () => {
-        const result = generateFixedPeriods({
-            year: 2015,
-            calendar: 'gregory',
-            locale: 'en',
-            periodType: 'FYNOV',
-        })
-
-        expect(result).toEqual(
-            expect.arrayContaining([
-                {
-                    id: '2015Nov',
-                    name: 'November 2015 - October 2016',
-                    startDate: '2015-11-01',
-                    endDate: '2016-10-31',
-                },
-                {
-                    id: '2014Nov',
-                    name: 'November 2014 - October 2015',
-                    startDate: '2014-11-01',
-                    endDate: '2015-10-31',
-                },
-                // .... up to
-                {
-                    id: '2006Nov',
-                    name: 'November 2006 - October 2007',
-                    startDate: '2006-11-01',
-                    endDate: '2007-10-31',
-                },
-            ])
-        )
-    })
-    it('should generate weekly periods (weeks starting on Sunday) for the specified year', () => {
-        const result = generateFixedPeriods({
-            year: 2015,
-            calendar: 'gregory',
-            locale: 'en',
-            periodType: 'WEEKLYSUN',
-        })
-
-        expect(result).toEqual(
-            expect.arrayContaining([
-                {
-                    id: '2015SunW1',
-                    iso: '2015SunW1',
-                    name: 'Week 1 - 2015-01-04 - 2015-01-10',
-                    startDate: '2015-01-04',
-                    endDate: '2015-01-10',
-                },
-                // .... up to
-                {
-                    id: '2015SunW52',
-                    iso: '2015SunW52',
-                    name: 'Week 52 - 2015-12-27 - 2016-01-02',
-                    startDate: '2015-12-27',
-                    endDate: '2016-01-02',
-                },
-            ])
-        )
-    })
-
-    it('should generate monthly periods (localised in Spanish) for the specified year', () => {
-        const result = generateFixedPeriods({
-            year: 2015,
-            calendar: 'gregory',
-            locale: 'es',
-            periodType: 'MONTHLY',
-        })
-
-        expect(result).toEqual(
-            expect.arrayContaining([
-                {
-                    id: '201501',
-                    iso: '201501',
-                    name: 'Enero de 2015',
-                    startDate: '2015-01-01',
-                    endDate: '2015-01-31',
-                },
-                // .... up to
-                {
-                    id: '201512',
-                    iso: '201512',
-                    name: 'Diciembre de 2015',
-                    startDate: '2015-12-01',
-                    endDate: '2015-12-31',
-                },
-            ])
-        )
-    })
-
-    it('should generate bi-monthly periods for the Ethiopic calendar for the specified year', () => {
-        const result = generateFixedPeriods({
-            year: 2015,
-            calendar: 'ethiopic',
-            locale: 'en',
-            periodType: 'BIMONTHLY',
-        })
-
-        expect(result).toEqual(
-            expect.arrayContaining([
-                {
-                    id: '201501B',
-                    iso: '201501B',
-                    name: 'Meskerem - Tekemt 2015',
-                    startDate: '2015-01-01',
-                    endDate: '2015-02-30',
-                },
-                // .... up to
-                {
-                    endDate: '2015-12-30',
-                    id: '201506B',
-                    iso: '201506B',
-                    name: 'Hamle - Nehasse 2015',
-                    startDate: '2015-11-01',
-                },
-            ])
-        )
-    })
-    it('should generate six-monthly periods for the Nepali calendar for the specified year', () => {
-        const result = generateFixedPeriods({
-            year: 2078,
-            calendar: 'nepali',
-            locale: 'en',
-            periodType: 'SIXMONTHLY',
-        })
-
-        expect(result).toEqual([
-            {
-                id: '2078S1',
-                iso: '2078S1',
-                name: 'Baisakh - Ashwin 2078',
-                startDate: '2078-01-01',
-                endDate: '2078-06-31',
-            },
-            {
-                id: '2078S2',
-                iso: '2078S2',
-                name: 'Kartik - Chaitra 2078',
-                startDate: '2078-07-01',
-                endDate: '2078-12-30',
-            },
-        ])
-    })
-})
-```
-
-### Types
-
-The method takes a single `options` parameter and returns an
-`Array<FixedPeriod>`.
-
-#### The `options` param
-
-The `options` param is an object of type `GeneratedPeriodParams`:
+`useDatePicker` takes a
+[DatePickerOptions](https://github.com/dhis2/multi-calendar-dates/blob/multi-calendar-docs/src/hooks/useDatePicker.ts#L16)
+object, and returns
+[UseDatePickerReturn](https://github.com/dhis2/multi-calendar-dates/blob/multi-calendar-docs/src/hooks/useDatePicker.ts#LL28C13-L28C32)
+that contains information needed to render a UI component, i.e. the localised
+day names, and the weeks in the current view (month).
 
 ```ts
-type GeneratedPeriodParams = {
-    year: number
-    periodType: PeriodIdentifier
-    calendar: SupportedCalendar
-    locale?: string
-    startingDay?: number /** 1 is Monday */
-    yearsCount?: number
+// the options passed to useDatePicker
+type DatePickerOptions = {
+    date: string
+    options: PickerOptions
+    onDateSelect: (payload: OnDateSelectPayload) => void
+    minDate?: string
+    maxDate?: string
+    format?: 'YYYY-MM-DD' | 'DD-MM-YYYY'
+    strictValidation?: boolean
 }
+type OnDateSelectPayload = { calendarDateString: string } | null
 ```
 
-For convenience, `locale` can be passed in the Java-like style (i.e. `ar_SD`
-rather than `ar-SD`) and it will be converted to the JS-style. `yearsCount` is
-used when generating yearly periods to know how many years to generate
-(defaults to 10). `
-
-`periodType` can be one of the period identifiers defined
-[here](https://github.com/dhis2/multi-calendar-dates/blob/multi-calendar-docs/src/period-calculation/fixed-periods.ts#L10).
-Although the library internally is flexible and can accept, for example,
-quarterly periods starting any month (i.e. `QUARTERLYMAY`), support for such
-periods might not be available in the backend, so they should be used
-carefully. The flexibility, though, means that a new period could be added to
-the backend and used without changes in the frontend.
-
-#### The return value
-
-The returned value is an array of `FixedPeriod`s:
-
 ```ts
-type FixedPeriod = {
-    id: string
-    iso?: string
-    name: string
-    startDate: string
-    endDate: string
+// the return type of the hook
+type UseDatePickerReturn = UseNavigationReturnType & {
+    weekDayLabels: string[]
+    calendarWeekDays: {
+        dateValue: string
+        label: string | number
+        onClick: () => void
+        isSelected: boolean | undefined
+        isToday: boolean
+        isInCurrentMonth: boolean
+    }[][]
 }
-```
-
--   `id` (and `iso`) are the same right now, and return a period identifier,
-    i.e. `2015Q1` (quarter one of the year 2015) or `2015SunW1` (the first week
-    -   starting Sunday - of the year 2015). The full list of values are
-        documented in
-        [periodValues](https://github.com/dhis2/multi-calendar-dates/blob/main/features/fixed-periods.ethiopic.feature)
-        in the feature files.
-
-> please use `id` to identify the period. `iso` was added for backwards
-> compatibility with existing implementations
-
--   `startDate` and `endDate` are the start and end dates of the specific
-    period. This is provided for convenience, but the backend currently only
-    makes use of the ID to work out what each period means.
--   `name` is the human readable name of the period, according to what we
-    dispaly in DHIS2 Data Visualizer, i.e. `Week 1 - 2014-13-03 - 2015-01-04`
-    for a weekly period or `2015` for a yearly period.
-
-## getNowInCalendar
-
-`getNowInCalendar` returns the current date and time of day in the specified
-calendrical system and time zone, as a plain
-`{ year, month, day, eraYear?, hour, minute, second }` object (typed as
-`CalendarDateTime`). The date fields are the same shape returned by
-`convertFromIso8601`/`convertToIso8601` below; `hour` (0-23), `minute` and
-`second` are the wall-clock time in the given time zone, read from the same
-instant as the date.
-
-> **Breaking change (`@js-temporal/polyfill` 0.5.x upgrade):** prior versions
-> of this library returned a `Temporal.ZonedDateTime` directly from
-> `getNowInCalendar`, exposing Temporal methods (`.startOfDay()`,
-> `.withCalendar()`, etc.) and time-of-day/timezone information alongside
-> `.year`/`.month`/`.day`/`.eraYear`. It now returns plain data only — no
-> Temporal (or other date-engine) type is exposed. `.hour`/`.minute`/`.second`
-> are still available as plain numbers (they were missing in 3.0.0 and added
-> back afterwards); other time zone information is not. Code that only read
-> `.year`/`.month`/`.day`/`.eraYear`/`.hour`/`.minute`/`.second` needs no changes; code that called Temporal
-> methods on the result needs to be rewritten against plain data (e.g. re-derive
-> another date via `getNowInCalendar`/`convertFromIso8601` again, rather than
-> calling `.withCalendar()` on the previous result). See
-> ["Breaking changes: `@js-temporal/polyfill` 0.5.x calendar protocol
-> removal"](#breaking-changes-js-temporalpolyfill-05x-calendar-protocol-removal)
-> above for why this was forced, not just a cleanup.
-
-### Examples
-
-```js
-// Assuming today's date is 13th October 2021
-beforeEach(() => {
-    // 13 October 2021 UTC
-    jest.spyOn(Date, 'now').mockReturnValue(1634089600000)
-})
-it('should get today date in Gregorian', () => {
-    const { day, month, year } = getNowInCalendar('gregory', 'UTC')
-    expect({ day, month, year }).toEqual({ day: 13, month: 10, year: 2021 })
-})
-it('should get today date in Ethiopic', () => {
-    const { day, month, eraYear: year } = getNowInCalendar('ethiopic', 'UTC')
-    expect({ day, month, year }).toEqual({
-        day: 3,
-        month: 2,
-        year: 2014,
-    })
-})
-it('should get the time of day in the given time zone', () => {
-    // 01:46:40 UTC; Asia/Kathmandu is UTC+05:45
-    const { hour, minute, second } = getNowInCalendar('nepali', 'Asia/Kathmandu')
-    expect({ hour, minute, second }).toEqual({ hour: 7, minute: 31, second: 40 })
-})
-```
-
-## convertFromIso8601 and convertToIso8601
-
-`convertFromIso8601` and `convertToIso8601` are used to convert between Iso8601 (gregorian) dates and specific calendars (i.e. Ethiopic or Nepali). It accepts either a string in the format `yyyy-MM-dd` or an object representing the date properties (`year`, `month` and `day`).
-
-### Examples
-
-```js
-it('should convert a gregorian date to ethiopic', () => {
-    const result = convertFromIso8601('2024-05-23', 'ethiopic')
-    expect(result).toMatchObject({
-        year: 7516,
-        eraYear: 2016,
-        month: 9,
-        day: 15,
-    })
-})
-it('should convert a Nepali date to gregorian', () => {
-    const result = convertToIso8601('2081-02-10', 'nepali')
-    expect(result).toMatchObject({ year: 2024, month: 5, day: 23 })
-})
-it('should convert an ethiopic date to gregorian', () => {
-    const result = convertToIso8601('2016-09-15', 'ethiopic')
-    expect(result).toMatchObject({ year: 2024, month: 5, day: 23 })
-})
-it('should accept a date object instead of a string', () => {
-    const result = convertToIso8601(
-        {
-            year: 2081,
-            month: 2,
-            day: 10,
-        },
-        'nepali'
-    )
-    expect(result).toMatchObject({ year: 2024, month: 5, day: 23 })
-})
-```
-
-### Types
-
-The method takes two positional arguments:
-
--   `calendarToUse` which can be one of the calendars specified
-    [here](https://github.com/dhis2/multi-calendar-dates/blob/multi-calendar-docs/src/constants/calendars.ts)
-    (defaults to `gregory` calendar if not specied.
--   `timeZone`: a string representing the time zone (defaults to `UTC`) of the
-    user.
-
-and returns a plain `{ year, month, day, eraYear? }` object in the specified
-calendar. Read the year as `eraYear ?? year`. To turn it into a `yyyy-MM-dd`
-string, use [`formatCalendarDate`](#date-arithmetic-and-formatting).
-
-## Date arithmetic and formatting
-
-These take and return the same plain date objects as `getNowInCalendar` and
-`convertFromIso8601`, so their results can be passed in as-is. They follow the
-DHIS2 date-string convention: the year is `eraYear ?? year` (e.g. the Amete
-Mihret year for Ethiopic, not Temporal's Amete Alem `year`). The calendar can
-be a Temporal calendar id or a DHIS2 one (`ethiopian`, `gregorian`, …).
-
--   **`getDaysInMonth({ year, month }, calendar)`** returns the number of days
-    in a month, e.g. `29` for February 2024, `5` or `6` for the 13th month in
-    Ethiopic, or up to `32` in Nepali.
--   **`addToCalendarDate(date, { years, months, days }, calendar)`** adds (or,
-    with negative values, subtracts) years, months and days. Years and months
-    are counted in the calendar's own months, and the day is clamped to the
-    end of the resulting month; days are added after that.
--   **`formatCalendarDate(date, { format, includeTime })`** formats a date as
-    the date string the DHIS2 backend expects. `format` is `YYYY-MM-DD`
-    (default) or `DD-MM-YYYY`. `includeTime` appends `Thh:mm:ss`, from
-    `getNowInCalendar`'s `hour`, `minute` and `second`.
-
-All of them throw for a date that doesn't exist in the calendar, or a Nepali
-year outside 1970-2100.
-
-### Examples
-
-```js
-const now = getNowInCalendar('ethiopian') // { eraYear: 2016, year: 7516, month: 10, day: 8, … }
-
-formatCalendarDate(now) // '2016-10-08'
-formatCalendarDate(now, { includeTime: true }) // '2016-10-08T10:30:00'
-
-// one year ago
-formatCalendarDate(addToCalendarDate(now, { years: -1 }, 'ethiopian')) // '2015-10-08'
-
-// 31 March minus 1 month is clamped to the end of February
-addToCalendarDate({ year: 2024, month: 3, day: 31 }, { months: -1 }, 'gregory') // { year: 2024, month: 2, day: 29, … }
-
-getDaysInMonth({ year: 2016, month: 13 }, 'ethiopian') // 5
-getDaysInMonth({ year: 2081, month: 2 }, 'nepali') // 32
-```
-
-## `createFixedPeriodFromPeriodId`
-
--   [API](#createFixedPeriodFromPeriodId-api)
--   [Examples](#createFixedPeriodFromPeriodId-examples)
-
-<a name="createFixedPeriodFromPeriodId-api"></a>
-
-### API
-
-#### Arguments
-
-The function expects an options object with the following properties:
-
-| Option     | type                | Required | Default value | Description                                    |
-| ---------- | ------------------- | -------- | ------------- | ---------------------------------------------- |
-| `periodId` | `string`            | yes      | -             | A period id, e.g. `2020` or `2020April`        |
-| `calendar` | `SupportedCalendar` | yes      | -             | A calendar sytem, e.g. `gregory` or `ethiopic` |
-| `locale`   | `string`            | no       | `"en"`        | A language locale for the displayed labels     |
-
-#### Return value
-
-Returns a `FixedPeriod` whos `id` equals the provided `periodId`, see `src/period-calculation/types.ts`
-
-<a name="createFixedPeriodFromPeriodId-examples"></a>
-
-### Examples
-
-```ts
-createFixedPeriodFromPeriodId({
-    periodId: '2023',
-    calendar: 'gregory',
-})
-```
-
-will return:
-
-```ts
-{
-    periodType: 'YEARLY',
-    name: '2023',
-    displayName: '2023',
-    id: '2023',
-    iso: '2023',
-    startDate: '2023-01-01',
-    endDate: '2023-12-31',
-}
-```
-
-## `getAdjacentFixedPeriods`
-
--   [API](#getAdjacentFixedPeriods-api)
--   [Examples](#getAdjacentFixedPeriods-examples)
-
-<a name="getAdjacentFixedPeriods-api"></a>
-
-### API
-
-#### Arguments
-
-The function expects an options object with the following properties:
-
-| Option     | Type                | Required | Default value | Description                                                       |
-| ---------- | ------------------- | -------- | ------------- | ----------------------------------------------------------------- |
-| `period`   | `FixedPeriod`       | yes      | -             | A period id, e.g. `2020` or `2020April`                           |
-| `calendar` | `SupportedCalendar` | yes      | -             | A calendar sytem, e.g. `gregory` or `ethiopic`                    |
-| `steps`    | `integer`           | no       | `1`           | Amount of adjacent fixed period forward/backward, can be negative |
-| `locale`   | `string`            | no       | `"en"`        | A language locale for the displayed labels                        |
-
-#### Return value
-
-Returns a collection with fixed periods, see `src/period-calculation/types.ts`
-
-<a name="getAdjacentFixedPeriods-examples"></a>
-
-### Examples
-
-**With `steps: 1` (default):**
-
-```ts
-const period = createFixedPeriodFromPeriodId({
-    periodId: '20230101',
-    calendar: 'gregory',
-})
-getAdjacentFixedPeriods({
-    period,
-    calendar: 'gregory',
-})
-```
-
-will return:
-
-```ts
-{
-    periodType: 'YEARLY',
-    name: '2023',
-    displayName: '2023',
-    id: '2023',
-    iso: '2023',
-    startDate: '2023-01-01',
-    endDate: '2023-12-31',
-}
-```
-
-**With `steps: 2`:**
-
-```ts
-const period = createFixedPeriodFromPeriodId({
-    periodId: '20221230',
-    calendar: 'gregory',
-})
-getAdjacentFixedPeriods({
-    period,
-    calendar: 'gregory',
-    steps: 2,
-})
-```
-
-will return:
-
-```ts
-;[
-    {
-        periodType: 'DAILY',
-        name: '2022-12-31',
-        displayName: 'December 31, 2022',
-        id: '20221231',
-        iso: '20221231',
-        startDate: '2022-12-31',
-        endDate: '2022-12-31',
-    },
-    {
-        periodType: 'DAILY',
-        name: '2023-01-01',
-        displayName: 'January 1, 2023',
-        id: '20230101',
-        iso: '20230101',
-        startDate: '2023-01-01',
-        endDate: '2023-01-01',
-    },
-]
-```
-
-**With `steps: -3`:**
-
-```ts
-const period = createFixedPeriodFromPeriodId({
-    periodId: '20230102',
-    calendar: 'gregory',
-})
-getAdjacentFixedPeriods({
-    period,
-    calendar: 'gregory',
-    steps: -3,
-})
-```
-
-will return:
-
-```ts
-;[
-    {
-        periodType: 'DAILY',
-        name: '2022-12-30',
-        displayName: 'December 30, 2022',
-        id: '20221230',
-        iso: '20221230',
-        startDate: '2022-12-30',
-        endDate: '2022-12-30',
-    },
-    {
-        periodType: 'DAILY',
-        name: '2022-12-31',
-        displayName: 'December 31, 2022',
-        id: '20221231',
-        iso: '20221231',
-        startDate: '2022-12-31',
-        endDate: '2022-12-31',
-    },
-    {
-        periodType: 'DAILY',
-        name: '2023-01-01',
-        displayName: 'January 1, 2023',
-        id: '20230101',
-        iso: '20230101',
-        startDate: '2023-01-01',
-        endDate: '2023-01-01',
-    },
-]
-```
-
-## `getFixedPeriodByDate`
-
--   [API](#getFixedPeriodByDate-api)
--   [Examples](#getFixedPeriodByDate-examples)
-
-<a name="getFixedPeriodByDate-api"></a>
-
-### API
-
-#### Arguments
-
-The function expects an options object with the following properties:
-
-| Option                                    | Type                | Required | Default value | Description                                    |
-| ----------------------------------------- | ------------------- | -------- | ------------- | ---------------------------------------------- |
-| `periodType`                              | `PeriodType`        | yes      | -             | E.g. `'YEARLY'` (see                           |
-| `src/period-calculation/period-types.ts`) |
-| `calendar`                                | `SupportedCalendar` | yes      | -             | A calendar sytem, e.g. `gregory` or `ethiopic` |
-| `date`                                    | `string`            | yes      | -             | E.g. `'2020-10-04'`                            |
-| `locale`                                  | `string`            | no       | `"en"`        | A language locale for the displayed labels     |
-
-#### Return value
-
-Returns a fixed period, see `src/period-calculation/types.ts`
-
-<a name="getFixedPeriodByDate-examples"></a>
-
-### Examples
-
-```ts
-getFixedPeriodByDate({
-    periodType: 'DAILY',
-    date: '2022-01-01',
-    calendar: 'gregory',
-})
-```
-
-will return:
-
-```ts
-{
-    periodType: 'DAILY',
-    id: '20220101',
-    iso: '20220101',
-    displayName: 'January 1, 2022',
-    name: '2022-01-01',
-    startDate: '2022-01-01',
-    endDate: '2022-01-01'
-}
-```
-
-## `periodTypes`
-
-Some functions require a period type to be passed. Instead of hardcoding string
-or manually replicating the constants used in the library, they're being
-exposed. `periodTypes` is an array with string, which can easily be converted
-to an object:
-
-```ts
-const obj = periodTypes.reduce(
-    (acc, periodType) => ({ ...acc, [periodType]: periodType }),
-    {}
-)
-```
-
-### API
-
-For all available period types, see: `src/period-calculation/period-types.ts`
-
-```ts
-type periodTypes = string[]
 ```
 
 # Special cases and considerations with periods logic
@@ -824,54 +193,11 @@ files. Some of these are:
     make them easier to use in a JavaScript context (i.e from `ar_SD` to
     `ar-SD`).
 
-# Hooks for Calendar UI
+# Architecture Decision Records
 
-The library provides a hook `useDatePicker` that's consumed by the dhis/ui
-calendar components. There are two components that currently use it:
-
--   [Calendar](https://ui.dhis2.nu/components/calendar): a calendar component
-    supporting non-Greogorian calendars
--   [CalendarInput](https://ui.dhis2.nu/components/calendar-input): a wrapper
-    around the Calendar component to support the most common use case for a
-    calendar when we want to display it next to an input.
-
-`useDatePicker` takes a
-[DatePickerOptions](https://github.com/dhis2/multi-calendar-dates/blob/multi-calendar-docs/src/hooks/useDatePicker.ts#L16)
-object, and returns
-[UseDatePickerReturn](https://github.com/dhis2/multi-calendar-dates/blob/multi-calendar-docs/src/hooks/useDatePicker.ts#LL28C13-L28C32)
-that contains information needed to render a UI component, i.e. the localised
-day names, and the weeks in the current view (month).
-
-```ts
-// the options passed to useDatePicker
-type DatePickerOptions = {
-    date: string
-    options: PickerOptions
-    onDateSelect: (payload: OnDateSelectPayload) => void
-    minDate?: string
-    maxDate?: string
-    format?: 'YYYY-MM-DD' | 'DD-MM-YYYY'
-    strictValidation?: boolean
-}
-type OnDateSelectPayload = { calendarDateString: string } | null
-```
-
-```ts
-// the return type of the hook
-type UseDatePickerReturn = UseNavigationReturnType & {
-    weekDayLabels: string[]
-    calendarWeekDays: {
-        dateValue: string
-        label: string | number
-        onClick: () => void
-        isSelected: boolean | undefined
-        isToday: boolean
-        isInCurrentMonth: boolean
-    }[][]
-}
-```
-
-# Architecture Design Records
-
+-   [Record architecture decisions](./doc/architecture/decisions/0001-record-architecture-decisions.md)
 -   [Use Temporal API as the backbone of the
     engine](./doc/architecture/decisions/0002-use-temporal-api-as-the-backbone-for-the-engine.md)
+-   [Upgrade the Temporal polyfill to 0.5.x without custom
+    calendars](./doc/architecture/decisions/0003-upgrade-temporal-polyfill-to-0-5-without-custom-calendars.md)
+    (the 3.0.0 breaking change)
