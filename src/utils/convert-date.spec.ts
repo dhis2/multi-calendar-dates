@@ -116,6 +116,17 @@ describe('date conversion to gregorian', () => {
             )
             expect(result).toMatchObject({ year: 2024, month: 5, day: 23 })
         })
+        // month starts in 2083 as published in the national panchang
+        it.each([
+            ['2083-01-01', { year: 2026, month: 4, day: 14 }],
+            ['2083-07-01', { year: 2026, month: 10, day: 18 }],
+            ['2083-08-01', { year: 2026, month: 11, day: 17 }],
+            ['2083-09-01', { year: 2026, month: 12, day: 16 }],
+            ['2083-10-01', { year: 2027, month: 1, day: 15 }],
+            ['2083-11-01', { year: 2027, month: 2, day: 13 }],
+        ])('should convert %s to the official date', (date, expected) => {
+            expect(convertToIso8601(date, 'nepali')).toMatchObject(expected)
+        })
     })
     it('islamic to gregorian', () => {
         const result = convertToIso8601('1445-11-15', 'islamic')
