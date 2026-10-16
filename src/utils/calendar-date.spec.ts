@@ -1,3 +1,4 @@
+import { NEPALI_CALENDAR_DATA } from '../custom-calendars/nepaliCalendarData'
 import { SupportedCalendar } from '../types'
 import {
     addToCalendarDate,
@@ -35,6 +36,23 @@ describe('getDaysInMonth', () => {
         expect(() =>
             getDaysInMonth({ year: 2024, month: 13 }, 'gregory')
         ).toThrow()
+    })
+
+    it('matches the Nepali month lengths for every supported year', () => {
+        // 1970 is left out: converting its months before Poush reads 1969,
+        // which is not in the table
+        const years = Object.entries(NEPALI_CALENDAR_DATA).filter(
+            ([year]) => year !== '1970'
+        )
+        const mismatches = years.flatMap(([year, [, ...monthLengths]]) =>
+            monthLengths
+                .map((days, i) => ({ year: +year, month: i + 1, days }))
+                .filter(
+                    ({ year, month, days }) =>
+                        getDaysInMonth({ year, month }, 'nepali') !== days
+                )
+        )
+        expect(mismatches).toEqual([])
     })
 
     it('throws for a Nepali year that is out of range', () => {
