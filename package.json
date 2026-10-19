@@ -37,7 +37,9 @@
         ]
     },
     "files": [
-        "/build/**"
+        "/build/**",
+        "src/**",
+        "docs/api.md"
     ],
     "main": "./build/cjs/index.js",
     "module": "./build/es/index.js",
