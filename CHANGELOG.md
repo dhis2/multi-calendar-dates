@@ -1,3 +1,10 @@
+## [3.2.1](https://github.com/dhis2/multi-calendar-dates/compare/v3.2.0...v3.2.1) (2026-10-20)
+
+
+### Bug Fixes
+
+* **nepali:** correct calendar data and derive the Jan-1 column ([#108](https://github.com/dhis2/multi-calendar-dates/issues/108)) ([ecfe868](https://github.com/dhis2/multi-calendar-dates/commit/ecfe868a141a8e7f646c742bb9ae564a5af09a20))
+
 # [3.2.0](https://github.com/dhis2/multi-calendar-dates/compare/v3.1.0...v3.2.0) (2026-10-15)
 
 
